@@ -141,7 +141,7 @@ describe("generateScript", () => {
     const db = new FakeScriptDb(INTERVIEW);
     setMockResponse("generateJson", [{ blocks: [{ kind: "opening", text: PALAVRAS(10) }], mainDescriptions: {}, mainCoverPrompt: "c" }]);
     let t = 0;
-    const slow = { ...deps(db), now: () => (t += 120_000) };
+    const slow = { ...deps(db), now: () => (t += 31_000) };
     await generateScriptWith(slow, "p1");
     expect(getMockCalls("generateJson")).toBe(1);
     expect(db.project.interview.scriptWarning).toMatch(/fora do esperado/);

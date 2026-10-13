@@ -61,7 +61,7 @@ export async function checkScript(
         `O roteiro inclui, de forma clara, esta chamada para ação (pode estar com outras palavras): "${opts.cta}"?`,
       );
     }
-    // Teto total (tentativas incluídas): roda depois de 2 gerações na mesma função de maxDuration=300.
+    // Teto total (tentativas incluídas): roda depois das gerações na mesma função de maxDuration=300.
     const res = await getClient().systemOne(
       { state: { roteiro: text }, questions, model: JUDGE_MODEL },
       { signal: AbortSignal.timeout(CHECK_TIMEOUT_MS) },

@@ -67,8 +67,9 @@ const CUT_TOLERANCE = 1.2;
 const TOTAL_MIN = 0.8;
 const TOTAL_MAX = 1.2;
 const CHECK_MIN = 0.5;
-// 115 s + 2×70 s (segunda geração) + 15 s (checkScript) = 270 s < 300 s, com folga para o banco.
-const RETRY_BUDGET_MS = 115_000;
+// Uma generateJson leva até ~240 s (2 tentativas em ai/index.ts, cada uma até 2×70 s em openrouter.ts).
+// 30 s + 240 s (segunda geração) + 15 s (checkScript) = 285 s < 300 s.
+const RETRY_BUDGET_MS = 30_000;
 
 /** Linha final da descrição, montada no código (nunca pela IA). */
 export function formatCta(cta: ScriptCta): string | null {
@@ -150,8 +151,7 @@ export async function generateScriptWith(deps: ScriptDeps, projectId: string): P
   const started = deps.now?.() ?? Date.now();
   let script = await generate();
   let problems = validateScript(script.blocks, mainSeconds, cutSeconds);
-  // maxDuration=300: cada geração pode levar até 2×70 s (openrouter.ts) e o checkScript até 15 s.
-  // Se a primeira já demorou, não tenta de novo; o problema vira aviso no script.
+  // maxDuration=300 (ver RETRY_BUDGET_MS): se a primeira já demorou, não tenta de novo; o problema vira aviso no script.
   if (problems.length > 0 && (deps.now?.() ?? Date.now()) - started < RETRY_BUDGET_MS) {
     script = await generate(problems.join("; "));
     problems = validateScript(script.blocks, mainSeconds, cutSeconds);
