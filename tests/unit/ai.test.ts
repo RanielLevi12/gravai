@@ -6,7 +6,7 @@ process.env.AI_MOCK = "1";
 const keys = vi.hoisted(() => ({ value: null as string | null }));
 vi.mock("@/lib/ai/keys", () => ({ getUserAiKey: async () => keys.value }));
 
-import { AiError, checkScript, scoreViral, withUserAi, type OcrImage } from "@/lib/ai";
+import { AiError, checkScript, scoreViral, userAiFrom, withUserAi, type OcrImage } from "@/lib/ai";
 import { stripNulls, toStrictJsonSchema } from "@/lib/ai/schemas";
 import {
   getMockCalls,
@@ -55,6 +55,27 @@ describe("camada de IA com mock", () => {
         return generateJson(z.object({ a: z.number() }), "s", "u");
       })(),
     ).rejects.toMatchObject({ userMessage: expect.stringContaining("IA") });
+  });
+
+  it("generateJson não faz a 2ª tentativa se a 1ª já gastou o tempo do maxDuration", async () => {
+    vi.useFakeTimers();
+    try {
+      let calls = 0;
+      const ai = userAiFrom({
+        ocrImages: async () => "",
+        ocrPdf: async () => "",
+        transcribeAudio: async () => ({ text: "", seconds: 0 }),
+        rawJson: async () => {
+          calls++;
+          vi.advanceTimersByTime(110_000);
+          return "não é json";
+        },
+      });
+      await expect(ai.generateJson(z.object({ a: z.number() }), "s", "u")).rejects.toMatchObject({ code: "invalid_output" });
+      expect(calls).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("generateJson tenta de novo uma vez e se recupera", async () => {

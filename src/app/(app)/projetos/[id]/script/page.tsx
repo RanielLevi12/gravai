@@ -8,6 +8,8 @@ import { generateScript } from "@/lib/script/actions";
 import { createServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Script · Gravaí" };
+// Chamadas de IA nesta rota/página (e nas ações que ela usa): os timeouts de src/lib/ai/openrouter.ts cabem aqui.
+export const maxDuration = 300;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

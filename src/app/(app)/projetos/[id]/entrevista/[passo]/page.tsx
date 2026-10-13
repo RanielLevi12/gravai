@@ -21,6 +21,8 @@ import { InterviewStep, type CtaOption } from "./InterviewStep";
 import { Summary } from "./Summary";
 
 export const metadata: Metadata = { title: "Entrevista · Gravaí" };
+// Chamadas de IA nesta rota/página (e nas ações que ela usa): os timeouts de src/lib/ai/openrouter.ts cabem aqui.
+export const maxDuration = 300;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { createProject } from "@/lib/ingest/create";
 
+// Chamadas de IA nesta rota/página (e nas ações que ela usa): os timeouts de src/lib/ai/openrouter.ts cabem aqui.
+export const maxDuration = 300;
+
 /** Mesma origem que o host atendido (proteção CSRF). */
 function sameOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin");
