@@ -1,0 +1,42 @@
+.field {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.control {
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--ui), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  resize: vertical;
+  transition: border-color 180ms var(--ease);
+}
+
+.control::placeholder {
+  color: var(--ink-2);
+}
+
+.control:focus-visible {
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+  border-color: var(--sky);
+  box-shadow: 0 0 0 3px var(--sky);
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}

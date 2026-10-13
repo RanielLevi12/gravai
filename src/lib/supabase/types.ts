@@ -29,7 +29,7 @@ export type Database = {
                   }
                   ComputedFields: never
                   Insert: {
-                    "id"?: string,"kind": string,"label"?: string | null,"user_id": string,"value"?: string | null
+                    "id"?: string,"kind": string,"label"?: string | null,"user_id"?: string,"value"?: string | null
                   }
                   Update: {
                     "id"?: string,"kind"?: string,"label"?: string | null,"user_id"?: string,"value"?: string | null
@@ -43,7 +43,7 @@ export type Database = {
                   }
                   ComputedFields: never
                   Insert: {
-                    "audience"?: string | null,"niche"?: string | null,"onboarded"?: boolean,"phrases"?: string | null,"tone"?: string | null,"user_id": string
+                    "audience"?: string | null,"niche"?: string | null,"onboarded"?: boolean,"phrases"?: string | null,"tone"?: string | null,"user_id"?: string
                   }
                   Update: {
                     "audience"?: string | null,"niche"?: string | null,"onboarded"?: boolean,"phrases"?: string | null,"tone"?: string | null,"user_id"?: string
@@ -57,7 +57,7 @@ export type Database = {
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"series_id"?: string | null,"source_kind": string,"source_text": string,"source_truncated"?: boolean,"status"?: string,"title": string,"user_id": string
+                    "created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"series_id"?: string | null,"source_kind": string,"source_text": string,"source_truncated"?: boolean,"status"?: string,"title": string,"user_id"?: string
                   }
                   Update: {
                     "created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"series_id"?: string | null,"source_kind"?: string,"source_text"?: string,"source_truncated"?: boolean,"status"?: string,"title"?: string,"user_id"?: string
@@ -77,7 +77,7 @@ isOneToOne: false
                   }
                   ComputedFields: never
                   Insert: {
-                    "cover_prompt"?: string | null,"cut_index"?: number | null,"cut_title"?: string | null,"descriptions"?: NonNullable<Json>,"id"?: string,"kind": string,"position": number,"project_id": string,"text"?: string,"user_id": string
+                    "cover_prompt"?: string | null,"cut_index"?: number | null,"cut_title"?: string | null,"descriptions"?: NonNullable<Json>,"id"?: string,"kind": string,"position": number,"project_id": string,"text"?: string,"user_id"?: string
                   }
                   Update: {
                     "cover_prompt"?: string | null,"cut_index"?: number | null,"cut_title"?: string | null,"descriptions"?: NonNullable<Json>,"id"?: string,"kind"?: string,"position"?: number,"project_id"?: string,"text"?: string,"user_id"?: string
@@ -97,7 +97,7 @@ isOneToOne: false
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"title": string,"user_id": string
+                    "created_at"?: string,"id"?: string,"title": string,"user_id"?: string
                   }
                   Update: {
                     "created_at"?: string,"id"?: string,"title"?: string,"user_id"?: string
