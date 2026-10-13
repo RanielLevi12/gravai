@@ -19,16 +19,19 @@ SaaS web (PWA, mobile-first) que transforma qualquer material em script de víde
 | Processamento de vídeo | Worker ffmpeg em container (Railway ou Fly), fila via tabela `jobs` no Supabase |
 | Upload | Resumível (tus, suportado pelo Supabase Storage) — vídeos de centenas de MB |
 
-### IA (provedores diretos, chaves de API — nunca login de assinatura pessoal)
+### IA (conta do próprio usuário via OpenRouter — nunca login de assinatura pessoal)
+
+Decisão de 13/10/2026: cada usuário conecta a própria conta OpenRouter por login (OAuth PKCE, botão "Conectar sua IA"); o app recebe uma chave cobrada na conta do usuário, guardada cifrada no servidor. No piloto, a conta conectada é a do dono. Login de assinatura do ChatGPT/Claude não é usado (termos de uso).
 
 | Tarefa | Modelo | Provedor |
 |---|---|---|
-| Script, títulos, descrições, prompts de cenário/capa, divisão em série, reescrever trecho | `gpt-6-luna` | OpenAI API |
-| OCR de foto de livro, PDF escaneado, slide em imagem | `claude-haiku-5-5` | Anthropic API |
-| Ranking de títulos virais, checagem de regras (cortes, tom, CTA) | `jev-latest` | TypeSafe |
-| Transcrição de áudio e do vídeo gravado (com timestamps por palavra) | transcrição OpenAI (modelo e preço a confirmar no plano) | OpenAI API |
+| Script, títulos, descrições, prompts de cenário/capa, divisão em série, reescrever trecho | `openai/gpt-6-luna` | OpenRouter (conta do usuário) |
+| OCR de foto de livro, PDF escaneado, slide em imagem | `anthropic/claude-haiku-5.5` | OpenRouter (conta do usuário) |
+| Ranking de títulos virais, checagem de regras (cortes, tom, CTA) | `jev-latest` | TypeSafe (chave do Gravaí) |
+| Transcrição de áudio de ideia (Plano 1) | modelo com entrada de áudio (`google/gemini-3.8-flash`, trocável) | OpenRouter (conta do usuário) |
+| Transcrição do vídeo gravado com timestamps por palavra (Plano 3) | whisper local no worker | worker |
 
-Todas as chaves ficam só no servidor.
+Chaves (a do usuário cifrada, a TypeSafe) ficam só no servidor.
 
 ## 3. Fluxo
 
