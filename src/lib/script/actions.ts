@@ -51,7 +51,7 @@ export async function updateBlockText(blockId: string, text: string): Promise<{ 
   try {
     await updateBlockTextWith(supabaseBlockDb({ supabase: s.supabase }), blockId, text);
     // Sem isso, voltar pelo navegador reabre a tela com o texto de antes (cache do roteador do cliente).
-    revalidatePath("/projetos/[id]/script", "page");
+    revalidatePath("/(app)/projetos/[id]/script", "page");
     return { ok: true };
   } catch (e) {
     return failure(e);

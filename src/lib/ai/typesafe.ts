@@ -3,6 +3,7 @@ import { noul, score, TypeSafeClient } from "@typesafe-ai/sdk";
 import { AiError, type ScriptCheck } from "./schemas";
 
 export const JUDGE_MODEL = "jev-latest";
+const CHECK_TIMEOUT_MS = 15_000;
 
 const VIRAL_LEVELS = [
   "Título sem gancho: genérico, confuso ou que ninguém clicaria",
@@ -60,7 +61,11 @@ export async function checkScript(
         `O roteiro inclui, de forma clara, esta chamada para ação (pode estar com outras palavras): "${opts.cta}"?`,
       );
     }
-    const res = await getClient().systemOne({ state: { roteiro: text }, questions, model: JUDGE_MODEL });
+    // Teto total (tentativas incluídas): roda depois de 2 gerações na mesma função de maxDuration=300.
+    const res = await getClient().systemOne(
+      { state: { roteiro: text }, questions, model: JUDGE_MODEL },
+      { signal: AbortSignal.timeout(CHECK_TIMEOUT_MS) },
+    );
     const a = res.answers as Record<string, { noul: number }>;
     const clamp = (n: number) => Math.min(1, Math.max(0, n));
     return { toneOk: clamp(a.toneOk.noul), ctaPresent: opts.cta ? clamp(a.ctaPresent.noul) : null };

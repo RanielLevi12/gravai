@@ -57,6 +57,8 @@ export type ScriptDeps = {
   db: ScriptDb;
   ai: () => Promise<UserAi>;
   check: (text: string, opts: { tone: string; cta?: string }) => Promise<ScriptCheck>;
+  /** Só para testes. */
+  now?: () => number;
 };
 
 const MSG_SAVE_FAILED = "Não foi possível salvar o script agora. Tente de novo.";
@@ -65,6 +67,8 @@ const CUT_TOLERANCE = 1.2;
 const TOTAL_MIN = 0.8;
 const TOTAL_MAX = 1.2;
 const CHECK_MIN = 0.5;
+// 115 s + 2×70 s (segunda geração) + 15 s (checkScript) = 270 s < 300 s, com folga para o banco.
+const RETRY_BUDGET_MS = 115_000;
 
 /** Linha final da descrição, montada no código (nunca pela IA). */
 export function formatCta(cta: ScriptCta): string | null {
@@ -143,9 +147,12 @@ export async function generateScriptWith(deps: ScriptDeps, projectId: string): P
       buildScriptUser({ sourceText: project.source_text, interview: i, profile, episode, platforms, mainSeconds, cutSeconds, problem }),
     );
 
+  const started = deps.now?.() ?? Date.now();
   let script = await generate();
   let problems = validateScript(script.blocks, mainSeconds, cutSeconds);
-  if (problems.length > 0) {
+  // maxDuration=300: cada geração pode levar até 2×70 s (openrouter.ts) e o checkScript até 15 s.
+  // Se a primeira já demorou, não tenta de novo; o problema vira aviso no script.
+  if (problems.length > 0 && (deps.now?.() ?? Date.now()) - started < RETRY_BUDGET_MS) {
     script = await generate(problems.join("; "));
     problems = validateScript(script.blocks, mainSeconds, cutSeconds);
   }

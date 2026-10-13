@@ -137,6 +137,16 @@ describe("generateScript", () => {
     expect(db.project.interview.scriptWarning).toBeUndefined();
   });
 
+  it("primeira geração lenta: não tenta de novo (cabe no maxDuration) e grava o aviso", async () => {
+    const db = new FakeScriptDb(INTERVIEW);
+    setMockResponse("generateJson", [{ blocks: [{ kind: "opening", text: PALAVRAS(10) }], mainDescriptions: {}, mainCoverPrompt: "c" }]);
+    let t = 0;
+    const slow = { ...deps(db), now: () => (t += 120_000) };
+    await generateScriptWith(slow, "p1");
+    expect(getMockCalls("generateJson")).toBe(1);
+    expect(db.project.interview.scriptWarning).toMatch(/fora do esperado/);
+  });
+
   it("regenerar substitui os blocos sem duplicar", async () => {
     const db = new FakeScriptDb(INTERVIEW);
     await generateScriptWith(deps(db), "p1");
