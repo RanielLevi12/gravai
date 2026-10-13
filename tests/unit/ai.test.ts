@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 process.env.AI_MOCK = "1";
@@ -12,6 +12,7 @@ import {
   scoreViral,
   transcribeAudio,
 } from "@/lib/ai";
+import { stripNulls, toStrictJsonSchema } from "@/lib/ai/schemas";
 import {
   getMockCalls,
   resetMock,
@@ -76,5 +77,46 @@ describe("camada de IA com mock", () => {
     expect(c2.ctaPresent).toBeNull();
     expect(getMockCalls("ocrPdf")).toBe(1);
     expect(getMockCalls("ocrImages")).toBe(1);
+  });
+});
+
+describe("schema strict e stripNulls", () => {
+  const schema = z.object({
+    a: z.string(),
+    b: z.string().optional(),
+    d: z.partialRecord(z.enum(["youtube", "reels"]), z.string()),
+  });
+
+  it("toStrictJsonSchema deixa tudo required, sem propertyNames", () => {
+    const js = toStrictJsonSchema(schema) as any;
+    expect(js.required).toEqual(["a", "b", "d"]);
+    expect(js.additionalProperties).toBe(false);
+    expect(js.properties.b.anyOf).toContainEqual({ type: "null" });
+    expect(js.properties.d.required).toEqual(["youtube", "reels"]);
+    expect(js.properties.d.additionalProperties).toBe(false);
+    expect(JSON.stringify(js)).not.toContain("propertyNames");
+    expect(js.properties.d.properties.reels.anyOf).toContainEqual({ type: "null" });
+  });
+
+  it("resposta com nulls valida para o objeto sem as chaves nulas", async () => {
+    const reply = { a: "x", b: null, d: { youtube: "y", reels: null } };
+    expect(schema.parse(stripNulls(reply))).toEqual({ a: "x", d: { youtube: "y" } });
+    setMockResponse("generateJson", reply);
+    expect(await generateJson(schema, "s", "u")).toEqual({ a: "x", d: { youtube: "y" } });
+  });
+});
+
+describe("trava de produção do mock", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("lança AiError em produção sem AI_MOCK_ALLOW_PROD", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    await expect(ocrPdf(Buffer.from("x"))).rejects.toBeInstanceOf(AiError);
+  });
+
+  it("permite com AI_MOCK_ALLOW_PROD=1", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("AI_MOCK_ALLOW_PROD", "1");
+    await expect(ocrPdf(Buffer.from("x"))).resolves.toBeTypeOf("string");
   });
 });

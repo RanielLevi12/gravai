@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { AiError, type OcrImage } from "./schemas";
 
 export const OCR_MODEL = "claude-haiku-5-5";
+const MAX_OCR_CHARS = 60_000;
 
 const INSTRUCTION =
   "Transcreva fielmente o texto de cada página, na ordem, sem comentar nem explicar. " +
@@ -19,13 +20,21 @@ async function run(content: Anthropic.ContentBlockParam[]): Promise<string> {
   try {
     const res = await getClient().messages.create({
       model: OCR_MODEL,
-      max_tokens: 8192,
+      max_tokens: 32000,
       messages: [{ role: "user", content }],
     });
-    return res.content
+    let text = res.content
       .map((b) => (b.type === "text" ? b.text : ""))
       .join("")
       .trim();
+    if (res.stop_reason === "max_tokens") {
+      console.warn("[ai] OCR truncado por max_tokens");
+    }
+    if (text.length > MAX_OCR_CHARS) {
+      console.warn(`[ai] OCR acima de ${MAX_OCR_CHARS} caracteres; cortado`);
+      text = text.slice(0, MAX_OCR_CHARS);
+    }
+    return text;
   } catch (e) {
     if (e instanceof AiError) throw e;
     throw new AiError("Não consegui ler o arquivo. Tente de novo.", { cause: e });

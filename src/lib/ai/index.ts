@@ -1,11 +1,17 @@
 import "server-only";
 import type { z } from "zod";
-import { AiError, toJsonSchema, type OcrImage, type ScriptCheck, type Transcription } from "./schemas";
+import { AiError, toStrictJsonSchema, stripNulls, type OcrImage, type ScriptCheck, type Transcription } from "./schemas";
 
 export { AiError } from "./schemas";
 export type { OcrImage, ScriptCheck, Transcription } from "./schemas";
 
-const useMock = () => process.env.AI_MOCK === "1";
+const useMock = () => {
+  const mock = process.env.AI_MOCK === "1";
+  if (mock && process.env.NODE_ENV === "production" && process.env.AI_MOCK_ALLOW_PROD !== "1") {
+    throw new AiError("A IA está indisponível no momento. Tente mais tarde.");
+  }
+  return mock;
+};
 
 export async function ocrImages(images: OcrImage[]): Promise<string> {
   return useMock() ? (await import("./mock")).ocrImages(images) : (await import("./anthropic")).ocrImages(images);
@@ -24,11 +30,11 @@ export async function transcribeAudio(file: Buffer, filename: string): Promise<T
 /** Saída estruturada validada por zod; uma nova tentativa se falhar; depois AiError. */
 export async function generateJson<T>(schema: z.ZodType<T>, system: string, user: string): Promise<T> {
   const provider = useMock() ? await import("./mock") : await import("./openai");
-  const jsonSchema = toJsonSchema(schema);
+  const jsonSchema = toStrictJsonSchema(schema);
   for (let attempt = 0; attempt < 2; attempt++) {
     const raw = await provider.rawJson(jsonSchema, system, user);
     try {
-      const parsed = schema.safeParse(JSON.parse(raw));
+      const parsed = schema.safeParse(stripNulls(JSON.parse(raw)));
       if (parsed.success) return parsed.data;
     } catch {
       // JSON inválido: tenta de novo

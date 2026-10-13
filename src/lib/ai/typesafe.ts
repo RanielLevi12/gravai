@@ -62,7 +62,8 @@ export async function checkScript(
     }
     const res = await getClient().systemOne({ state: { roteiro: text }, questions, model: JUDGE_MODEL });
     const a = res.answers as Record<string, { noul: number }>;
-    return { toneOk: a.toneOk.noul, ctaPresent: opts.cta ? a.ctaPresent.noul : null };
+    const clamp = (n: number) => Math.min(1, Math.max(0, n));
+    return { toneOk: clamp(a.toneOk.noul), ctaPresent: opts.cta ? clamp(a.ctaPresent.noul) : null };
   } catch (e) {
     if (e instanceof AiError) throw e;
     throw new AiError(undefined, { cause: e });

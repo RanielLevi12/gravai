@@ -47,7 +47,11 @@ export async function transcribeAudio(file: Buffer, filename: string): Promise<T
       response_format: "verbose_json",
       timestamp_granularities: ["word"],
     })) as unknown as { text: string; duration?: number };
-    return { text: res.text, seconds: res.duration ?? 0 };
+    // Sem duração não dá para cobrar a cota de minutos: falha em vez de assumir 0.
+    if (typeof res.duration !== "number" || !Number.isFinite(res.duration)) {
+      throw new AiError("Não consegui transcrever o áudio. Tente de novo.");
+    }
+    return { text: res.text, seconds: res.duration };
   } catch (e) {
     if (e instanceof AiError) throw e;
     throw new AiError("Não consegui transcrever o áudio. Tente de novo.", { cause: e });
