@@ -62,6 +62,8 @@ export type Interview = {
   cover?: Cover;
   ctaId?: string | null;
   suggestion?: InterviewSuggestion;
+  /** Quando a sugestão falhou (erro da IA): não tentamos de novo sozinhos. */
+  suggestionFailedAt?: string;
   titleSuggestions?: TitleOption[];
 };
 

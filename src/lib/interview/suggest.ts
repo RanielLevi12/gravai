@@ -12,6 +12,7 @@ import {
   PLATFORMS,
   formatSeconds,
   isPlatform,
+  type Interview,
   type InterviewSuggestion,
   type TitleOption,
 } from "./steps";
@@ -113,6 +114,35 @@ Leia o texto e sugira, para um vídeo gravado pela própria pessoa:
 - cover: "frame" (um quadro do próprio vídeo com o título) ou "ai" (capa criada com IA).
 - reasons: uma frase curta e simples, em português do Brasil, explicando cada escolha (plataformas, formato, duracao, cenario, capa).
 Escreva os títulos e resumos dos episódios no mesmo idioma do texto.`;
+
+/**
+ * Sugestão para a página: usa a salva; tenta a IA só uma vez por entrevista.
+ * Sem IA conectada → `noAi`; outra falha (timeout, 5xx, JSON inválido) grava `suggestionFailedAt`
+ * e os passos seguem sem sugestão, sem nova chamada.
+ */
+export async function loadSuggestion(
+  deps: SuggestDeps,
+  projectId: string,
+  interview: Interview,
+): Promise<{ suggestion: InterviewSuggestion | null; noAi: boolean }> {
+  if (interview.suggestion) return { suggestion: interview.suggestion, noAi: false };
+  if (interview.suggestionFailedAt) return { suggestion: null, noAi: false };
+  try {
+    return { suggestion: await suggestInterviewWith(deps, projectId), noAi: false };
+  } catch (e) {
+    if (e instanceof AiError && e.code === "not_connected") return { suggestion: null, noAi: true };
+    console.error("[entrevista] sugestão falhou", e instanceof Error ? e.message : e);
+    try {
+      const fresh = await deps.db.getProject(projectId);
+      if (fresh && !fresh.interview?.suggestion) {
+        await deps.db.saveInterview(projectId, { ...(fresh.interview ?? {}), suggestionFailedAt: new Date().toISOString() });
+      }
+    } catch {
+      // sem o marcador, a próxima abertura tenta de novo; nada mais a fazer
+    }
+    return { suggestion: null, noAi: false };
+  }
+}
 
 /** Uma chamada à IA do usuário; a sugestão fica salva em `interview.suggestion`. */
 export async function suggestInterviewWith(deps: SuggestDeps, projectId: string): Promise<InterviewSuggestion> {

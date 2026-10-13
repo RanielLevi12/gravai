@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { AiError } from "@/lib/ai/schemas";
-import { suggestInterview, suggestTitles } from "@/lib/interview/actions";
+import { loadInterviewSuggestion, suggestTitles } from "@/lib/interview/actions";
 import {
   EPISODES_STEP,
   canOpen,
@@ -69,18 +69,12 @@ export default async function EntrevistaPage({ params }: { params: Promise<{ id:
     return <Summary projectId={id} backHref={backHref} interview={interview} ctaLabel={ctaLabel} episodeIndex={project.episode_index} />;
   }
 
-  // Sugestão da IA: uma vez, logo depois do texto-fonte. Sem IA conectada a entrevista segue sem ela.
-  let suggestion: InterviewSuggestion | null = interview.suggestion ?? null;
-  let noAi = false;
-  if (!suggestion) {
-    try {
-      suggestion = await suggestInterview(id);
-      interview = { ...interview, suggestion };
-    } catch (e) {
-      if (notConnected(e)) noAi = true;
-      else console.error("[entrevista] sugestão falhou", e instanceof Error ? e.message : e);
-    }
-  }
+  // Sugestão da IA: uma vez, logo depois do texto-fonte; falha não é repetida a cada passo.
+  // Sem IA conectada (ou após falha) a entrevista segue sem ela.
+  const loaded = await loadInterviewSuggestion(id, interview);
+  const suggestion: InterviewSuggestion | null = loaded.suggestion;
+  let noAi = loaded.noAi;
+  if (suggestion) interview = { ...interview, suggestion };
 
   if (passo === EPISODES_STEP) {
     if (interview.format !== "series") redirect(`${base}/formato`);

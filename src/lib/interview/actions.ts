@@ -6,8 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import { supabaseInterviewDb } from "./db";
 import { confirmSeriesWith, saveAnswerWith, type ConfirmSeriesResult, type SaveAnswerResult } from "./service";
-import { STEP_FIELD, type AnswerStep, type InterviewSuggestion, type StepValues, type TitleOption } from "./steps";
-import { suggestInterviewWith, suggestTitlesWith, type SuggestDeps } from "./suggest";
+import { STEP_FIELD, type AnswerStep, type Interview, type InterviewSuggestion, type StepValues, type TitleOption } from "./steps";
+import { loadSuggestion, suggestInterviewWith, suggestTitlesWith, type SuggestDeps } from "./suggest";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EXPIRED = "Sua sessão expirou. Entre de novo.";
@@ -71,6 +71,17 @@ export async function suggestInterview(projectId: string): Promise<InterviewSugg
   const s = await session();
   if (!s) throw new Error(EXPIRED);
   return suggestInterviewWith(s.deps, projectId);
+}
+
+/** Sugestão para a página da entrevista: a salva, ou uma tentativa única (falha não é repetida). */
+export async function loadInterviewSuggestion(
+  projectId: string,
+  interview: Interview,
+): Promise<{ suggestion: InterviewSuggestion | null; noAi: boolean }> {
+  if (typeof projectId !== "string" || !UUID.test(projectId)) throw new Error(NOT_FOUND);
+  const s = await session();
+  if (!s) throw new Error(EXPIRED);
+  return loadSuggestion(s.deps, projectId, interview);
 }
 
 /** 6 títulos da IA do usuário, ranqueados por `scoreViral` (maior primeiro). */

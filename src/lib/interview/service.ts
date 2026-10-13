@@ -91,6 +91,13 @@ export async function confirmSeriesWith(db: InterviewDb, projectId: string, inpu
   const interview: Interview = { ...base, current: nextAfter(base, EPISODES_STEP) };
   let seriesId: string | null = null;
   let claimed = false;
+  let refunded = false;
+  // A cota consumida volta uma vez só, aconteça o que acontecer depois.
+  const refundOnce = async () => {
+    if (refunded) return;
+    refunded = true;
+    await db.refundProjects(extra).catch(() => undefined);
+  };
   try {
     seriesId = await db.createSeries(project.title);
     if (!seriesId) throw new Error("series");
@@ -98,7 +105,8 @@ export async function confirmSeriesWith(db: InterviewDb, projectId: string, inpu
     if (!claimed) {
       // Outra confirmação chegou antes: desfaz esta e devolve a que ficou.
       await db.deleteSeries(seriesId);
-      await db.refundProjects(extra);
+      seriesId = null;
+      await refundOnce();
       const now = await db.getProject(projectId);
       return now?.series_id ? { ids: await db.seriesProjectIds(now.series_id) } : { error: MSG_SERIES_FAILED };
     }
@@ -118,7 +126,7 @@ export async function confirmSeriesWith(db: InterviewDb, projectId: string, inpu
   } catch {
     if (claimed) await db.releaseSeries(project.id, { title: project.title, interview: project.interview ?? {} }).catch(() => undefined);
     if (seriesId) await db.deleteSeries(seriesId).catch(() => undefined);
-    await db.refundProjects(extra).catch(() => undefined);
+    await refundOnce();
     return { error: MSG_SERIES_FAILED };
   }
 }

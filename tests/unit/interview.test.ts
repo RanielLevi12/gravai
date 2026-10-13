@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { resetMock, setMockResponse } from "@/lib/ai/mock";
+import { getMockCalls, resetMock, setMockInvalidJson, setMockResponse } from "@/lib/ai/mock";
 import { userAiFrom, type UserAi } from "@/lib/ai";
 import * as mockProvider from "@/lib/ai/mock";
 import { AiError } from "@/lib/ai/schemas";
@@ -11,7 +11,7 @@ import {
   type InterviewProject,
   type NewEpisodeProject,
 } from "@/lib/interview/service";
-import { normalizeSuggestion, suggestInterviewWith, suggestTitlesWith } from "@/lib/interview/suggest";
+import { loadSuggestion, normalizeSuggestion, suggestInterviewWith, suggestTitlesWith } from "@/lib/interview/suggest";
 
 const PALAVRAS = (n: number) => Array.from({ length: n }, (_, i) => `palavra${i + 1}`).join(" ");
 
@@ -223,6 +223,28 @@ describe("confirmSeries", () => {
     expect(db.projects.get(p.id)).toMatchObject({ series_id: null, title: "Original" });
   });
 
+  it("perdeu a corrida e a releitura falha: devolve a cota uma vez só", async () => {
+    const p = db.add({ interview: { format: "series" } });
+    let refunds = 0;
+    let reads = 0;
+    const getProject = db.getProject.bind(db);
+    db.getProject = async (id: string) => {
+      if (++reads > 1) throw new Error("rede caiu");
+      return getProject(id);
+    };
+    db.claimForSeries = async () => false;
+    const refund = db.refundProjects.bind(db);
+    db.refundProjects = async (n: number) => {
+      refunds++;
+      return refund(n);
+    };
+    const r = await confirmSeriesWith(db, p.id, EPISODIOS(3));
+    expect(r).toEqual({ error: expect.any(String) });
+    expect(refunds).toBe(1);
+    expect(db.used).toBe(1);
+    expect(db.series.size).toBe(0);
+  });
+
   it("exige pelo menos 2 episódios", async () => {
     const p = db.add({ interview: { format: "series" } });
     expect(await confirmSeriesWith(db, p.id, EPISODIOS(1))).toEqual({ error: expect.any(String) });
@@ -278,6 +300,33 @@ describe("sugestões", () => {
       { text: "D", score: 0.1 },
     ]);
     expect(db.projects.get(p.id)!.interview.titleSuggestions).toEqual(r);
+  });
+
+  it("falha da IA na sugestão é marcada e não é repetida", async () => {
+    const db = new FakeDb();
+    const p = db.add({ source_text: PALAVRAS(300) });
+    const deps = { db, ai: async () => ai };
+    setMockInvalidJson(2); // as duas tentativas de generateJson devolvem JSON inválido
+    const a = await loadSuggestion(deps, p.id, {});
+    expect(a).toEqual({ suggestion: null, noAi: false });
+    expect(getMockCalls("generateJson")).toBe(2);
+    const saved = db.projects.get(p.id)!.interview;
+    expect(saved.suggestionFailedAt).toEqual(expect.any(String));
+    expect(saved.suggestion).toBeUndefined();
+
+    const b = await loadSuggestion(deps, p.id, saved);
+    expect(b).toEqual({ suggestion: null, noAi: false });
+    expect(getMockCalls("generateJson")).toBe(2);
+  });
+
+  it("sem IA conectada, loadSuggestion devolve noAi e não marca falha", async () => {
+    const db = new FakeDb();
+    const p = db.add();
+    const noAi = async (): Promise<UserAi> => {
+      throw new AiError("Conecte", { code: "not_connected" });
+    };
+    expect(await loadSuggestion({ db, ai: noAi }, p.id, {})).toEqual({ suggestion: null, noAi: true });
+    expect(db.projects.get(p.id)!.interview.suggestionFailedAt).toBeUndefined();
   });
 
   it("sem IA conectada, suggestInterview propaga not_connected", async () => {
