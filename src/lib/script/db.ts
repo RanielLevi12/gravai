@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
 import type { InterviewProject } from "@/lib/interview/service";
 import type { Interview } from "@/lib/interview/steps";
-import type { ScriptDb } from "./generate";
+import type { BlockKind, ScriptDb } from "./generate";
+import type { BlockDb } from "./rewrite";
 
 const asJson = (v: unknown) => v as unknown as NonNullable<Json>;
 
@@ -45,6 +46,44 @@ export function supabaseScriptDb(deps: { supabase: SupabaseClient<Database>; use
         .eq("id", projectId)
         .select("id");
       return !upError && (data?.length ?? 0) > 0;
+    },
+  };
+}
+
+/** BlockDb sobre o Supabase da sessão do usuário (RLS limita aos blocos dele). */
+export function supabaseBlockDb(deps: { supabase: SupabaseClient<Database> }): BlockDb {
+  const { supabase } = deps;
+  return {
+    async blockContext(blockId) {
+      const { data: block } = await supabase
+        .from("script_blocks")
+        .select("project_id, position, kind, text")
+        .eq("id", blockId)
+        .maybeSingle();
+      if (!block) return null;
+      const [{ data: around }, { data: project }, { data: profile }] = await Promise.all([
+        supabase
+          .from("script_blocks")
+          .select("position, text")
+          .eq("project_id", block.project_id)
+          .in("position", [block.position - 1, block.position + 1]),
+        supabase.from("projects").select("interview").eq("id", block.project_id).maybeSingle(),
+        supabase.from("profiles").select("tone").maybeSingle(),
+      ]);
+      const interview = project?.interview && typeof project.interview === "object" && !Array.isArray(project.interview) ? (project.interview as Interview) : {};
+      const textAt = (position: number) => around?.find((b) => b.position === position)?.text || null;
+      return {
+        kind: block.kind as BlockKind,
+        text: block.text,
+        previous: textAt(block.position - 1),
+        next: textAt(block.position + 1),
+        cutSeconds: interview.cutSeconds ?? null,
+        tone: profile?.tone ?? null,
+      };
+    },
+    async saveBlockText(blockId, text) {
+      const { data, error } = await supabase.from("script_blocks").update({ text }).eq("id", blockId).select("id");
+      return !error && (data?.length ?? 0) > 0;
     },
   };
 }

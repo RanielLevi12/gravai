@@ -1,9 +1,11 @@
 "use server";
 
-import { checkScript, withUserAi } from "@/lib/ai";
+import { revalidatePath } from "next/cache";
+import { AiError, checkScript, withUserAi } from "@/lib/ai";
 import { createServerClient } from "@/lib/supabase/server";
-import { supabaseScriptDb } from "./db";
+import { supabaseBlockDb, supabaseScriptDb } from "./db";
 import { generateScriptWith } from "./generate";
+import { MSG_BLOCK_NOT_FOUND, rewriteBlockWith, updateBlockTextWith, type RewriteMode } from "./rewrite";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -21,4 +23,58 @@ export async function generateScript(projectId: string): Promise<void> {
     { db: supabaseScriptDb({ supabase, userId }), ai: () => withUserAi(userId), check: checkScript },
     projectId,
   );
+}
+
+const MSG_EXPIRED = "Sua sessão expirou. Entre de novo.";
+const MSG_UNAVAILABLE = "Não foi possível agora. Tente de novo.";
+
+export type ActionError = { error: string; notConnected?: boolean };
+
+/** Erros de ações voltam como valor: em produção o Next esconde a mensagem de um erro lançado. */
+function failure(e: unknown): ActionError {
+  if (e instanceof AiError) return { error: e.userMessage, ...(e.code === "not_connected" ? { notConnected: true } : {}) };
+  console.error("[script] ação falhou", e instanceof Error ? e.message : e);
+  return { error: e instanceof Error && e.message === MSG_BLOCK_NOT_FOUND ? e.message : MSG_UNAVAILABLE };
+}
+
+async function sessionUser() {
+  const supabase = await createServerClient();
+  const { data } = await supabase.auth.getUser();
+  return data.user ? { supabase, userId: data.user.id } : null;
+}
+
+/** Autosave do texto de um bloco (o cliente chama com debounce de 800 ms). */
+export async function updateBlockText(blockId: string, text: string): Promise<{ ok: true } | ActionError> {
+  if (typeof blockId !== "string" || !UUID.test(blockId)) return { error: MSG_BLOCK_NOT_FOUND };
+  const s = await sessionUser();
+  if (!s) return { error: MSG_EXPIRED };
+  try {
+    await updateBlockTextWith(supabaseBlockDb({ supabase: s.supabase }), blockId, text);
+    return { ok: true };
+  } catch (e) {
+    return failure(e);
+  }
+}
+
+/** Reescreve só aquele bloco; devolve o novo texto sem gravar (o autosave do cliente grava). */
+export async function rewriteBlock(blockId: string, mode: RewriteMode): Promise<{ text: string } | ActionError> {
+  if (typeof blockId !== "string" || !UUID.test(blockId)) return { error: MSG_BLOCK_NOT_FOUND };
+  const s = await sessionUser();
+  if (!s) return { error: MSG_EXPIRED };
+  try {
+    return await rewriteBlockWith({ db: supabaseBlockDb({ supabase: s.supabase }), ai: () => withUserAi(s.userId) }, blockId, mode);
+  } catch (e) {
+    return failure(e);
+  }
+}
+
+/** Gera o script de novo, substituindo o atual (a confirmação é feita na tela). */
+export async function regenerateScript(projectId: string): Promise<{ ok: true } | ActionError> {
+  try {
+    await generateScript(projectId);
+    revalidatePath(`/projetos/${projectId}/script`);
+    return { ok: true };
+  } catch (e) {
+    return failure(e);
+  }
 }

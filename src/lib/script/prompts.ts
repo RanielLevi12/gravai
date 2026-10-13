@@ -49,3 +49,49 @@ export function buildScriptUser(input: {
   if (problem) lines.push(`ATENÇÃO: a versão anterior falhou: ${problem}. Corrija isso.`);
   return `${lines.join("\n")}\n\nTexto-fonte:\n${input.sourceText.slice(0, SOURCE_EXCERPT)}`;
 }
+
+/** Tamanho máximo do pedido livre de reescrita. */
+export const MAX_CUSTOM = 300;
+
+export type RewriteInstruction = "shorter" | "direct" | "emotional" | "hook" | "simpler" | { custom: string };
+
+const REWRITE_INSTRUCTIONS = {
+  shorter: "Deixe mais curto: tire o que é repetido ou secundário e mantenha a ideia central.",
+  direct: "Deixe mais direto: vá ao ponto logo, sem rodeios nem introduções.",
+  emotional: "Deixe mais emocional: aproxime da vivência da pessoa que assiste, com mais sentimento e menos explicação seca.",
+  hook: "Reforce o gancho: a primeira frase precisa prender a atenção de quem está rolando o feed.",
+  simpler: "Deixe mais simples: palavras e frases curtas do dia a dia, sem termos difíceis.",
+} as const;
+
+export const REWRITE_SYSTEM = `Você reescreve UM trecho de um roteiro falado para vídeo de criador brasileiro.
+Regras:
+- Reescreva só o trecho indicado, no mesmo idioma dele, em linguagem falada e simples, mantendo o tom de voz.
+- Use o texto vizinho só para manter a continuidade: não repita nem reescreva o que está nele.
+- Não invente fatos e não escreva chamada para ação (link, WhatsApp, telefone).
+- Responda só com o JSON pedido, com o novo texto do trecho em "text".`;
+
+export function buildRewriteUser(input: {
+  kind: "opening" | "bridge" | "cut" | "closing";
+  text: string;
+  previous: string | null;
+  next: string | null;
+  instruction: RewriteInstruction;
+  tone: string | null;
+  cutSeconds: number | null;
+  problem?: string;
+}): string {
+  const { kind, text, previous, next, instruction, tone, cutSeconds, problem } = input;
+  const lines: string[] = [];
+  if (tone) lines.push(`Tom de voz: ${tone}`);
+  lines.push(`Pedido: ${typeof instruction === "string" ? REWRITE_INSTRUCTIONS[instruction] : instruction.custom.trim()}`);
+  if (kind === "cut" && cutSeconds) {
+    lines.push(
+      `Este trecho é um corte de ${cutSeconds} segundos: o novo texto deve ter cerca de ${targetWords(cutSeconds)} palavras e no máximo ${targetWords(Math.floor(cutSeconds * 1.2))}.`,
+    );
+  }
+  if (problem) lines.push(`ATENÇÃO: a versão anterior falhou: ${problem}. Corrija isso.`);
+  if (previous) lines.push(`\nTexto que vem antes (não reescreva):\n${previous}`);
+  if (next) lines.push(`\nTexto que vem depois (não reescreva):\n${next}`);
+  lines.push(`\nTrecho a reescrever:\n${text}`);
+  return lines.join("\n");
+}

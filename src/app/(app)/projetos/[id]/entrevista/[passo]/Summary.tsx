@@ -44,7 +44,7 @@ export function Summary({
       number={8}
       backHref={backHref}
       footer={
-        <Button href={`/projetos/${projectId}/script`} className={styles.full}>
+        <Button href={`/projetos/${projectId}/script`} prefetch={false} className={styles.full}>
           Gerar script
           <ArrowRight size={20} strokeWidth={2} aria-hidden />
         </Button>
