@@ -11,12 +11,15 @@ export function Summary({
   backHref,
   interview: i,
   ctaLabel,
+  ctaRemoved,
   episodeIndex,
 }: {
   projectId: string;
   backHref: string;
   interview: Interview;
   ctaLabel: string | null;
+  /** A chamada escolhida não existe mais no perfil (foi apagada). */
+  ctaRemoved: boolean;
   episodeIndex: number | null;
 }) {
   const episodes = i.episodes?.length ?? 0;
@@ -36,7 +39,7 @@ export function Summary({
     { step: "cenario", label: "Cenário", value: i.scenery?.mode === "ai" ? "Fundo criado com IA" : "Cenário natural" },
     { step: "titulos", label: "Título", value: i.titles?.chosen ? `“${i.titles.chosen}”` : "" },
     { step: "capa", label: "Capa", value: i.cover === "ai" ? "Capa criada com IA" : "Quadro do vídeo + título" },
-    { step: "cta", label: "Chamada no final", value: ctaLabel ?? "Sem chamada" },
+    { step: "cta", label: "Chamada no final", value: ctaRemoved ? "Chamada removida do perfil" : (ctaLabel ?? "Sem chamada") },
   ];
 
   return (
@@ -52,6 +55,11 @@ export function Summary({
     >
       <h1 className={styles.question}>Tudo certo?</h1>
       <p className={styles.lead}>Toque numa resposta para mudar.</p>
+      {ctaRemoved ? (
+        <p className={styles.notice} role="note">
+          A chamada que você escolheu foi removida do seu perfil. Toque em “Chamada no final” e escolha de novo, ou o script sai sem ela.
+        </p>
+      ) : null}
       <ul className={styles.summary} aria-label="Suas respostas">
         {rows.map((r) => (
           <li key={r.step}>

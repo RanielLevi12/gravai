@@ -66,7 +66,7 @@ export default async function EntrevistaPage({ params }: { params: Promise<{ id:
     const { data: ctas } = await supabase.from("ctas").select("id, kind, label");
     const cta = ctas?.find((c) => c.id === interview.ctaId);
     const ctaLabel = cta ? cta.label || (isCtaKind(cta.kind) ? DEFAULT_CTA_LABELS[cta.kind] : "Chamada") : null;
-    return <Summary projectId={id} backHref={backHref} interview={interview} ctaLabel={ctaLabel} episodeIndex={project.episode_index} />;
+    return <Summary projectId={id} backHref={backHref} interview={interview} ctaLabel={ctaLabel} ctaRemoved={Boolean(interview.ctaId) && !cta} episodeIndex={project.episode_index} />;
   }
 
   // Sugestão da IA: uma vez, logo depois do texto-fonte; falha não é repetida a cada passo.

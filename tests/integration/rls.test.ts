@@ -135,3 +135,20 @@ describe("consume_usage", () => {
     expect(row2!.transcription_seconds).toBe(0);
   });
 });
+
+describe("syncCtas (ids dos CTAs)", () => {
+  it("editar o perfil mantém o id do CTA escolhido; só o removido some", async () => {
+    const { syncCtas } = await import("@/lib/profile/sync");
+    const u = await newUser("ctas");
+    await syncCtas(u.client, u.id, [
+      { kind: "whatsapp", label: "WhatsApp", value: "11999990000" },
+      { kind: "bio", label: "Instagram", value: "@eu" },
+    ]);
+    const before = (await u.client.from("ctas").select("id, kind")).data!;
+    const wa = before.find((c) => c.kind === "whatsapp")!.id;
+
+    await syncCtas(u.client, u.id, [{ kind: "whatsapp", label: "WhatsApp", value: "11988880000" }]);
+    const after = (await u.client.from("ctas").select("id, kind, value")).data!;
+    expect(after).toEqual([{ id: wa, kind: "whatsapp", value: "11988880000" }]);
+  });
+});

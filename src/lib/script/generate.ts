@@ -162,6 +162,7 @@ export async function generateScriptWith(deps: ScriptDeps, projectId: string): P
   }));
 
   const checks: string[] = [];
+  if (i.ctaId && !cta) checks.push("A chamada para ação que você escolheu foi removida do perfil; o script saiu sem ela.");
   const full = blocks.map((b) => b.text).join("\n\n");
   try {
     const r = await deps.check(full, { tone: profile?.tone ?? "", ...(ctaLine ? { cta: ctaLine } : {}) });

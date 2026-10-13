@@ -99,6 +99,13 @@ describe("generateScript", () => {
     expect(db.blocks.find((b) => b.cut_index === 1)!.descriptions.reels).toBe("Dica 1 #dicas");
   });
 
+  it("CTA escolhido que não existe mais: script sai sem ele e avisa em scriptChecks", async () => {
+    const db = new FakeScriptDb(INTERVIEW);
+    db.ctaRow = null;
+    await generateScriptWith(deps(db), "p1");
+    expect(db.project.interview.scriptChecks).toEqual([expect.stringContaining("foi removida do perfil")]);
+  });
+
   it("corte longo demais: tenta duas vezes e grava o aviso", async () => {
     const db = new FakeScriptDb(INTERVIEW);
     const longo = {
