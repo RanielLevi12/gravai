@@ -89,3 +89,65 @@ test("gerar de novo pede confirmação antes de substituir o script", async ({ p
   await expect(bloco(page, "Corte 1")).not.toContainText("Texto que vai ser substituído.");
   await expect(page.getByText("Corte 5", { exact: true })).toBeVisible();
 });
+
+test("um refresh do servidor não apaga o que o usuário está digitando", async ({ page }) => {
+  await novoProjetoNoScript(page, "script-refresh");
+  const corte1 = bloco(page, "Corte 1");
+  await corte1.getByRole("button", { name: "Editar" }).click();
+  const editor = corte1.getByRole("textbox", { name: "Texto do Corte 1" });
+  await editor.fill("Digitando antes do refresh.");
+  // Mesmo efeito de um refresh de sessão: a página do servidor chega de novo com o texto antigo.
+  await page.evaluate(() => (window as unknown as { next: { router: { refresh(): void } } }).next.router.refresh());
+  await page.waitForTimeout(1500);
+  await expect(editor).toHaveValue("Digitando antes do refresh.");
+  await expect(page.getByText("Salvo", { exact: true })).toBeVisible();
+});
+
+test("se gerar de novo falhar, a edição continua na tela e no banco", async ({ page }) => {
+  await novoProjetoNoScript(page, "script-falha");
+  const corte1 = bloco(page, "Corte 1");
+  await corte1.getByRole("button", { name: "Editar" }).click();
+  await corte1.getByRole("textbox", { name: "Texto do Corte 1" }).fill("Edição que não pode se perder.");
+  // O 1º POST (gravar a edição) passa; o 2º (gerar o script) cai.
+  let posts = 0;
+  await page.route(/\/script$/, (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    return ++posts === 1 ? route.continue() : route.abort();
+  });
+  await page.getByRole("button", { name: "Gerar script de novo" }).click();
+  await page.getByRole("dialog", { name: "Gerar o script de novo?" }).getByRole("button", { name: "Continuar" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Não foi possível gerar agora" })).toBeVisible();
+  await page.unroute(/\/script$/);
+  await page.getByRole("dialog").getByRole("button", { name: "Cancelar" }).click();
+  await expect(bloco(page, "Corte 1")).toContainText("Edição que não pode se perder.");
+  await page.reload();
+  await expect(bloco(page, "Corte 1")).toContainText("Edição que não pode se perder.");
+});
+
+test("durante a geração Esc não fecha a confirmação e o Desfazer não sobrevive ao script novo", async ({ page }) => {
+  await novoProjetoNoScript(page, "script-esc");
+  const corte1 = bloco(page, "Corte 1");
+  const original = (await corte1.locator("p").first().innerText()).trim();
+
+  await corte1.getByRole("button", { name: "Reescrever" }).click();
+  const folha = page.getByRole("dialog", { name: "Reescrever Corte 1" });
+  await folha.getByText("Mais curto", { exact: true }).click();
+  await folha.getByRole("button", { name: "Reescrever" }).click();
+  await expect(corte1).toContainText(TEXTO_REESCRITO);
+  await expect(page.getByRole("button", { name: "Desfazer" })).toBeVisible();
+
+  await page.route(/\/script$/, async (route) => {
+    if (route.request().method() === "POST") await new Promise((r) => setTimeout(r, 1200));
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Gerar script de novo" }).click();
+  const confirmacao = page.getByRole("dialog", { name: "Gerar o script de novo?" });
+  await confirmacao.getByRole("button", { name: "Continuar" }).click();
+  await expect(confirmacao.getByRole("button", { name: "Gerando…" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(confirmacao).toBeVisible();
+
+  await expect(confirmacao).toBeHidden({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: "Desfazer" })).toHaveCount(0);
+  await expect(bloco(page, "Corte 1")).toContainText(original);
+});

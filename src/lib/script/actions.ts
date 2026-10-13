@@ -69,11 +69,14 @@ export async function rewriteBlock(blockId: string, mode: RewriteMode): Promise<
 }
 
 /** Gera o script de novo, substituindo o atual (a confirmação é feita na tela). */
-export async function regenerateScript(projectId: string): Promise<{ ok: true } | ActionError> {
+export async function regenerateScript(projectId: string): Promise<{ ok: true; texts: Record<string, string> } | ActionError> {
   try {
     await generateScript(projectId);
+    // Os textos novos voltam na resposta: o cliente troca a tela por eles sem depender de a página refazer.
+    const supabase = await createServerClient();
+    const { data } = await supabase.from("script_blocks").select("id, text").eq("project_id", projectId);
     revalidatePath(`/projetos/${projectId}/script`);
-    return { ok: true };
+    return { ok: true, texts: Object.fromEntries((data ?? []).map((b) => [b.id, b.text])) };
   } catch (e) {
     return failure(e);
   }

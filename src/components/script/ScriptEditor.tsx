@@ -38,13 +38,6 @@ export function ScriptEditor({
   warnings: string[];
 }) {
   const [texts, setTexts] = useState(() => textsOf(blocks));
-  // Blocos novos vindos do servidor (script gerado de novo) substituem o que está na tela. Edições e
-  // reescritas não refazem a página, então não chegam aqui.
-  const [seenBlocks, setSeenBlocks] = useState(blocks);
-  if (seenBlocks !== blocks) {
-    setSeenBlocks(blocks);
-    setTexts(textsOf(blocks));
-  }
   const [rewriting, setRewriting] = useState<EditorBlock | null>(null);
   const [undo, setUndo] = useState<{ id: string; text: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -66,7 +59,8 @@ export function ScriptEditor({
 
   async function rewrite(mode: RewriteInstruction): Promise<ActionError | null> {
     const block = rewriting!;
-    await autosave.flush(block.id); // a IA lê o texto salvo: tem que ser o que está na tela
+    // A IA lê o texto salvo: tem que ser o que está na tela.
+    if (!(await autosave.flush(block.id))) return { error: "Não consegui salvar suas edições antes de reescrever. Tente de novo." };
     const r = await rewriteBlock(block.id, mode);
     if ("error" in r) return r;
     setUndo({ id: block.id, text: texts[block.id] });
@@ -79,11 +73,22 @@ export function ScriptEditor({
   async function regenerate() {
     setRegenerating(true);
     setRegenError(null);
-    await autosave.settle(); // edição pendente não pode sobrescrever o script novo
+    // Se a geração falhar, o banco precisa ter o que está na tela.
+    if (!(await autosave.flushAll())) {
+      setRegenError({ error: "Não consegui salvar suas edições antes de gerar. Tente de novo." });
+      setRegenerating(false);
+      return;
+    }
     try {
       const r = await regenerateScript(projectId);
       if ("error" in r) setRegenError(r);
-      else setConfirming(false); // a página é refeita com os blocos novos
+      else {
+        await autosave.reset(); // o script antigo saiu: nada dele pode ser gravado por cima do novo
+        setTexts(r.texts);
+        setUndo(null); // "Desfazer" é do texto antigo
+        setToast(null);
+        setConfirming(false);
+      }
     } catch {
       setRegenError({ error: "Não foi possível gerar agora. Tente de novo." });
     }
@@ -150,7 +155,7 @@ export function ScriptEditor({
         onSubmit={rewrite}
       />
 
-      <Sheet open={confirming} onClose={() => !regenerating && setConfirming(false)} title="Gerar o script de novo?">
+      <Sheet open={confirming} onClose={() => setConfirming(false)} busy={regenerating} title="Gerar o script de novo?">
         <p className={styles.confirmText}>Isso substitui o script atual. Continuar?</p>
         {regenError ? (
           <p role="alert" className={styles.sheetError}>

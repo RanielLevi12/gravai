@@ -11,11 +11,14 @@ export function Sheet({
   open,
   onClose,
   title,
+  busy = false,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** Enquanto ocupada, Esc e toque no fundo não fecham a folha. */
+  busy?: boolean;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -33,10 +36,13 @@ export function Sheet({
       ref={ref}
       className={styles.sheet}
       aria-labelledby={titleId}
+      onCancel={(e) => {
+        if (busy) e.preventDefault();
+      }}
       onClose={onClose}
       onClick={(e) => {
         // Toque no fundo escurecido fecha; o painel ocupa o resto do diálogo.
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && !busy) onClose();
       }}
     >
       {open ? (
