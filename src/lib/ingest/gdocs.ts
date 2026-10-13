@@ -4,7 +4,7 @@ const INVALID = "Link do Google Docs inválido. Cole o endereço completo do doc
 const PRIVATE = "Esse documento não está público. No Google Docs, use Compartilhar → Qualquer pessoa com o link.";
 
 export async function extractGdocs(url: string | undefined): Promise<string> {
-  const id = /^https:\/\/docs\.google\.com\/document\/d\/([A-Za-z0-9_-]+)/.exec((url ?? "").trim())?.[1];
+  const id = /^https:\/\/docs\.google\.com\/document\/(?:u\/\d+\/)?d\/([A-Za-z0-9_-]+)/.exec((url ?? "").trim())?.[1];
   if (!id) throw new IngestError(INVALID);
   let res: Response;
   try {

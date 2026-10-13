@@ -18,8 +18,12 @@ export async function inspectAudio(file: File): Promise<{ seconds: number; buffe
   }
 }
 
-export async function extractAudio(file: File, ai: UserAi): Promise<{ text: string; seconds: number }> {
-  const { seconds, buffer } = await inspectAudio(file);
+export async function extractAudio(file: File, ai: UserAi, knownSeconds?: number): Promise<{ text: string; seconds: number }> {
+  if (file.size > MAX_AUDIO_BYTES) throw new IngestError(AUDIO_TOO_BIG);
+  let seconds = knownSeconds;
+  let buffer: Buffer;
+  if (seconds === undefined) ({ seconds, buffer } = await inspectAudio(file));
+  else buffer = Buffer.from(await file.arrayBuffer());
   const { text } = await ai.transcribeAudio(buffer, file.name);
   if (text.trim().length < 1) throw new IngestError("Não encontrei fala neste áudio. Tente gravar de novo, mais perto do microfone.");
   return { text, seconds };

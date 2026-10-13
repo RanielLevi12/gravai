@@ -117,4 +117,74 @@ describe("POST /api/projects (createProject)", () => {
     }
     expect(await usage(u)).toBeNull();
   });
+
+  it("áudio de 26 MB sem IA conectada: mensagem de tamanho, não 412", async () => {
+    const u = await newUser("big");
+    delete process.env.AI_MOCK;
+    try {
+      const big = new File([new Uint8Array(26 * 1024 * 1024)], "g.mp3", { type: "audio/mpeg" });
+      const r = await post(u, { kind: "audio", files: big });
+      expect(r.status).toBe(422);
+      expect(String(r.body.error)).toContain("Áudio acima de 25 MB");
+    } finally {
+      process.env.AI_MOCK = "1";
+    }
+  });
+
+  it("mais de um áudio: 422", async () => {
+    const u = await newUser("dois");
+    const form = new FormData();
+    form.append("kind", "audio");
+    form.append("files", fx("ideia.mp3", "audio/mpeg"));
+    form.append("files", fx("ideia.mp3", "audio/mpeg"));
+    const r = await createProject({ supabase: u.client, admin, userId: u.id }, form);
+    expect(r.status).toBe(422);
+    expect(r.body.error).toBe("Envie um áudio por vez.");
+  });
+
+  it("path no Storage do próprio usuário: 201", async () => {
+    const u = await newUser("path");
+    const p = `${u.id}/${crypto.randomUUID()}/nota.txt`;
+    const up = await u.client.storage.from("sources").upload(p, new Blob(["Texto vindo do Storage"], { type: "text/plain" }));
+    expect(up.error).toBeNull();
+    const r = await post(u, { kind: "txt", paths: p });
+    expect(r.status).toBe(201);
+    const { data } = await u.client.from("projects").select("source_text").eq("id", r.body.id as string).single();
+    expect(data?.source_text).toBe("Texto vindo do Storage");
+  });
+
+  it("path de outro usuário ou com '..': 422 sem consumir cota", async () => {
+    const a = await newUser("dono");
+    const b = await newUser("intruso");
+    const p = `${a.id}/${crypto.randomUUID()}/segredo.txt`;
+    await a.client.storage.from("sources").upload(p, new Blob(["segredo"], { type: "text/plain" }));
+    const r = await post(b, { kind: "txt", paths: p });
+    expect(r.status).toBe(422);
+    const r2 = await post(b, { kind: "txt", paths: `${b.id}/../${a.id}/x/segredo.txt` });
+    expect(r2.status).toBe(422);
+    expect(await usage(b)).toBeNull();
+  });
+
+  it("insert que falha estorna a cota (500)", async () => {
+    const u = await newUser("insfail");
+    expect((await post(u, { kind: "text", text: "um" })).status).toBe(201);
+    const before = await usage(u);
+    const failing = new Proxy(u.client, {
+      get(t, prop) {
+        if (prop === "from")
+          return (table: string) =>
+            table === "projects"
+              ? { insert: () => ({ select: () => ({ single: async () => ({ data: null, error: { message: "boom" } }) }) }) }
+              : t.from(table);
+        const v = Reflect.get(t, prop);
+        return typeof v === "function" ? v.bind(t) : v;
+      },
+    });
+    const form = new FormData();
+    form.append("kind", "text");
+    form.append("text", "dois");
+    const r = await createProject({ supabase: failing as SupabaseClient, admin, userId: u.id }, form);
+    expect(r.status).toBe(500);
+    expect(await usage(u)).toEqual(before);
+  });
 });

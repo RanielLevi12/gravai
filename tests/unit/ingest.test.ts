@@ -105,4 +105,19 @@ describe("extractText", () => {
     expect(r.text).toBe("Texto do documento público");
     expect(String(f.mock.calls[0][0])).toBe("https://docs.google.com/document/d/abc123/export?format=txt");
   });
+
+  it("gdocs com /u/0/ no caminho", async () => {
+    const f = vi.fn(async (_u: string) => new Response("ok texto", { status: 200, headers: { "content-type": "text/plain" } }));
+    vi.stubGlobal("fetch", f);
+    await extractText({ kind: "gdocs", url: "https://docs.google.com/document/u/0/d/xyz_9-A/edit" }, ai);
+    expect(String(f.mock.calls[0][0])).toBe("https://docs.google.com/document/d/xyz_9-A/export?format=txt");
+  });
+
+  it("foto HEIC e foto acima de 10 MB são recusadas", async () => {
+    const heic = new File([new Uint8Array(10)], "foto.heic", { type: "image/heic" });
+    await expect(extractText({ kind: "images", files: [heic] }, ai)).rejects.toThrow("Formato HEIC não suportado");
+    const big = new File([new Uint8Array(10 * 1024 * 1024 + 1)], "g.jpg", { type: "image/jpeg" });
+    await expect(extractText({ kind: "images", files: [big] }, ai)).rejects.toThrow("Foto acima de 10 MB");
+    expect(getMockCalls("ocrImages")).toBe(0);
+  });
 });

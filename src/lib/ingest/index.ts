@@ -8,14 +8,15 @@ import { extractPptx } from "./pptx";
 import { IngestError, clip, extractPlain, readTxt } from "./text";
 
 export { IngestError, MAX_SOURCE_CHARS } from "./text";
-export { MAX_AUDIO_BYTES, inspectAudio } from "./audio";
+export { AUDIO_TOO_BIG, MAX_AUDIO_BYTES, inspectAudio } from "./audio";
+export { validateImages } from "./image";
 
 export type SourceKind = "text" | "images" | "pdf" | "docx" | "pptx" | "txt" | "gdocs" | "audio";
 export const SOURCE_KINDS: SourceKind[] = ["text", "images", "pdf", "docx", "pptx", "txt", "gdocs", "audio"];
 /** Tipos que podem precisar da IA do usuário (OCR ou transcrição). */
 export const AI_KINDS: SourceKind[] = ["images", "pdf", "audio"];
 
-export type ExtractInput = { kind: SourceKind; files?: File[]; text?: string; url?: string };
+export type ExtractInput = { kind: SourceKind; files?: File[]; text?: string; url?: string; audioSeconds?: number };
 export type Extracted = { text: string; truncated: boolean; audioSeconds?: number };
 
 const EMPTY = "Não encontrei texto neste material.";
@@ -55,7 +56,7 @@ export async function extractText(input: ExtractInput, ai?: UserAi): Promise<Ext
       break;
     case "audio": {
       if (!ai) throw new IngestError("Conecte sua conta de IA para transcrever áudio.");
-      const r = await extractAudio(firstFile(input), ai);
+      const r = await extractAudio(firstFile(input), ai, input.audioSeconds);
       raw = r.text;
       audioSeconds = r.seconds;
       break;

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AiError, withUserAi, type UserAi } from "@/lib/ai";
 import { consumeUsage, quotaMessage, refundUsage } from "@/lib/usage";
-import { AI_KINDS, SOURCE_KINDS, extractText, inspectAudio, IngestError, type SourceKind } from "./index";
+import { AI_KINDS, AUDIO_TOO_BIG, MAX_AUDIO_BYTES, SOURCE_KINDS, extractText, inspectAudio, IngestError, validateImages, type SourceKind } from "./index";
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MAX_FILES = 10;
@@ -30,14 +30,39 @@ export async function createProject(
   const kind = String(form.get("kind") ?? "") as SourceKind;
   if (!SOURCE_KINDS.includes(kind)) return { status: 400, body: { error: "Tipo de material inválido." } };
 
-  const files = form.getAll("files").filter((f): f is File => typeof f !== "string" && f.size > 0);
+  const uploaded = form.getAll("files").filter((f): f is File => typeof f !== "string" && f.size > 0);
+  const paths = form.getAll("paths").filter((p): p is string => typeof p === "string" && p !== "");
   const text = typeof form.get("text") === "string" ? (form.get("text") as string) : undefined;
   const url = typeof form.get("url") === "string" ? (form.get("url") as string) : undefined;
 
-  if (files.length > MAX_FILES) return { status: 422, body: { error: `Envie no máximo ${MAX_FILES} arquivos.` } };
-  if (kind !== "audio" && files.some((f) => f.size > MAX_FILE_BYTES))
-    return { status: 422, body: { error: "Arquivo acima de 25 MB. Envie um arquivo menor." } };
+  if (uploaded.length + paths.length > MAX_FILES)
+    return { status: 422, body: { error: `Envie no máximo ${MAX_FILES} arquivos.` } };
+  if (kind === "audio" && uploaded.length + paths.length > 1)
+    return { status: 422, body: { error: "Envie um áudio por vez." } };
   if ((text?.length ?? 0) > MAX_PASTED_CHARS) return { status: 422, body: { error: "Texto grande demais para colar." } };
+
+  // Arquivos já enviados direto ao Storage: caminho estrito na pasta do próprio usuário.
+  const files = [...uploaded];
+  const pathRe = new RegExp(`^${userId}/[0-9a-f-]{36}/[^/\\\\]{1,200}$`, "i");
+  for (const p of paths) {
+    if (p.includes("..") || !pathRe.test(p)) return { status: 422, body: { error: "Arquivo enviado inválido. Tente enviar de novo." } };
+    const { data: blob, error } = await supabase.storage.from("sources").download(p);
+    if (error || !blob) return { status: 422, body: { error: "Não encontrei o arquivo enviado. Tente enviar de novo." } };
+    files.push(new File([blob], p.split("/").pop()!, { type: blob.type }));
+  }
+
+  // Limites de tamanho antes de qualquer IA ou cota.
+  if (kind === "audio") {
+    if (files.some((f) => f.size > MAX_AUDIO_BYTES)) return { status: 422, body: { error: AUDIO_TOO_BIG } };
+  } else if (kind === "images") {
+    try {
+      validateImages(files);
+    } catch (e) {
+      return { status: 422, body: { error: e instanceof IngestError ? e.message : GENERIC } };
+    }
+  } else if (files.some((f) => f.size > MAX_FILE_BYTES)) {
+    return { status: 422, body: { error: "Arquivo acima de 25 MB. Envie um arquivo menor." } };
+  }
 
   // PDF exige conexão de IA de antemão (simples; só o escaneado usaria OCR).
   let ai: UserAi | undefined;
@@ -62,12 +87,16 @@ export async function createProject(
     }
   }
 
-  const ok = await consumeUsage(supabase, 1, audioSeconds);
+  let ok: boolean;
+  try {
+    ok = await consumeUsage(supabase, 1, audioSeconds);
+  } catch {
+    return { status: 500, body: { error: "Não foi possível criar o projeto agora. Tente de novo." } };
+  }
   if (!ok) return { status: 402, body: { error: await quotaMessage(supabase, audioSeconds) } };
-
   const refund = () => refundUsage(admin, userId, 1, audioSeconds).catch(() => undefined);
   try {
-    const r = await extractText({ kind, files, text, url }, ai);
+    const r = await extractText({ kind, files, text, url, audioSeconds: kind === "audio" ? audioSeconds : undefined }, ai);
     const { data, error } = await supabase
       .from("projects")
       .insert({
