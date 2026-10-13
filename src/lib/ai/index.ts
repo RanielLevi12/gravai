@@ -3,7 +3,7 @@ import { z } from "zod";
 import { AiError, toStrictJsonSchema, stripOptionalNulls, type OcrImage, type ScriptCheck, type Transcription } from "./schemas";
 
 export { AiError } from "./schemas";
-export type { OcrImage, ScriptCheck, Transcription } from "./schemas";
+export type { AiErrorCode, OcrImage, ScriptCheck, Transcription } from "./schemas";
 
 const useMock = () => {
   const mock = process.env.AI_MOCK === "1";
@@ -13,27 +13,14 @@ const useMock = () => {
   return mock;
 };
 
-export async function ocrImages(images: OcrImage[]): Promise<string> {
-  return useMock() ? (await import("./mock")).ocrImages(images) : (await import("./anthropic")).ocrImages(images);
-}
-
-export async function ocrPdf(pdf: Buffer): Promise<string> {
-  return useMock() ? (await import("./mock")).ocrPdf(pdf) : (await import("./anthropic")).ocrPdf(pdf);
-}
-
-export async function transcribeAudio(file: Buffer, filename: string): Promise<Transcription> {
-  return useMock()
-    ? (await import("./mock")).transcribeAudio(file, filename)
-    : (await import("./openai")).transcribeAudio(file, filename);
-}
+type RawJson = (jsonSchema: Record<string, unknown>, system: string, user: string) => Promise<string>;
 
 /** Saída estruturada validada por zod; uma nova tentativa se falhar; depois AiError. */
-export async function generateJson<T>(schema: z.ZodType<T>, system: string, user: string): Promise<T> {
-  const provider = useMock() ? await import("./mock") : await import("./openai");
+async function generateJsonWith<T>(rawJson: RawJson, schema: z.ZodType<T>, system: string, user: string): Promise<T> {
   const jsonSchema = toStrictJsonSchema(schema);
   const { $schema: _s, ...original } = z.toJSONSchema(schema) as Record<string, unknown>;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const raw = await provider.rawJson(jsonSchema, system, user);
+    const raw = await rawJson(jsonSchema, system, user);
     try {
       const parsed = schema.safeParse(stripOptionalNulls(JSON.parse(raw), original));
       if (parsed.success) return parsed.data;
@@ -41,9 +28,44 @@ export async function generateJson<T>(schema: z.ZodType<T>, system: string, user
       // JSON inválido: tenta de novo
     }
   }
-  throw new AiError();
+  throw new AiError(undefined, { code: "invalid_output" });
 }
 
+export type UserAi = {
+  ocrImages(images: OcrImage[]): Promise<string>;
+  ocrPdf(pdf: Buffer): Promise<string>;
+  transcribeAudio(file: Buffer, filename: string): Promise<Transcription>;
+  generateJson<T>(schema: z.ZodType<T>, system: string, user: string): Promise<T>;
+};
+
+/**
+ * IA cobrada na conta OpenRouter do usuário. Sem conexão → AiError code 'not_connected'.
+ * Com AI_MOCK=1 devolve o mock sem exigir conexão.
+ */
+export async function withUserAi(userId: string): Promise<UserAi> {
+  const provider = useMock()
+    ? await import("./mock")
+    : await (async () => {
+        const key = await (await import("./keys")).getUserAiKey(userId);
+        if (!key) throw new AiError("Conecte sua conta de IA para continuar.", { code: "not_connected" });
+        return (await import("./openrouter")).createOpenRouterAi(key);
+      })();
+  return userAiFrom(provider);
+}
+
+type Provider = Omit<UserAi, "generateJson"> & { rawJson: RawJson };
+
+/** Liga um provedor (mock ou OpenRouter) ao pipeline de generateJson. Uso interno e no smoke. */
+export function userAiFrom(provider: Provider): UserAi {
+  return {
+    ocrImages: (images) => provider.ocrImages(images),
+    ocrPdf: (pdf) => provider.ocrPdf(pdf),
+    transcribeAudio: (file, filename) => provider.transcribeAudio(file, filename),
+    generateJson: (schema, system, user) => generateJsonWith(provider.rawJson, schema, system, user),
+  };
+}
+
+/** Julgamentos globais (jev, chave do Gravaí). */
 export async function scoreViral(titles: string[], context: string): Promise<number[]> {
   return useMock()
     ? (await import("./mock")).scoreViral(titles, context)

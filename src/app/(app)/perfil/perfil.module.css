@@ -67,6 +67,44 @@ a.row:hover,
     0 0 0 5px var(--sky);
 }
 
+.secao {
+  display: grid;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.secaoTitulo {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.textoIa {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.aviso,
+.avisoErro {
+  margin: 0;
+  font-size: 14px;
+}
+
+.aviso {
+  color: var(--ink);
+}
+
+.avisoErro {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.acaoIa {
+  width: 100%;
+}
+
 .sair {
   margin-top: auto;
   padding-top: var(--space-lg);

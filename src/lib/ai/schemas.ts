@@ -1,15 +1,23 @@
 import { z } from "zod";
 
-/** Erro da camada de IA. `userMessage` é genérica e segura para mostrar ao usuário. */
+export type AiErrorCode = "not_connected" | "provider" | "invalid_output";
+
+/**
+ * Erro da camada de IA. `userMessage` é genérica e segura para mostrar ao usuário.
+ * `code`: not_connected = usuário sem conta de IA conectada; provider = o provedor falhou;
+ * invalid_output = a IA respondeu fora do formato.
+ */
 export class AiError extends Error {
   userMessage: string;
+  code?: AiErrorCode;
   constructor(
     userMessage = "A IA não respondeu como esperado. Tente de novo.",
-    options?: { cause?: unknown },
+    options?: { cause?: unknown; code?: AiErrorCode },
   ) {
-    super(userMessage, options);
+    super(userMessage, options?.cause !== undefined ? { cause: options.cause } : undefined);
     this.name = "AiError";
     this.userMessage = userMessage;
+    this.code = options?.code;
   }
 }
 

@@ -3,15 +3,10 @@ import { z } from "zod";
 
 process.env.AI_MOCK = "1";
 
-import {
-  AiError,
-  checkScript,
-  generateJson,
-  ocrImages,
-  ocrPdf,
-  scoreViral,
-  transcribeAudio,
-} from "@/lib/ai";
+const keys = vi.hoisted(() => ({ value: null as string | null }));
+vi.mock("@/lib/ai/keys", () => ({ getUserAiKey: async () => keys.value }));
+
+import { AiError, checkScript, scoreViral, withUserAi, type OcrImage } from "@/lib/ai";
 import { stripNulls, toStrictJsonSchema } from "@/lib/ai/schemas";
 import {
   getMockCalls,
@@ -20,7 +15,18 @@ import {
   setMockResponse,
 } from "@/lib/ai/mock";
 
-beforeEach(() => resetMock());
+const UID = "11111111-1111-4111-8111-111111111111";
+// Funções por usuário vêm de withUserAi; com AI_MOCK=1 não exigem conexão.
+const generateJson = <T,>(schema: z.ZodType<T>, system: string, user: string) =>
+  withUserAi(UID).then((ai) => ai.generateJson(schema, system, user));
+const ocrImages = (images: OcrImage[]) => withUserAi(UID).then((ai) => ai.ocrImages(images));
+const ocrPdf = (pdf: Buffer) => withUserAi(UID).then((ai) => ai.ocrPdf(pdf));
+const transcribeAudio = (f: Buffer, n: string) => withUserAi(UID).then((ai) => ai.transcribeAudio(f, n));
+
+beforeEach(() => {
+  resetMock();
+  keys.value = null;
+});
 afterEach(() => resetMock());
 
 describe("camada de IA com mock", () => {
@@ -134,5 +140,36 @@ describe("stripOptionalNulls", () => {
     expect(await generateJson(sch, "s", "u")).toEqual({
       itens: [{ k: "a", m: null }, { k: "b", x: 2, m: "z" }],
     });
+  });
+});
+
+describe("withUserAi", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("sem conexão e sem mock → AiError code 'not_connected'", async () => {
+    vi.stubEnv("AI_MOCK", "");
+    const err = await withUserAi(UID).catch((e) => e);
+    expect(err).toBeInstanceOf(AiError);
+    expect(err.code).toBe("not_connected");
+    expect(err.userMessage).toBe("Conecte sua conta de IA para continuar.");
+  });
+
+  it("com AI_MOCK=1 funciona sem conexão", async () => {
+    const ai = await withUserAi(UID);
+    expect(await ai.ocrPdf(Buffer.from("x"))).toBeTypeOf("string");
+    expect(await ai.generateJson(z.object({ a: z.number() }), "s", "u")).toEqual({ a: 1 });
+  });
+
+  it("com conexão e sem mock devolve as quatro funções", async () => {
+    vi.stubEnv("AI_MOCK", "");
+    keys.value = "sk-or-v1-x";
+    const ai = await withUserAi(UID);
+    expect(Object.keys(ai).sort()).toEqual(["generateJson", "ocrImages", "ocrPdf", "transcribeAudio"]);
+  });
+
+  it("JSON inválido duas vezes → code 'invalid_output'", async () => {
+    setMockInvalidJson(2);
+    const err = await generateJson(z.object({ a: z.number() }), "s", "u").catch((e) => e);
+    expect(err.code).toBe("invalid_output");
   });
 });

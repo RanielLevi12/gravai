@@ -53,6 +53,10 @@ test("magic link, onboarding completo e perfil", async ({ page }) => {
   await expect(page.getByText("Descontraído")).toBeVisible();
   await expect(page.getByText("CTAs salvos (1)")).toBeVisible();
   await expect(page.getByText("finanças pessoais")).toBeVisible();
+
+  // Sua IA: sem conexão, oferece conectar pelo OpenRouter (rota do servidor)
+  await expect(page.getByRole("heading", { name: "Sua IA" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Conectar sua IA" })).toHaveAttribute("href", "/api/ai/connect");
 });
 
 test("pular o onboarding leva a /projetos e o próximo login não volta a ele", async ({ page }) => {

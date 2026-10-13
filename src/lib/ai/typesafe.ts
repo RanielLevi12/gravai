@@ -43,7 +43,7 @@ export async function scoreViral(titles: string[], context: string): Promise<num
     });
   } catch (e) {
     if (e instanceof AiError) throw e;
-    throw new AiError(undefined, { cause: e });
+    throw new AiError(undefined, { code: "provider", cause: e });
   }
 }
 
@@ -66,6 +66,6 @@ export async function checkScript(
     return { toneOk: clamp(a.toneOk.noul), ctaPresent: opts.cta ? clamp(a.ctaPresent.noul) : null };
   } catch (e) {
     if (e instanceof AiError) throw e;
-    throw new AiError(undefined, { cause: e });
+    throw new AiError(undefined, { code: "provider", cause: e });
   }
 }
