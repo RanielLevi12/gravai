@@ -39,4 +39,5 @@
   margin: 0;
   font-size: 13px;
   color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
 }

@@ -1,34 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-
-// Mailpit do Supabase local (porta de [local_smtp] em supabase/config.toml).
-const MAILPIT = "http://127.0.0.1:58324/api/v1";
-
-type MailpitList = { messages: { ID: string }[] };
-
-/** Espera chegar um e-mail novo para o endereço e devolve o link de acesso dele. */
-async function esperarLink(email: string, jaVistos: Set<string>): Promise<{ id: string; link: string }> {
-  for (let i = 0; i < 40; i++) {
-    const res = await fetch(`${MAILPIT}/search?query=${encodeURIComponent(`to:${email}`)}`);
-    const { messages } = (await res.json()) as MailpitList;
-    const novo = messages.find((m) => !jaVistos.has(m.ID));
-    if (novo) {
-      const msg = (await (await fetch(`${MAILPIT}/message/${novo.ID}`)).json()) as { HTML: string };
-      const href = /href="([^"]+)"/.exec(msg.HTML)?.[1];
-      if (!href) throw new Error("e-mail sem link de acesso");
-      return { id: novo.ID, link: href.replaceAll("&amp;", "&") };
-    }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  throw new Error(`nenhum e-mail novo para ${email}`);
-}
-
-async function pedirLink(page: Page, email: string) {
-  await page.goto("/entrar");
-  await expect(page.getByRole("heading", { name: "Entre no Gravaí" })).toBeVisible();
-  await page.getByLabel("E-mail").fill(email);
-  await page.getByRole("button", { name: "Receber link de acesso" }).click();
-  await expect(page.getByText("Enviamos o link para")).toBeVisible();
-}
+import { expect, test } from "@playwright/test";
+import { esperarLink, pedirLink } from "./support";
 
 test("magic link, onboarding completo e perfil", async ({ page }) => {
   const email = `onboarding-${Date.now()}@example.com`;

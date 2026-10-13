@@ -1,0 +1,243 @@
+/* Lista de origens (wireframe novo-entrada) */
+.options {
+  display: grid;
+  gap: 10px;
+  margin: var(--space-xs) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-sm);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  box-shadow: var(--shadow-1);
+  color: var(--ink);
+  text-decoration: none;
+  transition:
+    border-color 180ms var(--ease),
+    transform 180ms var(--ease);
+}
+
+.option:hover {
+  border-color: var(--line-strong);
+}
+
+.option:active {
+  transform: scale(0.98);
+}
+
+.option:focus-visible {
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 5px var(--sky);
+}
+
+.optionIc {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.optionText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.optionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.optionHint {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.optionChevron {
+  color: var(--ink-2);
+}
+
+/* Campos */
+.textarea {
+  min-height: 260px;
+}
+
+.fileLabel[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* o input escondido vem antes do rótulo (irmão): o foco dele aparece no botão */
+input:focus-visible ~ .fileLabel {
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 5px var(--sky),
+    0 0 0 6px var(--ink);
+}
+
+.files {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: 52px;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.fileName {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileSize {
+  flex-shrink: 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.player {
+  width: 100%;
+}
+
+/* Câmera: miniaturas em ordem, 2:3 */
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.thumb {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbNum {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.thumbRemove {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--bg);
+  cursor: pointer;
+}
+
+/* círculo visível de 30px dentro da área de toque de 44px */
+.thumbRemove::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: rgba(21, 22, 28, 0.72);
+}
+
+.thumbRemove svg {
+  position: relative;
+}
+
+.thumbRemove:focus-visible {
+  outline: 3px solid var(--sky);
+  outline-offset: -3px;
+  border-radius: 50%;
+}
+
+/* Gravação */
+.rec {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 56px;
+  padding: 0 0 0 var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.recDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--rec-red);
+  animation: piscar 1.2s steps(2, end) infinite;
+}
+
+@keyframes piscar {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.recTime {
+  flex: 1;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.recStop {
+  background: var(--bg);
+}
+
+.conectar {
+  min-height: 44px;
+  background: var(--bg);
+  font-size: 15px;
+}

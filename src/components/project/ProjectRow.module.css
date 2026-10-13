@@ -1,0 +1,105 @@
+.proj {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  box-shadow: var(--shadow-1);
+}
+
+.thumb {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 92px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+
+.info {
+  min-width: 0;
+}
+
+.title {
+  font-family: var(--ui), system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin: 3px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.steps {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.steps i {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+
+.steps i.done {
+  background: var(--ink);
+}
+
+/* DESIGN.md: etapa atual = coral */
+.steps i.now {
+  background: var(--primary);
+}
+
+.next {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.next span {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.nextBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 14.5px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 180ms var(--ease);
+}
+
+.nextBtn:active {
+  transform: scale(0.98);
+}
+
+.nextBtn:focus-visible {
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 5px var(--sky);
+}
