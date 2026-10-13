@@ -50,7 +50,7 @@ export interface ScriptDb {
   profile(): Promise<ScriptProfile | null>;
   cta(id: string): Promise<ScriptCta | null>;
   /** Substitui os blocos do projeto pelos novos (sem duplicar) e atualiza descrições, entrevista e status='script'. */
-  saveScript(projectId: string, data: { blocks: NewScriptBlock[]; descriptions: Descriptions; interview: Interview }): Promise<boolean>;
+  saveScript(projectId: string, data: { blocks: NewScriptBlock[]; descriptions: Descriptions; coverPrompt: string | null; interview: Interview }): Promise<boolean>;
 }
 
 export type ScriptDeps = {
@@ -181,6 +181,7 @@ export async function generateScriptWith(deps: ScriptDeps, projectId: string): P
   const ok = await deps.db.saveScript(projectId, {
     blocks,
     descriptions: finishDescriptions(script.mainDescriptions, platforms, ctaLine),
+    coverPrompt: script.mainCoverPrompt.trim() || null,
     interview,
   });
   if (!ok) throw new Error(MSG_SAVE_FAILED);

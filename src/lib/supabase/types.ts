@@ -67,14 +67,14 @@ export type Database = {
                   ]
                 },"projects": {
                   Row: {
-                    "created_at": string,"descriptions": NonNullable<Json>,"episode_index": number | null,"id": string,"interview": NonNullable<Json>,"series_id": string | null,"source_kind": string,"source_text": string,"source_truncated": boolean,"status": string,"title": string,"user_id": string
+                    "cover_prompt": string | null,"created_at": string,"descriptions": NonNullable<Json>,"episode_index": number | null,"id": string,"interview": NonNullable<Json>,"series_id": string | null,"source_kind": string,"source_text": string,"source_truncated": boolean,"status": string,"title": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"series_id"?: string | null,"source_kind": string,"source_text": string,"source_truncated"?: boolean,"status"?: string,"title": string,"user_id"?: string
+                    "cover_prompt"?: string | null,"created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"series_id"?: string | null,"source_kind": string,"source_text": string,"source_truncated"?: boolean,"status"?: string,"title": string,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"series_id"?: string | null,"source_kind"?: string,"source_text"?: string,"source_truncated"?: boolean,"status"?: string,"title"?: string,"user_id"?: string
+                    "cover_prompt"?: string | null,"created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"series_id"?: string | null,"source_kind"?: string,"source_text"?: string,"source_truncated"?: boolean,"status"?: string,"title"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {

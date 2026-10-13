@@ -12,6 +12,7 @@ class FakeScriptDb implements ScriptDb {
   project: InterviewProject;
   blocks: NewScriptBlock[] = [];
   descriptions: unknown = {};
+  coverPrompt: string | null = null;
   ctaRow: ScriptCta | null = { kind: "whatsapp", label: "WhatsApp", value: "11999990000" };
   constructor(interview: Interview) {
     this.project = {
@@ -35,7 +36,8 @@ class FakeScriptDb implements ScriptDb {
   async cta() {
     return this.ctaRow;
   }
-  async saveScript(_id: string, data: { blocks: NewScriptBlock[]; descriptions: unknown; interview: Interview }) {
+  async saveScript(_id: string, data: { blocks: NewScriptBlock[]; descriptions: unknown; coverPrompt: string | null; interview: Interview }) {
+    this.coverPrompt = data.coverPrompt;
     this.blocks = structuredClone(data.blocks);
     this.descriptions = data.descriptions;
     this.project.interview = data.interview;
@@ -61,6 +63,8 @@ describe("generateScript", () => {
     expect(db.blocks[0].kind).toBe("opening");
     expect(db.blocks[6].kind).toBe("closing");
     expect(db.project.status).toBe("script");
+    expect(db.coverPrompt).toBe("Capa do vídeo principal");
+    expect(db.blocks.find((b) => b.cut_index === 3)!.cover_prompt).toBe("Capa da dica 3");
     expect(db.project.interview.scriptWarning).toBeUndefined();
     expect(getMockCalls("generateJson")).toBe(1);
   });

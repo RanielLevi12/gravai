@@ -30,7 +30,7 @@ export function supabaseScriptDb(deps: { supabase: SupabaseClient<Database>; use
       const { data } = await supabase.from("ctas").select("kind, label, value").eq("id", id).maybeSingle();
       return data ? { kind: data.kind as "link" | "bio" | "whatsapp" | "phone", label: data.label, value: data.value } : null;
     },
-    async saveScript(projectId, { blocks, descriptions, interview }) {
+    async saveScript(projectId, { blocks, descriptions, coverPrompt, interview }) {
       // Grava por cima (posição única) e só depois apaga as sobras: nunca deixa o projeto sem blocos.
       const { error } = await supabase.from("script_blocks").upsert(
         blocks.map((b) => ({ ...b, project_id: projectId, user_id: userId, descriptions: asJson(b.descriptions) })),
@@ -41,7 +41,7 @@ export function supabaseScriptDb(deps: { supabase: SupabaseClient<Database>; use
       if (delError) return false;
       const { data, error: upError } = await supabase
         .from("projects")
-        .update({ descriptions: asJson(descriptions), interview: asJson(interview), status: "script" })
+        .update({ descriptions: asJson(descriptions), cover_prompt: coverPrompt, interview: asJson(interview), status: "script" })
         .eq("id", projectId)
         .select("id");
       return !upError && (data?.length ?? 0) > 0;
