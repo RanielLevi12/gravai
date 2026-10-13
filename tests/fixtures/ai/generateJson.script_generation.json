@@ -1,0 +1,67 @@
+{
+  "blocks": [
+    {
+      "kind": "opening",
+      "text": "Todo mundo já passou por isso e sabe como é difícil começar sem um plano claro. Por isso, vou te mostrar o passo que muda tudo na prática, com um exemplo simples do dia a"
+    },
+    {
+      "kind": "cut",
+      "text": "sabe como é difícil começar sem um plano claro. Por isso, vou te mostrar o passo que muda tudo na prática, com um exemplo simples do dia a dia. Preste atenção nesse detalhe porque ele evita erros caros e economiza muito tempo. Todo mundo já passou por isso e sabe como é difícil começar sem um plano claro. Por isso, vou te mostrar o passo que muda tudo na prática, com um exemplo simples do",
+      "cutTitle": "Dica 1",
+      "descriptions": {
+        "reels": "Dica 1 #dicas",
+        "youtube": "Dica 1. Veja o vídeo completo e se inscreva no canal."
+      },
+      "coverPrompt": "Capa da dica 1"
+    },
+    {
+      "kind": "cut",
+      "text": "plano claro. Por isso, vou te mostrar o passo que muda tudo na prática, com um exemplo simples do dia a dia. Preste atenção nesse detalhe porque ele evita erros caros e economiza muito tempo. Todo mundo já passou por isso e sabe como é difícil começar sem um plano claro. Por isso, vou te mostrar o passo que muda tudo na prática, com um exemplo simples do dia a dia. Preste atenção nesse detalhe",
+      "cutTitle": "Dica 2",
+      "descriptions": {
+        "reels": "Dica 2 #dicas",
+        "youtube": "Dica 2. Veja o vídeo completo e se inscreva no canal."
+      },
+      "coverPrompt": "Capa da dica 2"
+    },
+    {
+      "kind": "cut",
+      "text": "o passo que muda tudo na prática, com um exemplo simples do dia a dia. Preste atenção nesse detalhe porque ele evita erros caros e economiza muito tempo. Todo mundo já passou por isso e sabe como é difícil começar sem um plano claro. Por isso, vou te mostrar o passo que muda tudo na prática, com um exemplo simples do dia a dia. Preste atenção nesse detalhe porque ele evita erros caros e economiza",
+      "cutTitle": "Dica 3",
+      "descriptions": {
+        "reels": "Dica 3 #dicas",
+        "youtube": "Dica 3. Veja o vídeo completo e se inscreva no canal."
+      },
+      "coverPrompt": "Capa da dica 3"
+    },
+    {
+      "kind": "cut",
+      "text": "com um exemplo simples do dia a dia. Preste atenção nesse detalhe porque ele evita erros caros e economiza muito tempo. Todo mundo já passou por isso e sabe como é difícil começar sem um plano claro. Por isso, vou te mostrar o passo que muda tudo na prática, com um exemplo simples do dia a dia. Preste atenção nesse detalhe porque ele evita erros caros e economiza muito tempo. Todo mundo já passou por",
+      "cutTitle": "Dica 4",
+      "descriptions": {
+        "reels": "Dica 4 #dicas",
+        "youtube": "Dica 4. Veja o vídeo completo e se inscreva no canal."
+      },
+      "coverPrompt": "Capa da dica 4"
+    },
+    {
+      "kind": "cut",
+      "text": "dia. Preste atenção nesse detalhe porque ele evita erros caros e economiza muito tempo. Todo mundo já passou por isso e sabe como é difícil começar sem um plano claro. Por isso, vou te mostrar o passo que muda tudo na prática, com um exemplo simples do dia a dia. Preste atenção nesse detalhe porque ele evita erros caros e economiza muito tempo. Todo mundo já passou por isso e sabe como é difícil começar",
+      "cutTitle": "Dica 5",
+      "descriptions": {
+        "reels": "Dica 5 #dicas",
+        "youtube": "Dica 5. Veja o vídeo completo e se inscreva no canal."
+      },
+      "coverPrompt": "Capa da dica 5"
+    },
+    {
+      "kind": "closing",
+      "text": "passou por isso e sabe como é difícil começar sem um plano claro. Por isso, vou te mostrar o passo que muda tudo na prática, com um exemplo simples do dia a dia. Preste atenção nesse detalhe porque ele evita"
+    }
+  ],
+  "mainDescriptions": {
+    "reels": "Vídeo completo #dicas",
+    "youtube": "Vídeo completo. Veja o vídeo completo e se inscreva no canal."
+  },
+  "mainCoverPrompt": "Capa do vídeo principal"
+}

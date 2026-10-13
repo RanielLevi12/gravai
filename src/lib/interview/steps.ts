@@ -65,6 +65,10 @@ export type Interview = {
   /** Quando a sugestão falhou (erro da IA): não tentamos de novo sozinhos. */
   suggestionFailedAt?: string;
   titleSuggestions?: TitleOption[];
+  /** Problema de duração que sobrou depois da regeneração do script. */
+  scriptWarning?: string;
+  /** Avisos do `checkScript` (tom e CTA). */
+  scriptChecks?: string[];
 };
 
 /** Valor de cada pergunta. */
