@@ -24,8 +24,9 @@ export async function proxy(request: NextRequest) {
 
   // Quem ainda não concluiu (nem pulou) o onboarding começa por ele.
   if (!path.startsWith("/boas-vindas") && !path.startsWith("/api/")) {
-    const { data: profile } = await supabase.from("profiles").select("onboarded").eq("user_id", user.id).maybeSingle();
-    if (!profile?.onboarded) return redirectTo(new URL("/boas-vindas/nicho", request.url));
+    const { data: profile, error } = await supabase.from("profiles").select("onboarded").eq("user_id", user.id).maybeSingle();
+    // Erro transitório na consulta não deve mandar quem já concluiu de volta ao onboarding.
+    if (!error && !profile?.onboarded) return redirectTo(new URL("/boas-vindas/nicho", request.url));
   }
 
   return getResponse();
