@@ -1,5 +1,5 @@
 {
-  "name": "video-facil",
+  "name": "gravai",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,20 +7,26 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "test:integration": "bash scripts/test-integration.sh",
+    "db:types": "supabase gen types typescript --local > src/lib/supabase/types.ts"
   },
   "dependencies": {
     "lucide-react": "^1.56.0",
     "next": "^16.4.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.3",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "sharp": "^0.35.5",
+    "supabase": "^2.120.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.4"
   }
