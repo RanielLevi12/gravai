@@ -1,0 +1,100 @@
+{
+  "title": "Escolha o mundo visual — rodada ousada",
+  "question": "Formas estrangeiras, comprometidas por inteiro. O primeiro sorteado lidera; o Mapa de metrô venceu nos dois critérios.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Espécime vivo",
+      "kicker": "THE ROLL",
+      "lineage": "espécimes interativos de fonte variável",
+      "thesis": "O script é tipografia viva: você arrasta um controle e o texto engorda, encolhe e acelera na sua frente.",
+      "palette": ["#FFFFFF", "#0D0D0F", "#FF2D87", "#00B4F0", "#FFD000", "#1FC46A"],
+      "materials": ["papel branco liso", "letra gigante variável", "leituras em monoespaçada"],
+      "viewport": "Projetos como espécimes: o título de cada vídeo em letra enorme, com duração e cortes em monoespaçada pequena; no teleprompter, os controles são eixos que transformam o texto ao vivo.",
+      "risk": "Pode soar 'de designer' e técnico, que você pediu para evitar; depende de uma fonte variável muito boa.",
+      "raised": [
+        {"from": "notation-diagram-systems-labanotation", "raise": "A altura de cada bloco do script é a sua duração real: corte de 30 s fica visivelmente maior que um de 10 s."},
+        {"from": "pop-culture-shelf-character-goods-catalog", "raise": "Cada projeto ganha uma cor própria e saturada que o acompanha em todas as telas."},
+        {"from": "japanese-high-density-web", "raise": "Cada bloco leva uma etiqueta-aba pequena e colorida (Abertura, Corte 1…), sem caixas extras."}
+      ],
+      "hero": "https://impeccable.style/worlds/cards/variable-font-specimen-hero.webp"
+    },
+    {
+      "id": "challenger-transit",
+      "label": "Mapa de metrô",
+      "verdict": "wins",
+      "lineage": "mapas de metrô esmaltados (linhas a 45° e 90°, estações de baldeação)",
+      "thesis": "Cada vídeo é uma linha de metrô colorida: as estações são as etapas e os cortes saem como ramais.",
+      "palette": ["#F4F6FB", "#0E1A3A", "#E8322B", "#1F5BFF", "#FFB000", "#12A150"],
+      "materials": ["porcelana branca no app", "esmalte azul-noite na gravação", "linhas grossas com curvas de 45°"],
+      "viewport": "Projetos como linhas paralelas, cada uma na sua cor, com a estação atual acesa (Material, Entrevista, Script, Gravar, Cortes); o script mostra os ramais de corte saindo da linha principal.",
+      "case": "Vence nos dois: todo mundo sabe ler mapa de metrô (identificação) e 'onde estou e o que falta' fica óbvio (clareza). Tradução: fundo azul-noite só na gravação, app claro como você pediu.",
+      "risk": "Se a metáfora forçar nomes como 'estação' na interface, atrapalha; o mapa é a forma, os textos continuam simples.",
+      "hero": "https://impeccable.style/worlds/cards/wayfinding-cartography-signage-midnight-transit-diagram-hero.webp"
+    },
+    {
+      "id": "challenger-boarding",
+      "label": "Cartão de embarque",
+      "verdict": "competitive",
+      "lineage": "cartão de embarque segmentado + painel de partidas",
+      "thesis": "Cada projeto é um cartão de embarque; o processamento é um painel de partidas que reordena e acende o que mudou.",
+      "palette": ["#FFFFFF", "#111111", "#FFD60A", "#2A2A2A"],
+      "materials": ["cartão com picote", "números tabulares", "linha que acende ao mudar"],
+      "viewport": "Projetos como cartões segmentados (plataformas, duração, cortes); 'processando' como painel cujas linhas mudam de estado no lugar.",
+      "case": "Muito claro para status e progresso; perde em identificação e é pouco colorido.",
+      "risk": "Neutro demais para o 'colorido com cores vivas' pedido.",
+      "hero": "https://impeccable.style/worlds/cards/vernacular-ephemera-boarding-pass-and-gate-board-hero.webp"
+    },
+    {
+      "id": "challenger-japanese",
+      "label": "Portal japonês denso",
+      "verdict": "declined",
+      "lineage": "sites japoneses de alta densidade",
+      "thesis": "Dezenas de módulos pequenos numa tela só.",
+      "palette": ["#FFFFFF", "#111111", "#E60012", "#D9D9D9"],
+      "materials": ["módulos com filete", "abas vermelhas"],
+      "viewport": "Mosaico denso de módulos.",
+      "case": "Densidade é o oposto de 'fácil para leigo'.",
+      "risk": "Cara de ferramenta técnica.",
+      "kept": "Etiqueta-aba colorida em cada bloco."
+    },
+    {
+      "id": "challenger-mascots",
+      "label": "Catálogo de mascotes",
+      "verdict": "declined",
+      "lineage": "catálogos de personagens kawaii",
+      "thesis": "Elenco de mascotes arredondados ranqueados.",
+      "palette": ["#FFE4EC", "#DFF3FF", "#FF4F8B"],
+      "materials": ["tons pastel", "contorno branco"],
+      "viewport": "Grade de personagens.",
+      "case": "Infantil/gamificado, que você vetou.",
+      "risk": "Infantil.",
+      "kept": "Uma cor saturada própria por projeto."
+    },
+    {
+      "id": "challenger-labanotation",
+      "label": "Partitura de dança",
+      "verdict": "declined",
+      "lineage": "labanotação",
+      "thesis": "Blocos cujo comprimento é a duração exata.",
+      "palette": ["#FFFFFF", "#000000", "#BDBDBD"],
+      "materials": ["papel de partitura", "blocos hachurados"],
+      "viewport": "Pauta vertical lida de baixo para cima.",
+      "case": "Sistema obscuro para o público.",
+      "risk": "Ilegível para leigo.",
+      "kept": "Altura do bloco = duração real."
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "code", "toggle": false},
+  "canon": true,
+  "canonCard": {
+    "label": "Padrão da categoria",
+    "thesis": "App de criação de vídeo como os concorrentes, feito com capricho.",
+    "palette": ["#FFFFFF", "#111827", "#7C3AED"],
+    "materials": ["cards limpos", "ícones de linha", "botão roxo"],
+    "viewport": "Lista de projetos em cards, botão flutuante de novo vídeo.",
+    "risk": "Igual a todo app de IA, exatamente o que você pediu para evitar."
+  },
+  "steer": true
+}

@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env*
+!.env.example
+.superpowers/
+.claude/settings.local.json
+coverage/
+test-results/
+playwright-report/
+supabase/.temp/

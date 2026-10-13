@@ -1,0 +1,560 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-13T12:46:29+00:00",
+  "title": "Design System: Video Facil",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Coral-Magenta",
+        "canonical": "oklch(58.8% 0.222 13.3)",
+        "tonalRamp": [
+          "#1E0005",
+          "#490115",
+          "#7A0228",
+          "#AE033D",
+          "#E21E55",
+          "#FF5F7B",
+          "#FEA9B1",
+          "#FFE8EA"
+        ]
+      },
+      "primary-press": {
+        "role": "primary",
+        "displayName": "Coral Pressionado",
+        "canonical": "oklch(52.7% 0.202 12.3)",
+        "tonalRamp": [
+          "#1E0005",
+          "#4A0016",
+          "#7A022A",
+          "#AE033F",
+          "#DA335C",
+          "#FE5F7D",
+          "#FFA9B2",
+          "#FEE8EA"
+        ]
+      },
+      "primary-tint": {
+        "role": "primary",
+        "displayName": "Rosa-Clarinho",
+        "canonical": "oklch(94.3% 0.031 357.8)",
+        "tonalRamp": [
+          "#15060B",
+          "#311E24",
+          "#4E3940",
+          "#6D575D",
+          "#8E767D",
+          "#B0979E",
+          "#D6BCC4",
+          "#FFE7EE"
+        ]
+      },
+      "tangerine": {
+        "role": "secondary",
+        "displayName": "Tangerina (corte 1)",
+        "canonical": "oklch(72.3% 0.190 50.5)",
+        "tonalRamp": [
+          "#180600",
+          "#3D1800",
+          "#662D02",
+          "#934400",
+          "#C25C03",
+          "#F47500",
+          "#FFAF81",
+          "#FFEADE"
+        ]
+      },
+      "sky": {
+        "role": "secondary",
+        "displayName": "Céu (corte 2)",
+        "canonical": "oklch(67.6% 0.179 249.4)",
+        "tonalRamp": [
+          "#000C1C",
+          "#002545",
+          "#014173",
+          "#0260A4",
+          "#0680D9",
+          "#3EA3FE",
+          "#95C9FE",
+          "#E2F0FF"
+        ]
+      },
+      "mint": {
+        "role": "secondary",
+        "displayName": "Menta (corte 3)",
+        "canonical": "oklch(68.6% 0.167 154.9)",
+        "tonalRamp": [
+          "#000F05",
+          "#002D15",
+          "#024D29",
+          "#01703E",
+          "#079555",
+          "#1EBC6E",
+          "#57E393",
+          "#C5FFD8"
+        ]
+      },
+      "sun": {
+        "role": "secondary",
+        "displayName": "Sol (corte 4)",
+        "canonical": "oklch(84.6% 0.169 84.9)",
+        "tonalRamp": [
+          "#110A00",
+          "#302100",
+          "#523C01",
+          "#775803",
+          "#9E7606",
+          "#C79601",
+          "#F5BA06",
+          "#FFEDC8"
+        ]
+      },
+      "sky-tint": {
+        "role": "tertiary",
+        "displayName": "Céu-Claro",
+        "canonical": "oklch(95.0% 0.025 244.4)",
+        "tonalRamp": [
+          "#030C15",
+          "#192530",
+          "#35414C",
+          "#525F6B",
+          "#717F8C",
+          "#92A1AE",
+          "#B7C6D4",
+          "#E1F1FF"
+        ]
+      },
+      "sky-ink": {
+        "role": "tertiary",
+        "displayName": "Céu-Profundo",
+        "canonical": "oklch(34.9% 0.088 249.9)",
+        "tonalRamp": [
+          "#000C1C",
+          "#012545",
+          "#13426C",
+          "#33618D",
+          "#5381B0",
+          "#73A3D4",
+          "#98C9FC",
+          "#E3F0FF"
+        ]
+      },
+      "mint-tint": {
+        "role": "tertiary",
+        "displayName": "Menta-Clara",
+        "canonical": "oklch(95.2% 0.031 165.3)",
+        "tonalRamp": [
+          "#000F08",
+          "#152920",
+          "#30453C",
+          "#4E6359",
+          "#6D8379",
+          "#8DA59A",
+          "#B3CBBF",
+          "#DCF5E9"
+        ]
+      },
+      "mint-ink": {
+        "role": "tertiary",
+        "displayName": "Menta-Profunda",
+        "canonical": "oklch(44.4% 0.104 156.0)",
+        "tonalRamp": [
+          "#000F05",
+          "#012D17",
+          "#024D2B",
+          "#1B6F44",
+          "#419063",
+          "#64B283",
+          "#8AD9A8",
+          "#C4FFD9"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "oklch(20.2% 0.012 277.8)",
+        "tonalRamp": [
+          "#0A0B10",
+          "#22242A",
+          "#3E3F46",
+          "#5C5D65",
+          "#7B7D85",
+          "#9C9EA6",
+          "#C2C3CC",
+          "#ECEEF7"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Tinta Média",
+        "canonical": "oklch(46.3% 0.025 276.5)",
+        "tonalRamp": [
+          "#080A15",
+          "#212330",
+          "#3C3F4D",
+          "#5A5D6C",
+          "#797C8C",
+          "#9A9DAE",
+          "#BFC3D4",
+          "#EAEEFE"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Branco",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#242424",
+          "#404040",
+          "#5D5D5D",
+          "#7D7D7D",
+          "#9E9E9E",
+          "#C4C4C4",
+          "#EEEEEE"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Cinza-Frio",
+        "canonical": "oklch(97.1% 0.005 275.0)",
+        "tonalRamp": [
+          "#0A0B0D",
+          "#232427",
+          "#3F4043",
+          "#5D5D61",
+          "#7C7D81",
+          "#9D9EA2",
+          "#C3C4C8",
+          "#EDEEF2"
+        ]
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Cinza-Frio 2",
+        "canonical": "oklch(94.9% 0.008 271.3)",
+        "tonalRamp": [
+          "#0A0B0F",
+          "#222428",
+          "#3E4044",
+          "#5C5D62",
+          "#7B7D82",
+          "#9C9EA4",
+          "#C2C4CA",
+          "#ECEEF4"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Linha",
+        "canonical": "oklch(92.2% 0.010 273.3)",
+        "tonalRamp": [
+          "#0A0B0F",
+          "#222429",
+          "#3E3F45",
+          "#5C5D63",
+          "#7B7D83",
+          "#9C9EA5",
+          "#C2C4CB",
+          "#ECEEF5"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Linha Forte",
+        "canonical": "oklch(84.6% 0.017 274.8)",
+        "tonalRamp": [
+          "#090B12",
+          "#21242C",
+          "#3D3F49",
+          "#5B5D67",
+          "#7A7D88",
+          "#9B9EA9",
+          "#C1C3CF",
+          "#EBEEFA"
+        ]
+      },
+      "rec-bg": {
+        "role": "neutral",
+        "displayName": "Estúdio",
+        "canonical": "oklch(16.0% 0.011 276.2)",
+        "tonalRamp": [
+          "#0A0B10",
+          "#222429",
+          "#3E3F46",
+          "#5C5D64",
+          "#7B7D84",
+          "#9C9EA5",
+          "#C2C4CB",
+          "#ECEEF6"
+        ]
+      },
+      "rec-red": {
+        "role": "neutral",
+        "displayName": "Vermelho REC",
+        "canonical": "oklch(65.4% 0.232 28.7)",
+        "tonalRamp": [
+          "#1F0000",
+          "#4B0001",
+          "#7C0203",
+          "#B20105",
+          "#E71916",
+          "#FF6555",
+          "#FEAB9F",
+          "#FEE9E5"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Título da tela raiz."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Pergunta da entrevista."
+      },
+      "headline-sm": {
+        "displayName": "Headline Sm",
+        "purpose": "Título do script e do painel Novo vídeo."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Títulos de seção."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "Números grandes das opções, tabulares."
+      },
+      "title-ui": {
+        "displayName": "Title Ui",
+        "purpose": "Nome de projeto, título de corte, título da barra superior."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Texto corrido de interface."
+      },
+      "body-script": {
+        "displayName": "Body Script",
+        "purpose": "Texto dos blocos do script."
+      },
+      "prompter": {
+        "displayName": "Prompter",
+        "purpose": "Texto do teleprompter no estúdio escuro."
+      },
+      "label-button": {
+        "displayName": "Label Button",
+        "purpose": "Rótulo dos botões grandes."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Chips, mini-botões, plataformas, etiquetas."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Meta de projeto e corte, tabular."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Rótulos de aba e selo; piso de 12px."
+      }
+    },
+    "shadows": [
+      {
+        "name": "rest",
+        "value": "0 1px 2px rgba(21,22,28,.06), 0 4px 12px rgba(21,22,28,.06)",
+        "purpose": "Card de projeto e bloco de corte."
+      },
+      {
+        "name": "action",
+        "value": "0 4px 10px rgba(225,29,85,.28), 0 12px 28px rgba(225,29,85,.18)",
+        "purpose": "Só no elemento primário (botão, painel Novo vídeo, aba Novo)."
+      },
+      {
+        "name": "focus-ring",
+        "value": "outline: 3px solid #1E9BFF; outline-offset: 2px",
+        "purpose": "Foco visível em todo controle."
+      },
+      {
+        "name": "studio-glass",
+        "value": "background: rgba(12,13,18,.72); backdrop-filter: blur(6px)",
+        "purpose": "Painel do teleprompter sobre a câmera."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "Curva única do sistema."
+      },
+      {
+        "name": "duration-press",
+        "value": "180ms",
+        "purpose": "Pressão (scale .98) e hover."
+      },
+      {
+        "name": "duration-state",
+        "value": "200ms",
+        "purpose": "Troca de borda/fundo em opções e plataformas."
+      },
+      {
+        "name": "duration-enter",
+        "value": "350ms",
+        "purpose": "Check da opção, entrada do toast."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile-reference",
+        "value": "390px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botão primário",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "A única ação principal da tela, no rodapé.",
+      "html": "<button class=\"ds-btn-primary\">Próxima<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></button>",
+      "css": ".ds-btn-primary{font-family:'Hanken Grotesk',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;width:320px;min-height:56px;padding:0 22px;border:0;border-radius:16px;background:#E11D55;color:#fff;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 4px 10px rgba(225,29,85,.28),0 12px 28px rgba(225,29,85,.18);transition:transform .18s cubic-bezier(.16,1,.3,1),background-color .18s cubic-bezier(.16,1,.3,1);}.ds-btn-primary:hover{background:#C3134A;}.ds-btn-primary:active{transform:scale(.98);}.ds-btn-primary:focus-visible{outline:3px solid #1E9BFF;outline-offset:2px;}"
+    },
+    {
+      "name": "Botão suave",
+      "kind": "button",
+      "refersTo": "button-soft",
+      "description": "Ação secundária de largura total.",
+      "html": "<button class=\"ds-btn-soft\">Baixar tudo (.zip)</button>",
+      "css": ".ds-btn-soft{font-family:'Hanken Grotesk',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;width:320px;min-height:56px;padding:0 22px;border:0;border-radius:16px;background:#F4F5F9;color:#15161C;font-size:17px;font-weight:700;cursor:pointer;transition:transform .18s cubic-bezier(.16,1,.3,1),background-color .18s cubic-bezier(.16,1,.3,1);}.ds-btn-soft:hover{background:#ECEEF4;}.ds-btn-soft:active{transform:scale(.98);}.ds-btn-soft:focus-visible{outline:3px solid #1E9BFF;outline-offset:2px;}"
+    },
+    {
+      "name": "Botão de próxima ação",
+      "kind": "button",
+      "refersTo": "button-next",
+      "description": "Próximo passo dentro do card de projeto.",
+      "html": "<button class=\"ds-btn-next\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5\"/><rect x=\"2\" y=\"6\" width=\"14\" height=\"12\" rx=\"2\"/></svg>Gravar</button>",
+      "css": ".ds-btn-next{font-family:'Hanken Grotesk',system-ui,sans-serif;display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border:0;border-radius:12px;background:#15161C;color:#fff;font-size:14.5px;font-weight:700;cursor:pointer;transition:transform .18s cubic-bezier(.16,1,.3,1);}.ds-btn-next svg{width:17px;height:17px;}.ds-btn-next:active{transform:scale(.98);}.ds-btn-next:focus-visible{outline:3px solid #1E9BFF;outline-offset:2px;}"
+    },
+    {
+      "name": "Chips",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Informação compacta; 'Salvo' em menta.",
+      "html": "<div class=\"ds-chips\"><span class=\"ds-chip\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"10\" x2=\"14\" y1=\"2\" y2=\"2\"/><line x1=\"12\" x2=\"15\" y1=\"14\" y2=\"11\"/><circle cx=\"12\" cy=\"14\" r=\"8\"/></svg>3:05</span><span class=\"ds-chip\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"6\" cy=\"6\" r=\"3\"/><path d=\"M8.12 8.12 12 12\"/><path d=\"M20 4 8.12 15.88\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M14.8 14.8 20 20\"/></svg>5 cortes</span><span class=\"ds-chip ds-chip-saved\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg>Salvo</span></div>",
+      "css": ".ds-chips{display:flex;gap:6px;}.ds-chip{font-family:'Hanken Grotesk',system-ui,sans-serif;display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;background:#F4F5F9;color:#555867;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;}.ds-chip svg{width:15px;height:15px;}.ds-chip-saved{background:#DDF6EA;color:#08643A;}"
+    },
+    {
+      "name": "Opção sugerida",
+      "kind": "custom",
+      "refersTo": "option-card-selected",
+      "description": "Opção da entrevista já marcada pela IA, com selo Sugerido e barras de corte.",
+      "html": "<button class=\"ds-opt\" role=\"radio\" aria-checked=\"true\"><span class=\"ds-opt-check\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg></span><div class=\"ds-opt-big\">30<small>s</small></div><div class=\"ds-opt-sub\">≈ 5 cortes</div><div class=\"ds-opt-cuts\"><i></i><i></i><i></i><i></i><i></i></div><span class=\"ds-badge\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\"/></svg>Sugerido</span></button>",
+      "css": ".ds-opt{font-family:'Hanken Grotesk',system-ui,sans-serif;position:relative;width:170px;text-align:left;padding:18px 16px 16px;border-radius:16px;background:#FFE4EC;border:2px solid #E11D55;color:#15161C;cursor:pointer;transition:border-color .2s cubic-bezier(.16,1,.3,1),background-color .2s cubic-bezier(.16,1,.3,1);}.ds-opt:focus-visible{outline:3px solid #1E9BFF;outline-offset:2px;}.ds-opt-check{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;background:#E11D55;color:#fff;display:grid;place-items:center;}.ds-opt-check svg{width:16px;height:16px;}.ds-opt-big{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:34px;letter-spacing:-0.03em;line-height:1;font-variant-numeric:tabular-nums;}.ds-opt-big small{font-size:18px;letter-spacing:0;margin-left:2px;}.ds-opt-sub{margin-top:8px;font-size:14px;color:#555867;font-variant-numeric:tabular-nums;}.ds-opt-cuts{display:flex;gap:3px;margin-top:10px;height:8px;}.ds-opt-cuts i{flex:1;border-radius:2px;}.ds-opt-cuts i:nth-child(4n+1){background:#FF7A00;}.ds-opt-cuts i:nth-child(4n+2){background:#1E9BFF;}.ds-opt-cuts i:nth-child(4n+3){background:#12B76A;}.ds-opt-cuts i:nth-child(4n+4){background:#FFC21A;}.ds-badge{display:inline-flex;align-items:center;gap:4px;margin-top:10px;height:24px;padding:0 8px;border-radius:999px;background:#15161C;color:#fff;font-size:12px;font-weight:700;}.ds-badge svg{width:13px;height:13px;}"
+    },
+    {
+      "name": "Bloco de corte",
+      "kind": "card",
+      "refersTo": "block-cut",
+      "description": "Bloco do script que vira corte: borda e etiqueta na cor do corte, texto em tinta.",
+      "html": "<section class=\"ds-block\"><div class=\"ds-block-head\"><span class=\"ds-tag\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"6\" cy=\"6\" r=\"3\"/><path d=\"M8.12 8.12 12 12\"/><path d=\"M20 4 8.12 15.88\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><path d=\"M14.8 14.8 20 20\"/></svg>Corte 1</span><span class=\"ds-dur\">0:28</span></div><p>Todo hábito tem três partes: a deixa, a rotina e a recompensa.</p></section>",
+      "css": ".ds-block{font-family:'Hanken Grotesk',system-ui,sans-serif;width:340px;border-radius:16px;padding:14px 16px 12px;background:#fff;border:2px solid #FF7A00;box-shadow:0 1px 2px rgba(21,22,28,.06),0 4px 12px rgba(21,22,28,.06);color:#15161C;}.ds-block-head{display:flex;align-items:center;justify-content:space-between;}.ds-tag{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:8px;background:#FF7A00;color:#15161C;font-size:13px;font-weight:700;}.ds-tag svg{width:14px;height:14px;}.ds-dur{font-size:13.5px;font-weight:600;color:#555867;font-variant-numeric:tabular-nums;}.ds-block p{margin:10px 0 0;font-size:16px;line-height:1.55;}"
+    },
+    {
+      "name": "Plataformas",
+      "kind": "chip",
+      "refersTo": "platform-toggle",
+      "description": "Alternância de plataforma, neutra; selecionada em tinta.",
+      "html": "<div class=\"ds-plats\"><button class=\"ds-plat\" aria-pressed=\"true\">Reels</button><button class=\"ds-plat\" aria-pressed=\"false\">TikTok</button><button class=\"ds-plat\" aria-pressed=\"false\">YouTube</button></div>",
+      "css": ".ds-plats{display:flex;gap:8px;}.ds-plat{font-family:'Hanken Grotesk',system-ui,sans-serif;height:36px;padding:0 14px;border-radius:999px;border:1.5px solid #E3E5EC;background:#fff;color:#15161C;font-size:14px;font-weight:600;cursor:pointer;transition:border-color .2s cubic-bezier(.16,1,.3,1),background-color .2s cubic-bezier(.16,1,.3,1);}.ds-plat:hover{border-color:#C9CCD8;}.ds-plat[aria-pressed=\"true\"]{background:#15161C;border-color:#15161C;color:#fff;}.ds-plat:focus-visible{outline:3px solid #1E9BFF;outline-offset:2px;}"
+    },
+    {
+      "name": "Capas",
+      "kind": "custom",
+      "refersTo": "cover-poster",
+      "description": "Capa existente em linguagem de pôster; antes disso, placeholder tracejado com ícone da origem.",
+      "html": "<div class=\"ds-covers\"><div class=\"ds-cover\"><b>O hábito que muda tudo</b></div><div class=\"ds-cover-empty\" aria-label=\"Sem capa ainda\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 7v14\"/><path d=\"M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z\"/></svg></div></div>",
+      "css": ".ds-covers{display:flex;gap:12px;}.ds-cover{position:relative;overflow:hidden;width:64px;height:92px;border-radius:12px;background:#E11D55;color:#fff;display:flex;align-items:flex-end;padding:7px;box-sizing:border-box;}.ds-cover::before{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.5),transparent 65%);}.ds-cover b{position:relative;font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:12px;line-height:1.05;letter-spacing:-0.01em;}.ds-cover-empty{width:64px;height:92px;border-radius:12px;background:#F4F5F9;border:1.5px dashed #C9CCD8;color:#555867;display:grid;place-items:center;box-sizing:border-box;}.ds-cover-empty svg{width:24px;height:24px;}"
+    },
+    {
+      "name": "Linha do teleprompter",
+      "kind": "custom",
+      "refersTo": "prompter",
+      "description": "Texto do teleprompter no estúdio escuro: passado esmaecido, linha atual em sol.",
+      "html": "<div class=\"ds-prompter\"><span class=\"ds-read\"></span><span class=\"ds-past\">Todo hábito tem três partes:</span><br><span class=\"ds-now\">a deixa, a rotina e a recompensa.</span><br>A deixa é o gatilho.</div>",
+      "css": ".ds-prompter{font-family:'Hanken Grotesk',system-ui,sans-serif;position:relative;width:340px;padding:18px 20px 20px;border-radius:24px;background:#0C0D12;color:#fff;font-size:27px;line-height:1.35;font-weight:600;letter-spacing:-0.01em;}.ds-past{color:rgba(255,255,255,.38);}.ds-now{color:#FFC21A;}.ds-read{position:absolute;left:0;top:57px;width:4px;height:36px;border-radius:0 3px 3px 0;background:#FFC21A;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Estúdio de Bolso",
+    "overview": "Video Facil é um app de criação no padrão da categoria, executado com acabamento nível Canva: cada tela tem uma única próxima ação óbvia, e as cores vivas significam alguma coisa. Fundo branco, seções em cinza-frio muito claro, tinta quase preta; o coral-magenta aparece só onde está a ação principal da tela. O resto do arco-íris (tangerina, céu, menta, sol) não decora: ele numera os cortes do vídeo, sempre na mesma ordem.\n\nA densidade é de celular com uma mão: blocos grandes e arredondados, alvos de 44 a 60px, botão principal ancorado no rodapé ao alcance do polegar. Títulos em grotesca expressiva e amigável (Bricolage Grotesque) dão personalidade; a interface em grotesca humanista (Hanken Grotesk) fica quieta e legível. Sombras são suaves e difusas, com leve deslocamento para baixo; nada de sombra dura.\n\nO app é claro e vibrante; a gravação vira um estúdio escuro quase preto, onde o único destaque é a linha atual do teleprompter em amarelo-sol. O sistema recusa o editor escuro com gradiente roxo de IA, o painel cheio de opções, a cara de ferramenta técnica, o visual infantil/gamificado e o corporativo sério.",
+    "keyCharacteristics": [
+      "Uma ação primária coral-magenta por tela; todo o resto é neutro ou tinta.",
+      "Cores vivas de apoio = código dos cortes, em sequência fixa, sempre em campos sólidos.",
+      "Texto sobre cor viva é tinta, nunca branco.",
+      "Cantos generosos (12 a 24px), sombras suaves, superfícies brancas sobre cinza-frio.",
+      "Gravação em quase-preto com a linha atual em sol.",
+      "Números de tempo sempre com algarismos tabulares."
+    ],
+    "rules": [
+      {
+        "name": "A Regra da Uma Voz",
+        "body": "Coral-magenta marca a única ação principal da tela. Se duas coisas estão em coral, uma delas está errada.",
+        "section": "colors"
+      },
+      {
+        "name": "A Regra do Código de Cortes",
+        "body": "Tangerina, céu, menta e sol codificam somente cortes, nesta sequência fixa. Plataformas, origens de conteúdo, avatares e categorias ficam neutros (tinta quando selecionados).",
+        "section": "colors"
+      },
+      {
+        "name": "A Regra da Tinta sobre Cor",
+        "body": "Texto e ícone sobre campo vivo (tangerina, céu, menta, sol) são sempre `ink`, nunca branco (branco sobre tangerina dá 2,61:1). Branco só sobre `primary`, `ink` e `rec-bg`.",
+        "section": "colors"
+      },
+      {
+        "name": "A Regra do Campo Sólido",
+        "body": "Cor viva é sempre campo sólido; nunca degradê entre cores. O único degradê do sistema é o véu preto→transparente na base da capa e o esmaecimento de rolagem.",
+        "section": "colors"
+      },
+      {
+        "name": "A Regra do Piso de 12",
+        "body": "Nenhum texto abaixo de 12px, inclusive título em capa e rótulo de aba.",
+        "section": "typography"
+      },
+      {
+        "name": "A Regra do Relógio Tabular",
+        "body": "Toda duração, timecode, contagem (3:05, 0:28, 4/8, 00:14, \"2 de 5\") usa `font-variant-numeric: tabular-nums`.",
+        "section": "typography"
+      },
+      {
+        "name": "A Regra do Brilho da Ação",
+        "body": "Sombra tingida de coral pertence exclusivamente ao elemento primário; ela é parte da Regra da Uma Voz.",
+        "section": "elevation"
+      },
+      {
+        "name": "A Regra do Vidro no Estúdio",
+        "body": "No escuro, o teleprompter e os controles flutuam sobre a câmera em véu translúcido (`rgba(12,13,18,.72)` com blur de 6px; controles em branco a 10–12%), nunca em cartão opaco.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do dar a cada tela exatamente uma ação em coral-magenta, de preferência no rodapé ao alcance do polegar.",
+      "Do colorir cortes na sequência tangerina → céu → menta → sol, repetindo a partir do 5º.",
+      "Do usar `ink` para texto e ícone sobre qualquer campo vivo.",
+      "Do mostrar a capa só quando ela existe; antes disso, placeholder tracejado com o ícone da origem.",
+      "Do vir com a sugestão já marcada e o selo \"Sugerido\", com explicação em céu-claro.",
+      "Do usar algarismos tabulares em toda duração, timecode e contagem; nunca texto abaixo de 12px.",
+      "Do manter a gravação em `rec-bg` com a linha atual em `sun`.",
+      "Do auto-hospedar Bricolage Grotesque e Hanken Grotesk na PWA e usar só ícones Lucide com traço 2px."
+    ],
+    "donts": [
+      "Don't usar roxo de IA, neon ou degradê entre cores; cor viva é sempre campo sólido.",
+      "Don't dar cor própria a plataformas, origens de conteúdo ou categorias; as quatro cores vivas são dos cortes.",
+      "Don't colocar texto branco sobre tangerina, céu, menta ou sol.",
+      "Don't pôr duas ações coral na mesma tela nem usar a sombra coral fora do elemento primário.",
+      "Don't usar sombra dura ou deslocada sem desfoque.",
+      "Don't escurecer o app inteiro: só gravação/teleprompter é escuro.",
+      "Don't misturar bibliotecas de ícones nem pesos de traço."
+    ]
+  }
+}

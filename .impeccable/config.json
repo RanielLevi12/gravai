@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "nested-cards",
+        "value": "*",
+        "files": [
+          "design/telas.html"
+        ],
+        "createdAt": "2026-10-13T12:36:25.038Z",
+        "reason": "Claude: .phone is the device mockup frame of a presentation board, not a card; screens inside it are flat sections"
+      },
+      {
+        "rule": "pulsing-dot",
+        "value": "*",
+        "files": [
+          "design/telas.html"
+        ],
+        "createdAt": "2026-10-13T12:36:25.047Z",
+        "reason": "Claude: literal REC recording indicator on the camera screen, domain-appropriate; disabled under prefers-reduced-motion"
+      }
+    ]
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "title": "Escolha o mundo visual",
+  "question": "O sorteio indicou a Claquete. Fique com ela, escolha uma alternativa ou sorteie de novo.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Claquete",
+      "kicker": "THE ROLL",
+      "lineage": "claquetes de set de filmagem, brancas e digitais com bastões coloridos",
+      "thesis": "Cada projeto é uma claquete: cena, take e duração escritos à mão, e o app 'bate' quando algo começa ou fica pronto.",
+      "palette": ["#FFFFFF", "#111114", "#FFD000", "#00B4F0", "#FF2D87", "#1FC46A", "#FF3B30"],
+      "materials": ["claquete branca de marcador", "listras diagonais nos bastões", "timecode de LED vermelho na gravação"],
+      "viewport": "Projetos como pilha de claquetes brancas, cada uma com bastão listrado na cor da plataforma e campos CENA / TAKE / DURAÇÃO em grade; botão grande 'Novo vídeo' no alcance do polegar.",
+      "risk": "Se as listras virarem enfeite em todo lugar, cansa; elas só marcam início, corte e conclusão.",
+      "raised": [
+        {"from": "crouwel-grid-specimen", "raise": "Campos da claquete alinhados numa grade rígida e visível, como a ficha de uma claquete real."},
+        {"from": "notation-diagram-systems-orienteering-map", "raise": "Uma cor reservada só para a etapa ativa; nada mais na tela usa essa cor."},
+        {"from": "operate-b-exposure-record-zone-sheets", "raise": "Todo tempo (duração, timecode, cortes) em números tabulares, alinhados como num relatório de câmera."},
+        {"from": "editorial-sequence-montage-botanical-folio-season", "raise": "As etapas do projeto (material → script → take → cortes) numa faixa de escala fixa, sempre no mesmo lugar."}
+      ]
+    },
+    {
+      "id": "model-pick",
+      "label": "Páginas de revisão de roteiro",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "páginas coloridas de revisão de roteiro de cinema e TV (azul, rosa, amarela, verde)",
+      "thesis": "O script é um maço de páginas coloridas: cada corte ganha a cor de uma página de revisão.",
+      "palette": ["#FFDF3D", "#FF6FAE", "#43C2FF", "#5FD97A", "#1A1A1A", "#FFFFFF"],
+      "materials": ["papel colorido saturado", "fonte de máquina de escrever só nos rótulos", "marca de grampo"],
+      "viewport": "Projetos como maços de páginas empilhadas, a borda de cada cor mostrando quantos cortes cabem dentro.",
+      "risk": "Referência de bastidor que nem todo iniciante reconhece; papel pode puxar para 'escritório'."
+    },
+    {
+      "id": "challenger-feed",
+      "label": "Feed vertical",
+      "verdict": "competitive",
+      "lineage": "feed vertical de vídeo (TikTok/Reels)",
+      "thesis": "O app fala a língua do feed: uma coisa por tela, ações empilhadas à direita, próximo item a um deslize.",
+      "palette": ["#000000", "#FFFFFF", "#FF2D87", "#00E0D0"],
+      "materials": ["tela cheia", "degradê de leitura no rodapé", "ícones brancos"],
+      "viewport": "Cada projeto ocupa a tela inteira com a capa; ações (gravar, cortes, baixar) num trilho à direita.",
+      "case": "Identificação máxima do público; perde em clareza no script e na entrevista, que pedem leitura e comparação.",
+      "risk": "Ótimo para ver, ruim para escrever e decidir; pode virar 'mais um app de vídeo escuro'.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-vertical-video-feed-surface-hero.webp"
+    },
+    {
+      "id": "challenger-ticket",
+      "label": "Carteira de passagens",
+      "verdict": "competitive",
+      "lineage": "carteira de passagens aéreas dos anos 60, cupons destacáveis",
+      "thesis": "Cada projeto é uma carteira; cada corte é um cupom que se destaca quando fica pronto.",
+      "palette": ["#1B2A6B", "#E63329", "#FFFFFF", "#5B3FA8"],
+      "materials": ["cupons com picote", "carimbo VALIDADO", "números em carbono"],
+      "viewport": "Pasta do projeto como carteira aberta, cortes empilhados como cupons com picote e carimbo de pronto.",
+      "case": "Casa bem com pastas e cortes; perde em identificação, o público não vive esse mundo.",
+      "risk": "Navy e vermelho oficial puxam para o sério, contra o colorido pedido.",
+      "hero": "https://impeccable.style/worlds/cards/vernacular-ephemera-jet-age-ticket-wallet-hero.webp"
+    },
+    {
+      "id": "challenger-crouwel",
+      "label": "Grade Crouwel",
+      "verdict": "declined",
+      "lineage": "espécimes tipográficos em grade de Wim Crouwel",
+      "thesis": "Letras gigantes construídas célula a célula sobre grade visível.",
+      "palette": ["#FFFFFF", "#1E40FF", "#111111"],
+      "materials": ["grade de construção", "letras modulares"],
+      "viewport": "Títulos em letras de grade ocupando a tela.",
+      "case": "Bonito, mas técnico e frio para criador iniciante.",
+      "risk": "Cara de ferramenta técnica.",
+      "kept": "A grade rígida e visível dos campos."
+    },
+    {
+      "id": "challenger-botanical",
+      "label": "Fólio botânico",
+      "verdict": "declined",
+      "lineage": "pranchas botânicas em sequência de estações",
+      "thesis": "Uma planta em cinco estágios, mesma escala e mesmo chão.",
+      "palette": ["#F3EAD3", "#2F6B3A", "#C8202F"],
+      "materials": ["prancha creme", "gravura"],
+      "viewport": "Etapas lado a lado na mesma linha de base.",
+      "case": "Sem relação com o público; creme e serifa são o padrão a evitar.",
+      "risk": "Fofo e editorial demais.",
+      "kept": "Etapas do projeto numa faixa de escala fixa."
+    },
+    {
+      "id": "challenger-orienteering",
+      "label": "Mapa de orientação",
+      "verdict": "declined",
+      "lineage": "mapas de corrida de orientação (ISOM)",
+      "thesis": "Terreno fixo embaixo, percurso roxo por cima.",
+      "palette": ["#FFFFFF", "#9B2FAE", "#F5D90A", "#8A5A2B"],
+      "materials": ["curvas de nível", "círculos de controle"],
+      "viewport": "Percurso numerado sobre mapa.",
+      "case": "Metáfora distante do criador de conteúdo.",
+      "risk": "Confuso para leigo.",
+      "kept": "Uma cor reservada para a etapa ativa."
+    },
+    {
+      "id": "challenger-darkroom",
+      "label": "Ficha de laboratório",
+      "verdict": "declined",
+      "lineage": "fichas de exposição de laboratório fotográfico",
+      "thesis": "Folhas translúcidas sobre escala de zonas.",
+      "palette": ["#1A1A1A", "#8A8A8A", "#D6337F"],
+      "materials": ["folha translúcida", "hachura"],
+      "viewport": "Folhas sobrepostas com números de exposição.",
+      "case": "Técnico e cinza; contraria o colorido pedido.",
+      "risk": "Cara de ferramenta técnica.",
+      "kept": "Números tabulares para todo tempo e duração."
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "code", "toggle": false},
+  "canon": true,
+  "canonCard": {
+    "label": "Padrão da categoria",
+    "thesis": "App de criação de vídeo como os concorrentes, feito com capricho.",
+    "palette": ["#FFFFFF", "#111827", "#7C3AED"],
+    "materials": ["cards limpos", "ícones de linha", "botão roxo"],
+    "viewport": "Lista de projetos em cards, botão flutuante de novo vídeo.",
+    "risk": "Igual a todo app de IA, exatamente o que você pediu para evitar."
+  },
+  "steer": true
+}
