@@ -188,6 +188,12 @@ tests/unit/**, tests/fixtures/**, e2e/**
 
 ---
 
+### Tarefa 5b: Conectar a IA do usuário (OpenRouter OAuth) — adicionada em 13/10/2026
+
+Decisão do usuário: nada de chave colada; cada usuário conecta a própria conta OpenRouter por OAuth PKCE (piloto = conta do dono). Tabela `ai_connections` com chave cifrada (AES-256-GCM), rotas `/api/ai/{connect,callback,disconnect}`, camada de IA via OpenRouter (`openai/gpt-6-luna`, `anthropic/claude-haiku-5.5`, áudio `google/gemini-3.8-flash`) exposta por `withUserAi(userId)`; jev segue global com a chave do Gravaí. Brief completo no workspace de execução (`task-5b-brief.md`). Tarefas 6–10 consomem `withUserAi`.
+
+---
+
 ### Tarefa 6: Ingestão de material e criação de projeto
 
 **Files:**

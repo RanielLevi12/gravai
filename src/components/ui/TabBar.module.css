@@ -1,0 +1,63 @@
+.tabbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  padding: 8px 12px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 48px;
+  padding: 6px 0;
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tab[aria-current="page"] {
+  color: var(--ink);
+}
+
+.tabNew {
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-top: -6px;
+  border-radius: 20px;
+  background: var(--primary);
+  color: var(--bg);
+  box-shadow: var(--shadow-cta);
+  transition:
+    background-color 180ms var(--ease),
+    transform 180ms var(--ease);
+}
+
+.tabNew:hover {
+  background: var(--primary-press);
+}
+
+.tabNew:active {
+  transform: scale(0.98);
+}
+
+.tab:focus-visible,
+.tabNew:focus-visible {
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 5px var(--sky);
+}

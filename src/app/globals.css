@@ -1,0 +1,97 @@
+:root {
+  /* cores — DESIGN.md */
+  --primary: #e11d55;
+  --primary-press: #c3134a;
+  --primary-tint: #ffe4ec;
+  --tangerine: #ff7a00;
+  --sky: #1e9bff;
+  --mint: #12b76a;
+  --sun: #ffc21a;
+  --cut-1: var(--tangerine);
+  --cut-2: var(--sky);
+  --cut-3: var(--mint);
+  --cut-4: var(--sun);
+  --sky-tint: #e1f1ff;
+  --sky-ink: #0c3c66;
+  --mint-tint: #ddf6ea;
+  --mint-ink: #08643a;
+  --ink: #15161c;
+  --ink-2: #555867;
+  --bg: #ffffff;
+  --surface: #f4f5f9;
+  --surface-2: #eceef4;
+  --line: #e3e5ec;
+  --line-strong: #c9ccd8;
+  --rec-bg: #0c0d12;
+  --rec-red: #ff3b30;
+
+  /* raios */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+
+  /* espaçamento */
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 20px;
+  --space-xl: 28px;
+
+  /* sombras */
+  --shadow-1: 0 1px 2px rgba(21, 22, 28, 0.06), 0 4px 12px rgba(21, 22, 28, 0.06);
+  --shadow-2: 0 2px 4px rgba(21, 22, 28, 0.08), 0 12px 32px rgba(21, 22, 28, 0.1);
+  --shadow-cta: 0 4px 10px rgba(225, 29, 85, 0.28), 0 12px 28px rgba(225, 29, 85, 0.18);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--ui), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--display), system-ui, sans-serif;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.display {
+  font-family: var(--display), system-ui, sans-serif;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
