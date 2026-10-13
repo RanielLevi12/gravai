@@ -1,0 +1,18 @@
+{
+  "platforms": ["reels", "tiktok"],
+  "format": "single",
+  "episodes": [],
+  "mainSeconds": 60,
+  "scenery": {
+    "natural": "Uma parede lisa ou uma estante arrumada, com a luz de uma janela de frente para você.",
+    "aiPrompt": "Fundo de estúdio caseiro aconchegante, estante de madeira clara com livros e uma planta, luz natural suave vinda da esquerda, profundidade de campo rasa, sem pessoas, sem texto, formato vertical 9:16"
+  },
+  "cover": "frame",
+  "reasons": {
+    "plataformas": "O tema é direto e pessoal, do tipo que vai bem em vídeos verticais curtos.",
+    "formato": "O texto desenvolve uma ideia só, então cabe num vídeo único.",
+    "duracao": "Um minuto basta para passar a ideia principal sem perder a atenção.",
+    "cenario": "Um fundo simples e bem iluminado deixa o foco em você.",
+    "capa": "Um quadro seu falando, com o título, chama mais atenção no feed."
+  }
+}

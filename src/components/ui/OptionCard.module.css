@@ -1,0 +1,155 @@
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 44px;
+  padding: 18px 16px 16px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    border-color 200ms var(--ease),
+    background-color 200ms var(--ease);
+}
+
+.card:hover {
+  border-color: var(--line-strong);
+}
+
+.card:has(.input:checked) {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+}
+
+.card:has(.input:focus-visible) {
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 5px var(--sky),
+    0 0 0 6px var(--ink);
+}
+
+.disabled {
+  cursor: not-allowed;
+  background: var(--surface);
+}
+
+.disabled:hover {
+  border-color: var(--line);
+}
+
+.disabled .label,
+.disabled .sub {
+  color: var(--ink-2);
+}
+
+/* Rádio/caixa nativa escondida de forma acessível; o clique chega pelo <label>. */
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.check {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--bg);
+  transform: scale(0);
+  transition: transform 350ms var(--ease);
+}
+
+.card:has(.input:checked) .check {
+  transform: scale(1);
+}
+
+.label {
+  padding-right: 28px;
+  font-family: var(--display), system-ui, sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.text .label {
+  font-family: var(--ui), system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
+.sub {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.reason {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.cuts {
+  display: flex;
+  gap: 3px;
+  align-self: stretch;
+  height: 8px;
+  margin-top: 10px;
+}
+
+.cuts i {
+  flex: 1;
+  border-radius: 2px;
+}
+
+.cuts i:nth-child(4n + 1) {
+  background: var(--cut-1);
+}
+
+.cuts i:nth-child(4n + 2) {
+  background: var(--cut-2);
+}
+
+.cuts i:nth-child(4n + 3) {
+  background: var(--cut-3);
+}
+
+.cuts i:nth-child(4n + 4) {
+  background: var(--cut-4);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  margin-top: 10px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+}

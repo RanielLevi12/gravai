@@ -1,0 +1,82 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { scoreViral, withUserAi } from "@/lib/ai";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createServerClient } from "@/lib/supabase/server";
+import { supabaseInterviewDb } from "./db";
+import { confirmSeriesWith, saveAnswerWith, type ConfirmSeriesResult, type SaveAnswerResult } from "./service";
+import { STEP_FIELD, type AnswerStep, type InterviewSuggestion, type StepValues, type TitleOption } from "./steps";
+import { suggestInterviewWith, suggestTitlesWith, type SuggestDeps } from "./suggest";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const EXPIRED = "Sua sessão expirou. Entre de novo.";
+const NOT_FOUND = "Projeto não encontrado.";
+
+async function session() {
+  const supabase = await createServerClient();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) return null;
+  const userId = data.user.id;
+  const db = supabaseInterviewDb({ supabase, admin: createAdminClient, userId });
+  const deps: SuggestDeps = {
+    db,
+    ai: () => withUserAi(userId),
+    profile: async () => {
+      const { data: p } = await supabase.from("profiles").select("niche, audience, tone").maybeSingle();
+      return p;
+    },
+  };
+  return { db, deps };
+}
+
+const isAnswerStep = (s: unknown): s is AnswerStep => typeof s === "string" && Object.hasOwn(STEP_FIELD, s);
+
+/**
+ * Salva a resposta de um passo e devolve o próximo. Idempotente (mesmo valor → mesmo estado);
+ * zera `cutSeconds` se a nova duração o tornar inválido.
+ */
+export async function saveAnswer<S extends AnswerStep>(projectId: string, step: S, value: StepValues[S]): Promise<SaveAnswerResult> {
+  if (typeof projectId !== "string" || !UUID.test(projectId)) return { error: NOT_FOUND };
+  if (!isAnswerStep(step)) return { error: "Passo inválido." };
+  const s = await session();
+  if (!s) return { error: EXPIRED };
+  try {
+    const r = await saveAnswerWith(s.db, projectId, step, value);
+    // Voltar pelo navegador precisa mostrar a resposta salva, não a página guardada no cache do cliente.
+    if ("next" in r) revalidatePath(`/projetos/${projectId}`, "layout");
+    return r;
+  } catch {
+    return { error: "Não foi possível salvar agora. Tente de novo." };
+  }
+}
+
+/** Cria a série (o projeto atual vira o episódio 1) e devolve os ids dos episódios. */
+export async function confirmSeries(projectId: string, episodes: { title: string; summary: string }[]): Promise<ConfirmSeriesResult> {
+  if (typeof projectId !== "string" || !UUID.test(projectId)) return { error: NOT_FOUND };
+  const s = await session();
+  if (!s) return { error: EXPIRED };
+  try {
+    const r = await confirmSeriesWith(s.db, projectId, episodes);
+    if ("ids" in r) revalidatePath("/projetos", "layout");
+    return r;
+  } catch {
+    return { error: "Não consegui criar a série. Tente de novo." };
+  }
+}
+
+/** Sugestão da entrevista pela IA do usuário. Sem IA conectada lança AiError code 'not_connected'. */
+export async function suggestInterview(projectId: string): Promise<InterviewSuggestion> {
+  if (typeof projectId !== "string" || !UUID.test(projectId)) throw new Error(NOT_FOUND);
+  const s = await session();
+  if (!s) throw new Error(EXPIRED);
+  return suggestInterviewWith(s.deps, projectId);
+}
+
+/** 6 títulos da IA do usuário, ranqueados por `scoreViral` (maior primeiro). */
+export async function suggestTitles(projectId: string): Promise<TitleOption[]> {
+  if (typeof projectId !== "string" || !UUID.test(projectId)) throw new Error(NOT_FOUND);
+  const s = await session();
+  if (!s) throw new Error(EXPIRED);
+  return suggestTitlesWith({ ...s.deps, score: scoreViral }, projectId);
+}

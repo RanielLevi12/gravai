@@ -1,0 +1,33 @@
+.wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.bar {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.bar i {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  transition: background-color 200ms var(--ease);
+}
+
+.bar i.done {
+  background: var(--primary);
+}
+
+.count {
+  min-width: 34px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

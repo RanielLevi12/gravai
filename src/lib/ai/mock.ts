@@ -47,17 +47,23 @@ export function setMockInvalidJson(n: number): void {
   invalidJsonLeft = n;
 }
 
-function fixture(fn: MockFn): unknown {
-  const file = path.join(process.cwd(), "tests", "fixtures", "ai", `${fn}.json`);
+/**
+ * Fixture da função. `variant` escolhe `{fn}.{variant}.json` quando existe (em generateJson,
+ * o `title` do JSON Schema, ex.: interview_suggestion); senão cai em `{fn}.json`.
+ */
+function fixture(fn: MockFn, variant?: string): unknown {
+  const dir = path.join(process.cwd(), "tests", "fixtures", "ai");
+  const specific = variant && /^[a-z0-9_]+$/.test(variant) ? path.join(dir, `${fn}.${variant}.json`) : null;
+  const file = specific && fs.existsSync(specific) ? specific : path.join(dir, `${fn}.json`);
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
-function next(fn: MockFn): unknown {
+function next(fn: MockFn, variant?: string): unknown {
   calls[fn] = (calls[fn] ?? 0) + 1;
   const q = queues[fn];
   if (q && q.length > 0) return q.shift();
   if (fn in constants) return constants[fn];
-  return fixture(fn);
+  return fixture(fn, variant);
 }
 
 export async function ocrImages(_images: OcrImage[]): Promise<string> {
@@ -73,8 +79,8 @@ export async function transcribeAudio(_file: Buffer, _filename: string): Promise
 }
 
 /** Texto JSON bruto, como o provedor real devolveria. */
-export async function rawJson(_schema: Record<string, unknown>, _system: string, _user: string): Promise<string> {
-  const value = next("generateJson");
+export async function rawJson(schema: Record<string, unknown>, _system: string, _user: string): Promise<string> {
+  const value = next("generateJson", typeof schema.title === "string" ? schema.title : undefined);
   if (invalidJsonLeft > 0) {
     invalidJsonLeft--;
     return "{ isto não é json";
