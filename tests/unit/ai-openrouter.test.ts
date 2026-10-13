@@ -116,7 +116,20 @@ describe("openrouter.ts", () => {
   it("transcribeAudio sem duração legível → AiError, sem chamar o modelo", async () => {
     const sink: Captured[] = [];
     const ai = createOpenRouterAi(KEY, { fetch: fakeFetch("x", sink) });
-    await expect(ai.transcribeAudio(Buffer.from("isto não é áudio"), "a.mp3")).rejects.toBeInstanceOf(AiError);
+    const err = await ai.transcribeAudio(Buffer.from("isto não é áudio"), "a.mp3").catch((e) => e);
+    expect(err).toBeInstanceOf(AiError);
+    expect(err.code).toBe("invalid_input");
+    expect(sink).toHaveLength(0);
+  });
+
+  it("transcribeAudio em webm (formato não aceito) → AiError code 'invalid_input'", async () => {
+    const sink: Captured[] = [];
+    const ai = createOpenRouterAi(KEY, { fetch: fakeFetch("x", sink) });
+    // cabeçalho EBML mínimo de WebM
+    const webm = Buffer.from("1a45dfa39f4286810142f7810142f2810442f381084282847765626d42878104428581021853806701ffffffffffffff", "hex");
+    const err = await ai.transcribeAudio(webm, "gravacao.webm").catch((e) => e);
+    expect(err).toBeInstanceOf(AiError);
+    expect(err.code).toBe("invalid_input");
     expect(sink).toHaveLength(0);
   });
 

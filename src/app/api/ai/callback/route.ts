@@ -21,7 +21,11 @@ export async function GET(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  if (!user) {
+    const res = NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    clearOAuthCookie(res);
+    return res;
+  }
 
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
@@ -49,13 +53,21 @@ export async function GET(request: NextRequest) {
   }
   if (typeof key !== "string" || key.length < 8) return done("erro");
 
+  let keyCiphertext: string;
+  try {
+    keyCiphertext = encryptKey(key);
+  } catch {
+    console.warn("[ai] não foi possível cifrar a chave de IA (segredo de cifra indisponível)");
+    return done("erro");
+  }
+
   const { error } = await createAdminClient()
     .from("ai_connections")
     .upsert(
       {
         user_id: user.id,
         provider: "openrouter",
-        key_ciphertext: encryptKey(key),
+        key_ciphertext: keyCiphertext,
         key_hint: key.slice(-4),
         created_at: new Date().toISOString(),
       },

@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
   const { error } = await supabase.from("ai_connections").delete().eq("user_id", user.id);
-  const dest = error ? "/perfil?ia=erro" : "/perfil";
+  // ?ia=desconectada: o Perfil orienta a apagar a chave antiga no OpenRouter (não revogamos pela API).
+  const dest = error ? "/perfil?ia=erro" : "/perfil?ia=desconectada";
   return NextResponse.redirect(new URL(dest, request.nextUrl.origin), 303);
 }

@@ -23,6 +23,11 @@ function mesAtual() {
 const AVISO_IA: Record<string, { texto: string; erro: boolean }> = {
   conectada: { texto: "Pronto, sua IA está conectada.", erro: false },
   erro: { texto: "Não deu para conectar sua IA. Tente de novo.", erro: true },
+  // "Gravai" é o key_label enviado em /api/ai/connect: é o nome da chave no OpenRouter.
+  desconectada: {
+    texto: "IA desconectada. Para apagar a chave de vez, abra OpenRouter › Keys e remova a chave Gravai.",
+    erro: false,
+  },
 };
 
 export default async function PerfilPage({ searchParams }: { searchParams: Promise<{ ia?: string }> }) {

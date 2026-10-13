@@ -57,7 +57,8 @@ async function probeAudio(file: Buffer, filename: string): Promise<{ seconds: nu
   } catch {
     // arquivo ilegível: cai no erro abaixo
   }
-  throw new AiError(AUDIO_FAIL, { code: "invalid_output" });
+  // Arquivo ilegível, sem duração ou em formato que o input_audio não aceita (ex.: webm).
+  throw new AiError(AUDIO_FAIL, { code: "invalid_input" });
 }
 
 export type OpenRouterAi = ReturnType<typeof createOpenRouterAi>;

@@ -20,6 +20,14 @@ export async function GET(request: NextRequest) {
 
   const res = NextResponse.redirect(url, 302);
   res.headers.set("Cache-Control", "no-store");
-  setOAuthCookie(res, user.id, verifier, state);
+  try {
+    setOAuthCookie(res, user.id, verifier, state);
+  } catch {
+    // AI_KEY_ENCRYPTION_SECRET ausente ou inválido: não dá para assinar o cookie.
+    console.warn("[ai] não foi possível iniciar a conexão de IA (segredo de cifra indisponível)");
+    const erro = NextResponse.redirect(new URL("/perfil?ia=erro", request.nextUrl.origin), 303);
+    erro.headers.set("Cache-Control", "no-store");
+    return erro;
+  }
   return res;
 }

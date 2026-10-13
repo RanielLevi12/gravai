@@ -7,7 +7,19 @@ const state = vi.hoisted(() => ({
   upserts: [] as Record<string, unknown>[],
   upsertError: null as unknown,
   deletes: [] as { table: string; col: string; val: string }[],
+  encryptThrows: false,
 }));
+
+vi.mock("@/lib/ai/keys", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/lib/ai/keys")>();
+  return {
+    ...real,
+    encryptKey: (plain: string) => {
+      if (state.encryptThrows) throw new Error("AI_KEY_ENCRYPTION_SECRET ausente");
+      return real.encryptKey(plain);
+    },
+  };
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createServerClient: async () => ({
@@ -52,6 +64,7 @@ beforeEach(() => {
   state.upserts = [];
   state.upsertError = null;
   state.deletes = [];
+  state.encryptThrows = false;
   fetchMock = vi.fn(async () => new Response(JSON.stringify({ key: KEY, user_id: "or-user" }), { status: 200 }));
   vi.stubGlobal("fetch", fetchMock);
 });
@@ -106,6 +119,15 @@ describe("GET /api/ai/connect", () => {
     expect(verifier).toBeTruthy();
     expect(res.headers.get("location")).not.toContain(verifier);
     expect(res.headers.get("location")).not.toContain(USER_A);
+  });
+});
+
+describe("GET /api/ai/connect sem segredo", () => {
+  it("AI_KEY_ENCRYPTION_SECRET ausente → /perfil?ia=erro, sem cookie", async () => {
+    vi.stubEnv("AI_KEY_ENCRYPTION_SECRET", "");
+    const res = await connect(new NextRequest(`${ORIGIN}/api/ai/connect`));
+    expect(res.headers.get("location")).toBe(`${ORIGIN}/perfil?ia=erro`);
+    expect(res.cookies.getAll().filter((c) => c.value)).toHaveLength(0);
   });
 });
 
@@ -190,12 +212,36 @@ describe("GET /api/ai/callback", () => {
     expect(await fullText(res)).not.toContain(KEY);
   });
 
-  it("sem sessão → 401", async () => {
+  it("sem sessão → 401 e o cookie de PKCE é apagado", async () => {
     const { cookie, loc } = await startFlow();
     state.user = null;
     const res = await callback(callbackReq(`code=abc123&state=${loc.searchParams.get("state")}`, cookie));
     expect(res.status).toBe(401);
     expect(fetchMock).not.toHaveBeenCalled();
+    const cleared = res.cookies.get(cookie.name);
+    expect(cleared).toBeDefined();
+    expect(cleared!.value).toBe("");
+    expect(cleared!.maxAge).toBe(0);
+  });
+
+  it("segredo ausente no callback → /perfil?ia=erro, cookie apagado, nada gravado", async () => {
+    const { cookie, loc } = await startFlow();
+    vi.stubEnv("AI_KEY_ENCRYPTION_SECRET", "");
+    const res = await callback(callbackReq(`code=abc123&state=${loc.searchParams.get("state")}`, cookie));
+    expect(res.headers.get("location")).toBe(`${ORIGIN}/perfil?ia=erro`);
+    expect(res.cookies.get(cookie.name)?.value).toBe("");
+    expect(state.upserts).toHaveLength(0);
+  });
+
+  it("encryptKey lança depois da troca → /perfil?ia=erro, cookie apagado, chave fora da resposta", async () => {
+    const { cookie, loc } = await startFlow();
+    state.encryptThrows = true;
+    const res = await callback(callbackReq(`code=abc123&state=${loc.searchParams.get("state")}`, cookie));
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe(`${ORIGIN}/perfil?ia=erro`);
+    expect(res.cookies.get(cookie.name)?.value).toBe("");
+    expect(state.upserts).toHaveLength(0);
+    expect(await fullText(res)).not.toContain(KEY);
   });
 
   it("ignora qualquer destino vindo da URL (sem open redirect)", async () => {
@@ -211,7 +257,7 @@ describe("POST /api/ai/disconnect", () => {
   it("apaga a linha do usuário e volta ao perfil", async () => {
     const res = await disconnect(new NextRequest(`${ORIGIN}/api/ai/disconnect`, { method: "POST", headers: { origin: ORIGIN } }));
     expect(res.status).toBe(303);
-    expect(res.headers.get("location")).toBe(`${ORIGIN}/perfil`);
+    expect(res.headers.get("location")).toBe(`${ORIGIN}/perfil?ia=desconectada`);
     expect(state.deletes).toEqual([{ table: "ai_connections", col: "user_id", val: USER_A }]);
   });
 
