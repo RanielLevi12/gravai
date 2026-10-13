@@ -89,3 +89,45 @@ export function stripNulls(value: unknown): unknown {
   }
   return value;
 }
+
+function isNullable(js: Json | undefined): boolean {
+  if (!js) return false;
+  if (js.type === "null" || (Array.isArray(js.type) && js.type.includes("null"))) return true;
+  return Array.isArray(js.anyOf) && (js.anyOf as Json[]).some(isNullable);
+}
+
+/**
+ * Remove null apenas onde o schema ORIGINAL (não strict) tinha chave opcional
+ * (ou valor de record parcial). Campos `.nullable()` mantêm o null.
+ */
+export function stripOptionalNulls(value: unknown, original: Json | undefined): unknown {
+  if (!original) return value;
+  if (Array.isArray(original.anyOf)) {
+    // escolhe a opção compatível com a forma do valor
+    const opts = original.anyOf as Json[];
+    const isArr = Array.isArray(value);
+    const isObj = value !== null && typeof value === "object" && !isArr;
+    const opt = opts.find((o) => (isArr && o.type === "array") || (isObj && o.type === "object"));
+    return opt ? stripOptionalNulls(value, opt) : value;
+  }
+  if (Array.isArray(value)) {
+    const items = original.items as Json | undefined;
+    return value.map((v) => stripOptionalNulls(v, items));
+  }
+  if (value === null || typeof value !== "object") return value;
+  const props = (original.properties ?? {}) as Record<string, Json>;
+  const required = new Set((original.required as string[] | undefined) ?? []);
+  const names = original.propertyNames as { enum?: string[] } | undefined;
+  const recordValue =
+    names?.enum && original.additionalProperties && typeof original.additionalProperties === "object"
+      ? (original.additionalProperties as Json)
+      : undefined;
+  const out: Json = {};
+  for (const [k, v] of Object.entries(value as Json)) {
+    const sub = recordValue ?? props[k];
+    const optional = recordValue ? !isNullable(recordValue) : !required.has(k);
+    if (v === null && optional && !isNullable(sub)) continue;
+    out[k] = stripOptionalNulls(v, sub);
+  }
+  return out;
+}

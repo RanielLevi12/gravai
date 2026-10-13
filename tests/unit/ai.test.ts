@@ -120,3 +120,19 @@ describe("trava de produção do mock", () => {
     await expect(ocrPdf(Buffer.from("x"))).resolves.toBeTypeOf("string");
   });
 });
+
+describe("stripOptionalNulls", () => {
+  it("mantém null em campo .nullable()", async () => {
+    const sch = z.object({ n: z.number().nullable(), o: z.string().optional() });
+    setMockResponse("generateJson", { n: null, o: null });
+    expect(await generateJson(sch, "s", "u")).toEqual({ n: null });
+  });
+
+  it("array de objetos com opcional null vira chave ausente", async () => {
+    const sch = z.object({ itens: z.array(z.object({ k: z.string(), x: z.number().optional(), m: z.string().nullable() })) });
+    setMockResponse("generateJson", { itens: [{ k: "a", x: null, m: null }, { k: "b", x: 2, m: "z" }] });
+    expect(await generateJson(sch, "s", "u")).toEqual({
+      itens: [{ k: "a", m: null }, { k: "b", x: 2, m: "z" }],
+    });
+  });
+});

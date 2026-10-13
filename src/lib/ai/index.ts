@@ -1,6 +1,6 @@
 import "server-only";
-import type { z } from "zod";
-import { AiError, toStrictJsonSchema, stripNulls, type OcrImage, type ScriptCheck, type Transcription } from "./schemas";
+import { z } from "zod";
+import { AiError, toStrictJsonSchema, stripOptionalNulls, type OcrImage, type ScriptCheck, type Transcription } from "./schemas";
 
 export { AiError } from "./schemas";
 export type { OcrImage, ScriptCheck, Transcription } from "./schemas";
@@ -31,10 +31,11 @@ export async function transcribeAudio(file: Buffer, filename: string): Promise<T
 export async function generateJson<T>(schema: z.ZodType<T>, system: string, user: string): Promise<T> {
   const provider = useMock() ? await import("./mock") : await import("./openai");
   const jsonSchema = toStrictJsonSchema(schema);
+  const { $schema: _s, ...original } = z.toJSONSchema(schema) as Record<string, unknown>;
   for (let attempt = 0; attempt < 2; attempt++) {
     const raw = await provider.rawJson(jsonSchema, system, user);
     try {
-      const parsed = schema.safeParse(stripNulls(JSON.parse(raw)));
+      const parsed = schema.safeParse(stripOptionalNulls(JSON.parse(raw), original));
       if (parsed.success) return parsed.data;
     } catch {
       // JSON inválido: tenta de novo
