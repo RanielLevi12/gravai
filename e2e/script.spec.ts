@@ -151,3 +151,35 @@ test("durante a geração Esc não fecha a confirmação e o Desfazer não sobre
   await expect(page.getByRole("button", { name: "Desfazer" })).toHaveCount(0);
   await expect(bloco(page, "Corte 1")).toContainText(original);
 });
+
+test("voltar de /gravar reabre o script com a edição salva", async ({ page }) => {
+  const id = await novoProjetoNoScript(page, "script-voltar");
+  const corte1 = bloco(page, "Corte 1");
+  await corte1.getByRole("button", { name: "Editar" }).click();
+  await corte1.getByRole("textbox", { name: "Texto do Corte 1" }).fill("Edição que precisa sobreviver ao voltar.");
+  await expect(page.getByText("Salvo", { exact: true })).toBeVisible();
+
+  await page.getByRole("link", { name: "Gravar" }).click();
+  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar$`));
+  await page.goBack();
+  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/script$`));
+  await expect(bloco(page, "Corte 1")).toContainText("Edição que precisa sobreviver ao voltar.");
+});
+
+test("mudar uma resposta depois do script mostra a faixa de script desatualizado", async ({ page }) => {
+  const id = await novoProjetoNoScript(page, "script-velho");
+  await expect(page.getByText("Suas respostas mudaram desde este script")).toHaveCount(0);
+
+  await page.goto(`/projetos/${id}/entrevista/duracao`);
+  await page.getByRole("radiogroup", { name: "Duração do vídeo" }).getByRole("radio").first().check({ force: true });
+  await page.getByRole("button", { name: "Próxima" }).click();
+  await expect(page).toHaveURL(/\/entrevista\/cortes$/);
+
+  await page.goto(`/projetos/${id}/script`);
+  await expect(page.getByText("Suas respostas mudaram desde este script")).toBeVisible();
+  await page.getByRole("button", { name: "Gerar de novo", exact: true }).click();
+  await page.getByRole("dialog", { name: "Gerar o script de novo?" }).getByRole("button", { name: "Continuar" }).click();
+  await expect(page.getByText("Suas respostas mudaram desde este script")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText("Suas respostas mudaram desde este script")).toHaveCount(0);
+});

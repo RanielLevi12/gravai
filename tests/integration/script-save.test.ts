@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { BlockKind, NewScriptBlock } from "@/lib/script/generate";
+import { supabaseInterviewDb } from "@/lib/interview/db";
 import { supabaseScriptDb } from "@/lib/script/db";
 import type { Database } from "@/lib/supabase/types";
 
@@ -79,5 +80,21 @@ describe("supabaseScriptDb.saveScript", () => {
 
     const { data } = await client.from("projects").select("status, cover_prompt").eq("id", projectId).single();
     expect(data).toEqual({ status: "script", cover_prompt: "capa" });
+  });
+
+  it("script_stale: marcado ao mudar respostas depois do script, limpo ao salvar o script novo", async () => {
+    const db = supabaseScriptDb({ supabase: client, userId });
+    const stale = async () => (await client.from("projects").select("script_stale").eq("id", projectId).single()).data?.script_stale;
+    expect(await db.saveScript(projectId, { blocks: blocks(4), descriptions: {}, coverPrompt: null, interview: {} })).toBe(true);
+    expect(await stale()).toBe(false);
+
+    const iv = supabaseInterviewDb({ supabase: client });
+    expect(await iv.saveInterview(projectId, { mainSeconds: 60 })).toBe(true);
+    expect(await stale()).toBe(false);
+    expect(await iv.saveInterview(projectId, { mainSeconds: 120 }, { scriptStale: true })).toBe(true);
+    expect(await stale()).toBe(true);
+
+    expect(await db.saveScript(projectId, { blocks: blocks(4), descriptions: {}, coverPrompt: null, interview: {} })).toBe(true);
+    expect(await stale()).toBe(false);
   });
 });

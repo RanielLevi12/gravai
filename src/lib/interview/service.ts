@@ -1,6 +1,6 @@
 /** Regras da entrevista sobre um banco abstrato (Supabase no app, memória nos testes). */
 import { PROJECTS_LIMIT } from "@/lib/usage";
-import { applyAnswer, nextAfter, validateEpisodes, EPISODES_STEP, type AnswerStep, type Episode, type Interview, type RouteStep } from "./steps";
+import { applyAnswer, changesScriptInputs, hasScript, nextAfter, validateEpisodes, EPISODES_STEP, type AnswerStep, type Episode, type Interview, type RouteStep } from "./steps";
 
 export type InterviewProject = {
   id: string;
@@ -18,8 +18,8 @@ export type NewEpisodeProject = Omit<InterviewProject, "id">;
 
 export interface InterviewDb {
   getProject(id: string): Promise<InterviewProject | null>;
-  /** Grava a entrevista inteira. false = projeto não encontrado. */
-  saveInterview(id: string, interview: Interview): Promise<boolean>;
+  /** Grava a entrevista inteira. `scriptStale` marca o script já gerado como desatualizado. false = projeto não encontrado. */
+  saveInterview(id: string, interview: Interview, opts?: { scriptStale?: boolean }): Promise<boolean>;
   ctaIds(): Promise<string[]>;
   /** Quantos projetos ainda cabem na cota do mês (só leitura; quem consome é `insertProjects`). */
   remainingProjects(): Promise<number>;
@@ -52,7 +52,9 @@ export async function saveAnswerWith(db: InterviewDb, projectId: string, step: A
   const ctaIds = step === "cta" ? await db.ctaIds() : [];
   const r = applyAnswer(project.interview ?? {}, step, value, { sourceText: project.source_text, ctaIds });
   if (!r.ok) return { error: r.error };
-  if (!(await db.saveInterview(projectId, r.interview))) return { error: MSG_SAVE_FAILED };
+  // Respostas que o script usa mudaram depois de ele existir: a tela do script avisa e oferece "Gerar de novo".
+  const scriptStale = hasScript(project.status) && changesScriptInputs(project.interview ?? {}, r.interview);
+  if (!(await db.saveInterview(projectId, r.interview, scriptStale ? { scriptStale: true } : undefined))) return { error: MSG_SAVE_FAILED };
   return { next: r.next };
 }
 

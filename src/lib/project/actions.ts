@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase/server";
+import { hasScript } from "@/lib/interview/steps";
 import { nextStepHref } from "./next-step";
 import { MAX_SOURCE_CHARS } from "./source";
 
@@ -24,14 +25,19 @@ export async function saveSource(projectId: string, text: string): Promise<SaveS
 
   const { data: project, error: readError } = await supabase
     .from("projects")
-    .select("id, status, interview")
+    .select("id, status, interview, source_text")
     .eq("id", projectId)
     .maybeSingle();
   if (readError) return { ok: false, error: "Não foi possível salvar agora. Tente de novo." };
   if (!project) return { ok: false, error: "Projeto não encontrado." };
 
   const status = project.status === "fonte" ? "entrevista" : project.status;
-  const { error } = await supabase.from("projects").update({ source_text: sourceText, status }).eq("id", projectId);
+  // Texto-fonte mudou depois de o script existir: o script fica marcado como desatualizado.
+  const stale = hasScript(project.status) && project.source_text !== sourceText;
+  const { error } = await supabase
+    .from("projects")
+    .update({ source_text: sourceText, status, ...(stale ? { script_stale: true } : {}) })
+    .eq("id", projectId);
   if (error) return { ok: false, error: "Não foi possível salvar agora. Tente de novo." };
 
   return { ok: true, href: nextStepHref({ id: projectId, status, interview: project.interview }) };

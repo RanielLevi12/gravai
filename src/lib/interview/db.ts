@@ -22,8 +22,12 @@ export function supabaseInterviewDb(deps: { supabase: SupabaseClient<Database> }
       const interview = data.interview && typeof data.interview === "object" && !Array.isArray(data.interview) ? data.interview : {};
       return { ...data, interview: interview as unknown as Interview } satisfies InterviewProject;
     },
-    async saveInterview(id, interview) {
-      const { data, error } = await supabase.from("projects").update({ interview: asJson(interview) }).eq("id", id).select("id");
+    async saveInterview(id, interview, opts) {
+      const { data, error } = await supabase
+        .from("projects")
+        .update({ interview: asJson(interview), ...(opts?.scriptStale ? { script_stale: true } : {}) })
+        .eq("id", id)
+        .select("id");
       return !error && (data?.length ?? 0) > 0;
     },
     async ctaIds() {

@@ -42,7 +42,7 @@ export function supabaseScriptDb(deps: { supabase: SupabaseClient<Database>; use
       if (delError) return false;
       const { data, error: upError } = await supabase
         .from("projects")
-        .update({ descriptions: asJson(descriptions), cover_prompt: coverPrompt, interview: asJson(interview), status: "script" })
+        .update({ descriptions: asJson(descriptions), cover_prompt: coverPrompt, interview: asJson(interview), status: "script", script_stale: false })
         .eq("id", projectId)
         .select("id");
       return !upError && (data?.length ?? 0) > 0;

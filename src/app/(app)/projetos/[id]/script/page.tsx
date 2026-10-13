@@ -32,7 +32,7 @@ export default async function ScriptPage({ params }: { params: Promise<{ id: str
   };
 
   // RLS limita aos projetos do usuário: projeto de outra pessoa cai no 404.
-  const { data: project } = await supabase.from("projects").select("id, title, interview").eq("id", id).maybeSingle();
+  const { data: project } = await supabase.from("projects").select("id, title, interview, script_stale").eq("id", id).maybeSingle();
   if (!project) notFound();
 
   let rows = await loadBlocks();
@@ -78,6 +78,7 @@ export default async function ScriptPage({ params }: { params: Promise<{ id: str
       title={typeof chosen === "string" && chosen ? chosen : project.title}
       blocks={blocks}
       warnings={[...warning, ...(checks as string[])]}
+      stale={project.script_stale}
     />
   );
 }

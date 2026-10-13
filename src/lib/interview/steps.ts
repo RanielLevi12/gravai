@@ -271,3 +271,14 @@ export function validateEpisodes(value: unknown): { ok: true; episodes: Episode[
 }
 
 export { MAIN_DURATIONS };
+
+/** Respostas que mudam o script gerado (fora o passo atual, a sugestão da IA e os avisos). */
+const SCRIPT_INPUT_FIELDS = ["platforms", "format", "episodes", "mainSeconds", "cutSeconds", "scenery", "titles", "cover", "ctaId"] as const;
+
+/** true se `next` difere de `prev` em algo que o script usa. */
+export function changesScriptInputs(prev: Interview, next: Interview): boolean {
+  return SCRIPT_INPUT_FIELDS.some((f) => JSON.stringify(prev[f] ?? null) !== JSON.stringify(next[f] ?? null));
+}
+
+/** O projeto já tem script gerado (e portanto pode ficar desatualizado). */
+export const hasScript = (status: string): boolean => status === "script" || status === "gravacao" || status === "pronto";

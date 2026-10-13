@@ -31,11 +31,14 @@ export function ScriptEditor({
   title,
   blocks,
   warnings,
+  stale,
 }: {
   projectId: string;
   title: string;
   blocks: EditorBlock[];
   warnings: string[];
+  /** Respostas ou texto-fonte mudaram depois de este script ser gerado. */
+  stale: boolean;
 }) {
   const [texts, setTexts] = useState(() => textsOf(blocks));
   const [rewriting, setRewriting] = useState<EditorBlock | null>(null);
@@ -43,6 +46,7 @@ export function ScriptEditor({
   const [toast, setToast] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [outdated, setOutdated] = useState(stale);
   const [regenError, setRegenError] = useState<ActionError | null>(null);
   const autosave = useAutosave(saveText);
   const closeToast = useCallback(() => setToast(null), []);
@@ -88,6 +92,7 @@ export function ScriptEditor({
         setUndo(null); // "Desfazer" é do texto antigo
         setToast(null);
         setConfirming(false);
+        setOutdated(false);
       }
     } catch {
       setRegenError({ error: "Não foi possível gerar agora. Tente de novo." });
@@ -122,6 +127,19 @@ export function ScriptEditor({
           </Chip>
         </div>
       </header>
+
+      {outdated ? (
+        <aside className={styles.warn} aria-label="Script desatualizado">
+          <Info size={18} strokeWidth={2} aria-hidden />
+          <div>
+            <p className={styles.warnTitle}>Suas respostas mudaram desde este script</p>
+            <p>O texto abaixo foi escrito com as respostas antigas.</p>
+            <button type="button" className={styles.warnAction} onClick={() => setConfirming(true)}>
+              Gerar de novo
+            </button>
+          </div>
+        </aside>
+      ) : null}
 
       {warnings.length > 0 ? (
         <aside className={styles.warn} aria-label="Avisos sobre o script">

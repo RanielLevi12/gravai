@@ -48,9 +48,11 @@ class FakeDb implements InterviewDb {
     const p = this.projects.get(id);
     return p ? structuredClone(p) : null;
   }
-  async saveInterview(id: string, interview: Interview) {
+  stale = new Set<string>();
+  async saveInterview(id: string, interview: Interview, opts?: { scriptStale?: boolean }) {
     const p = this.projects.get(id);
     if (!p) return false;
+    if (opts?.scriptStale) this.stale.add(id);
     p.interview = structuredClone(interview);
     return true;
   }
@@ -146,6 +148,21 @@ describe("saveAnswer", () => {
     expect(await saveAnswerWith(db, p.id, "cta", "outro")).toEqual({ error: expect.any(String) });
     expect(await saveAnswerWith(db, p.id, "cta", "c1")).toEqual({ next: "resumo" });
     expect(await saveAnswerWith(db, p.id, "cta", null)).toEqual({ next: "resumo" });
+  });
+
+  it("mudar uma resposta depois de o script existir marca o script como desatualizado", async () => {
+    const p = db.add({ status: "script", interview: { platforms: ["reels"], format: "single", mainSeconds: 180, cutSeconds: null, current: "resumo" } });
+    expect(await saveAnswerWith(db, p.id, "duracao", 60)).toEqual({ next: expect.any(String) });
+    expect(db.stale.has(p.id)).toBe(true);
+  });
+
+  it("repetir a mesma resposta ou responder antes do script não marca nada", async () => {
+    const comScript = db.add({ status: "script", interview: { platforms: ["reels"], format: "single", mainSeconds: 180, cutSeconds: null, current: "resumo" } });
+    await saveAnswerWith(db, comScript.id, "duracao", 180);
+    await saveAnswerWith(db, comScript.id, "plataformas", ["reels"]);
+    const semScript = db.add({ status: "entrevista", interview: { platforms: ["reels"], format: "single", mainSeconds: 180, cutSeconds: null } });
+    await saveAnswerWith(db, semScript.id, "duracao", 60);
+    expect(db.stale.size).toBe(0);
   });
 
   it("projeto inexistente devolve erro", async () => {
