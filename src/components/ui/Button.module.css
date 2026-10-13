@@ -13,7 +13,9 @@
   line-height: 1.2;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 160ms var(--ease);
+  transition:
+    background-color 180ms var(--ease),
+    transform 180ms var(--ease);
 }
 
 .primary {
@@ -35,7 +37,25 @@
   background: var(--surface-2);
 }
 
+.button:active {
+  transform: scale(0.98);
+}
+
+/* Anel sky 3px com 2px de respiro (DESIGN.md). Sky sobre branco dá ~2,9:1,
+   abaixo de 3:1; um filete de tinta por fora garante o contraste do contorno. */
 .button:focus-visible {
-  outline: 3px solid var(--ink);
+  outline: 3px solid transparent; /* mantém o anel em modo de alto contraste */
   outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 5px var(--sky),
+    0 0 0 6px var(--ink);
+}
+
+.primary:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 5px var(--sky),
+    0 0 0 6px var(--ink),
+    var(--shadow-cta);
 }

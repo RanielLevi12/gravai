@@ -77,3 +77,21 @@ h3 {
 .tnum {
   font-variant-numeric: tabular-nums;
 }
+
+.display {
+  font-family: var(--display), system-ui, sans-serif;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
