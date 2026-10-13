@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AiError, withUserAi, type UserAi } from "@/lib/ai";
-import { consumeUsage, quotaMessage, refundUsage } from "@/lib/usage";
+import { quotaFits, quotaMessage } from "@/lib/usage";
 import { AI_KINDS, AUDIO_TOO_BIG, MAX_AUDIO_BYTES, SOURCE_KINDS, extractText, inspectAudio, IngestError, validateImages, type SourceKind } from "./index";
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
@@ -19,14 +19,15 @@ function titleFrom(kind: SourceKind, text: string, files: File[]): string {
 
 /**
  * Cria o projeto a partir do multipart. Ordem: validar → conexão de IA → duração do áudio →
- * consumir cota → extrair → inserir. Falha depois do consumo devolve a cota.
- * `supabase` = sessão do usuário; `admin` = service role (só para o estorno).
+ * conferir cota → extrair → criar. A cota só é consumida dentro de `create_project` (função do banco,
+ * na mesma transação do insert): se a extração ou a criação falharem, nada foi consumido.
+ * `supabase` = sessão do usuário (único caminho para inserir em `projects`).
  */
 export async function createProject(
-  deps: { supabase: SupabaseClient; admin: SupabaseClient; userId: string },
+  deps: { supabase: SupabaseClient; userId: string },
   form: FormData,
 ): Promise<CreateResult> {
-  const { supabase, admin, userId } = deps;
+  const { supabase, userId } = deps;
   const kind = String(form.get("kind") ?? "") as SourceKind;
   if (!SOURCE_KINDS.includes(kind)) return { status: 400, body: { error: "Tipo de material inválido." } };
 
@@ -87,34 +88,26 @@ export async function createProject(
     }
   }
 
-  let ok: boolean;
+  // Recusa cedo (antes de gastar IA); a conferência definitiva é a do banco, mais abaixo.
   try {
-    ok = await consumeUsage(supabase, 1, audioSeconds);
+    if (!(await quotaFits(supabase, audioSeconds))) return { status: 402, body: { error: await quotaMessage(supabase, audioSeconds) } };
   } catch {
     return { status: 500, body: { error: "Não foi possível criar o projeto agora. Tente de novo." } };
   }
-  if (!ok) return { status: 402, body: { error: await quotaMessage(supabase, audioSeconds) } };
-  const refund = () => refundUsage(admin, userId, 1, audioSeconds).catch(() => undefined);
   try {
     const r = await extractText({ kind, files, text, url, audioSeconds: kind === "audio" ? audioSeconds : undefined }, ai);
-    const { data, error } = await supabase
-      .from("projects")
-      .insert({
-        title: titleFrom(kind, r.text, files),
-        source_kind: kind,
-        source_text: r.text,
-        source_truncated: r.truncated,
-        status: "fonte",
-      })
-      .select("id")
-      .single();
-    if (error || !data) {
-      await refund();
-      return { status: 500, body: { error: "Não consegui criar o projeto. Tente de novo." } };
-    }
-    return { status: 201, body: { id: data.id } };
+    const { data, error } = await supabase.rpc("create_project", {
+      p_title: titleFrom(kind, r.text, files),
+      p_source_kind: kind,
+      p_source_text: r.text,
+      p_source_truncated: r.truncated,
+      p_seconds: Math.ceil(audioSeconds),
+    });
+    if (error) return { status: 500, body: { error: "Não consegui criar o projeto. Tente de novo." } };
+    // null = a cota estourou entre a conferência e a criação (outra aba, por exemplo).
+    if (!data) return { status: 402, body: { error: await quotaMessage(supabase, audioSeconds) } };
+    return { status: 201, body: { id: data } };
   } catch (e) {
-    await refund();
     const message = e instanceof IngestError ? e.message : e instanceof AiError ? e.userMessage : GENERIC;
     return { status: 422, body: { error: message } };
   }

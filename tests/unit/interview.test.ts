@@ -57,16 +57,8 @@ class FakeDb implements InterviewDb {
   async ctaIds() {
     return this.ctas;
   }
-  async consumeProjects(n: number) {
-    if (this.used + n > this.limit) return false;
-    this.used += n;
-    return true;
-  }
   async remainingProjects() {
     return Math.max(0, this.limit - this.used);
-  }
-  async refundProjects(n: number) {
-    this.used = Math.max(0, this.used - n);
   }
   async createSeries(title: string) {
     const id = `s${++this.seq}`;
@@ -89,6 +81,8 @@ class FakeDb implements InterviewDb {
   }
   async insertProjects(rows: NewEpisodeProject[]) {
     if (this.failInsert) return null;
+    if (this.used + rows.length > this.limit) return "quota";
+    this.used += rows.length;
     return rows.map((r) => this.add({ ...r }, false).id);
   }
   async seriesProjectIds(seriesId: string) {
@@ -213,7 +207,7 @@ describe("confirmSeries", () => {
     expect(db.projects.size).toBe(2);
   });
 
-  it("falha ao criar os episódios devolve a cota e desfaz a série", async () => {
+  it("falha ao criar os episódios desfaz a série e não consome cota", async () => {
     const p = db.add({ title: "Original", interview: { format: "series" } });
     db.failInsert = true;
     const r = await confirmSeriesWith(db, p.id, EPISODIOS(3));
@@ -223,9 +217,23 @@ describe("confirmSeries", () => {
     expect(db.projects.get(p.id)).toMatchObject({ series_id: null, title: "Original" });
   });
 
-  it("perdeu a corrida e a releitura falha: devolve a cota uma vez só", async () => {
+  it("a cota acabar entre a conferência e a criação desfaz a série e avisa quantos cabem", async () => {
+    const p = db.add({ title: "Original", interview: { format: "series" } });
+    const insert = db.insertProjects.bind(db);
+    db.insertProjects = async (rows: NewEpisodeProject[]) => {
+      db.used = 4; // outra aba consumiu antes
+      return insert(rows);
+    };
+    const r = await confirmSeriesWith(db, p.id, EPISODIOS(3));
+    expect(r).toEqual({ error: "Cabe só 1 episódio este mês." });
+    expect(db.used).toBe(4);
+    expect(db.series.size).toBe(0);
+    expect(db.projects.size).toBe(1);
+    expect(db.projects.get(p.id)).toMatchObject({ series_id: null, title: "Original" });
+  });
+
+  it("perdeu a corrida e a releitura falha: erro, sem consumir nada", async () => {
     const p = db.add({ interview: { format: "series" } });
-    let refunds = 0;
     let reads = 0;
     const getProject = db.getProject.bind(db);
     db.getProject = async (id: string) => {
@@ -233,14 +241,8 @@ describe("confirmSeries", () => {
       return getProject(id);
     };
     db.claimForSeries = async () => false;
-    const refund = db.refundProjects.bind(db);
-    db.refundProjects = async (n: number) => {
-      refunds++;
-      return refund(n);
-    };
     const r = await confirmSeriesWith(db, p.id, EPISODIOS(3));
     expect(r).toEqual({ error: expect.any(String) });
-    expect(refunds).toBe(1);
     expect(db.used).toBe(1);
     expect(db.series.size).toBe(0);
   });

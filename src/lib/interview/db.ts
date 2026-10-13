@@ -1,20 +1,19 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
-import { consumeUsage, currentMonth, PROJECTS_LIMIT, refundUsage } from "@/lib/usage";
+import { currentMonth, PROJECTS_LIMIT } from "@/lib/usage";
 import type { InterviewDb, InterviewProject } from "./service";
 import type { Interview } from "./steps";
 
 const PROJECT_FIELDS = "id, title, source_kind, source_text, source_truncated, status, interview, series_id, episode_index";
 
-const asJson = (i: Interview) => i as unknown as NonNullable<Json>;
+const asJson = (i: unknown) => i as unknown as NonNullable<Json>;
 
 /**
- * InterviewDb sobre o Supabase. `supabase` = sessão do usuário (RLS garante que tudo é dele);
- * `admin` = service role, usado só para devolver cota (refund_usage).
+ * InterviewDb sobre o Supabase. `supabase` = sessão do usuário (RLS garante que tudo é dele).
  */
-export function supabaseInterviewDb(deps: { supabase: SupabaseClient<Database>; admin: () => SupabaseClient<Database>; userId: string }): InterviewDb {
-  const { supabase, admin, userId } = deps;
+export function supabaseInterviewDb(deps: { supabase: SupabaseClient<Database> }): InterviewDb {
+  const { supabase } = deps;
   return {
     async getProject(id) {
       const { data, error } = await supabase.from("projects").select(PROJECT_FIELDS).eq("id", id).maybeSingle();
@@ -32,12 +31,10 @@ export function supabaseInterviewDb(deps: { supabase: SupabaseClient<Database>; 
       if (error) throw new Error("read ctas failed");
       return (data ?? []).map((c) => c.id);
     },
-    consumeProjects: (n) => consumeUsage(supabase, n, 0),
     async remainingProjects() {
       const { data } = await supabase.from("usage_months").select("projects").eq("month", currentMonth()).maybeSingle();
       return Math.max(0, PROJECTS_LIMIT - (data?.projects ?? 0));
     },
-    refundProjects: (n) => refundUsage(admin(), userId, n, 0),
     async createSeries(title) {
       const { data, error } = await supabase.from("series").insert({ title }).select("id").single();
       return error || !data ? null : data.id;
@@ -61,13 +58,12 @@ export function supabaseInterviewDb(deps: { supabase: SupabaseClient<Database>; 
         .eq("id", projectId);
     },
     async insertProjects(rows) {
-      const { data, error } = await supabase
-        .from("projects")
-        .insert(rows.map((r) => ({ ...r, interview: asJson(r.interview) })))
-        .select("id, episode_index");
+      // Função do banco: consome a cota e insere na mesma transação (projects não aceita INSERT direto).
+      const { data, error } = await supabase.rpc("create_episode_projects", { p_rows: asJson(rows) });
       if (error || !data) return null;
+      if (data.length === 0) return "quota";
       // Mesma ordem das linhas pedidas (por episódio).
-      return rows.map((r) => data.find((d) => d.episode_index === r.episode_index)?.id).filter((id): id is string => Boolean(id));
+      return rows.map((r) => data.find((d) => d.ep_index === r.episode_index)?.project_id).filter((id): id is string => Boolean(id));
     },
     async seriesProjectIds(seriesId) {
       const { data } = await supabase.from("projects").select("id").eq("series_id", seriesId).order("episode_index");

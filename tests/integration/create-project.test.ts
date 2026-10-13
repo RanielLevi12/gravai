@@ -31,7 +31,7 @@ type U = { id: string; client: SupabaseClient };
 const post = (u: U, fields: Record<string, string | File>) => {
   const form = new FormData();
   for (const [k, v] of Object.entries(fields)) form.append(k, v);
-  return createProject({ supabase: u.client, admin, userId: u.id }, form);
+  return createProject({ supabase: u.client, userId: u.id }, form);
 };
 const usage = async (u: U) =>
   (await admin.from("usage_months").select("projects, transcription_seconds").eq("user_id", u.id).maybeSingle()).data;
@@ -137,7 +137,7 @@ describe("POST /api/projects (createProject)", () => {
     form.append("kind", "audio");
     form.append("files", fx("ideia.mp3", "audio/mpeg"));
     form.append("files", fx("ideia.mp3", "audio/mpeg"));
-    const r = await createProject({ supabase: u.client, admin, userId: u.id }, form);
+    const r = await createProject({ supabase: u.client, userId: u.id }, form);
     expect(r.status).toBe(422);
     expect(r.body.error).toBe("Envie um áudio por vez.");
   });
@@ -165,17 +165,15 @@ describe("POST /api/projects (createProject)", () => {
     expect(await usage(b)).toBeNull();
   });
 
-  it("insert que falha estorna a cota (500)", async () => {
+  it("criação que falha não consome cota (500)", async () => {
     const u = await newUser("insfail");
     expect((await post(u, { kind: "text", text: "um" })).status).toBe(201);
     const before = await usage(u);
     const failing = new Proxy(u.client, {
       get(t, prop) {
-        if (prop === "from")
-          return (table: string) =>
-            table === "projects"
-              ? { insert: () => ({ select: () => ({ single: async () => ({ data: null, error: { message: "boom" } }) }) }) }
-              : t.from(table);
+        if (prop === "rpc")
+          return (fn: string, args?: Record<string, unknown>) =>
+            fn === "create_project" ? Promise.resolve({ data: null, error: { message: "boom" } }) : t.rpc(fn, args);
         const v = Reflect.get(t, prop);
         return typeof v === "function" ? v.bind(t) : v;
       },
@@ -183,8 +181,69 @@ describe("POST /api/projects (createProject)", () => {
     const form = new FormData();
     form.append("kind", "text");
     form.append("text", "dois");
-    const r = await createProject({ supabase: failing as SupabaseClient, admin, userId: u.id }, form);
+    const r = await createProject({ supabase: failing as SupabaseClient, userId: u.id }, form);
     expect(r.status).toBe(500);
     expect(await usage(u)).toEqual(before);
+  });
+
+  it("a função create_project recusa o 6º projeto e não cria linha (cota no banco)", async () => {
+    const u = await newUser("fn");
+    for (let i = 0; i < 5; i++) {
+      const { data, error } = await u.client.rpc("create_project", { p_title: `P${i}`, p_source_kind: "text", p_source_text: "texto" });
+      expect(error).toBeNull();
+      expect(data).toEqual(expect.any(String));
+    }
+    const sixth = await u.client.rpc("create_project", { p_title: "P6", p_source_kind: "text", p_source_text: "texto" });
+    expect(sixth.error).toBeNull();
+    expect(sixth.data).toBeNull();
+    const { count } = await u.client.from("projects").select("id", { count: "exact", head: true });
+    expect(count).toBe(5);
+    expect((await usage(u))?.projects).toBe(5);
+  });
+
+  it("a cota estourar entre a conferência e a criação devolve 402 (corrida)", async () => {
+    const u = await newUser("race");
+    const racing = new Proxy(u.client, {
+      get(t, prop) {
+        if (prop === "rpc")
+          return async (fn: string, args?: Record<string, unknown>) => {
+            // Outra aba consome os 5 projetos logo antes da criação.
+            if (fn === "create_project") for (let i = 0; i < 5; i++) await t.rpc("consume_usage", { p_projects: 1, p_seconds: 0 });
+            return t.rpc(fn, args);
+          };
+        const v = Reflect.get(t, prop);
+        return typeof v === "function" ? v.bind(t) : v;
+      },
+    });
+    const form = new FormData();
+    form.append("kind", "text");
+    form.append("text", "corrida");
+    const r = await createProject({ supabase: racing as SupabaseClient, userId: u.id }, form);
+    expect(r.status).toBe(402);
+    const { count } = await u.client.from("projects").select("id", { count: "exact", head: true });
+    expect(count).toBe(0);
+  });
+
+  it("create_episode_projects: consome 1 por linha, recusa série alheia e cota insuficiente", async () => {
+    const u = await newUser("eps");
+    const other = await newUser("eps-other");
+    const { data: s } = await u.client.from("series").insert({ title: "S" }).select("id").single();
+    const { data: so } = await other.client.from("series").insert({ title: "S" }).select("id").single();
+    const row = (series: string, n: number) => ({ series_id: series, episode_index: n, title: `E${n}`, source_kind: "text", source_text: "t", status: "entrevista", interview: {} });
+
+    const alien = await u.client.rpc("create_episode_projects", { p_rows: [row(so!.id, 2)] });
+    expect(alien.error).not.toBeNull();
+
+    const ok = await u.client.rpc("create_episode_projects", { p_rows: [row(s!.id, 2), row(s!.id, 3)] });
+    expect(ok.error).toBeNull();
+    expect(ok.data).toHaveLength(2);
+    expect((await usage(u))?.projects).toBe(2);
+
+    const over = await u.client.rpc("create_episode_projects", { p_rows: [row(s!.id, 4), row(s!.id, 5), row(s!.id, 6), row(s!.id, 7)] });
+    expect(over.error).toBeNull();
+    expect(over.data).toEqual([]);
+    expect((await usage(u))?.projects).toBe(2);
+    const { count } = await u.client.from("projects").select("id", { count: "exact", head: true });
+    expect(count).toBe(2);
   });
 });

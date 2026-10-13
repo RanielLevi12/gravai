@@ -21,17 +21,18 @@ export interface InterviewDb {
   /** Grava a entrevista inteira. false = projeto não encontrado. */
   saveInterview(id: string, interview: Interview): Promise<boolean>;
   ctaIds(): Promise<string[]>;
-  /** Consome `n` projetos da cota do mês, de forma atômica. false = não cabe (nada muda). */
-  consumeProjects(n: number): Promise<boolean>;
+  /** Quantos projetos ainda cabem na cota do mês (só leitura; quem consome é `insertProjects`). */
   remainingProjects(): Promise<number>;
-  refundProjects(n: number): Promise<void>;
   createSeries(title: string): Promise<string | null>;
   deleteSeries(id: string): Promise<void>;
   /** Liga o projeto à série como episódio 1, só se ele ainda não for de uma série. */
   claimForSeries(projectId: string, seriesId: string, patch: { title: string; interview: Interview }): Promise<boolean>;
   releaseSeries(projectId: string, original: { title: string; interview: Interview }): Promise<void>;
-  /** Insere os projetos e devolve os ids na mesma ordem; null se falhar. */
-  insertProjects(rows: NewEpisodeProject[]): Promise<string[] | null>;
+  /**
+   * Insere os projetos e consome 1 projeto da cota por linha, na mesma transação do banco.
+   * Devolve os ids na mesma ordem; "quota" = não coube (nada foi criado); null = falhou.
+   */
+  insertProjects(rows: NewEpisodeProject[]): Promise<string[] | "quota" | null>;
   seriesProjectIds(seriesId: string): Promise<string[]>;
 }
 
@@ -65,8 +66,8 @@ export type ConfirmSeriesResult = { ids: string[] } | { error: string };
 
 /**
  * Cria a série: o projeto original vira o episódio 1 e cada episódio novo vira um projeto
- * (mesmo texto-fonte, mesmas respostas até aqui). Consome 1 projeto da cota por episódio novo;
- * se a criação falhar depois de consumir, devolve a cota e desfaz a série.
+ * (mesmo texto-fonte, mesmas respostas até aqui). A cota (1 projeto por episódio novo) é consumida
+ * pelo banco junto com a criação dos episódios; se algo falhar, a série é desfeita e nada foi consumido.
  * Confirmar de novo (projeto já numa série) só devolve os ids existentes.
  */
 export async function confirmSeriesWith(db: InterviewDb, projectId: string, input: unknown): Promise<ConfirmSeriesResult> {
@@ -79,25 +80,19 @@ export async function confirmSeriesWith(db: InterviewDb, projectId: string, inpu
   if (project.series_id) return { ids: await db.seriesProjectIds(project.series_id) };
 
   const extra = episodes.length - 1;
-  let consumed: boolean;
+  // Recusa cedo e com a mensagem certa; a conferência definitiva é a do `insertProjects`.
+  let remaining: number;
   try {
-    consumed = await db.consumeProjects(extra);
+    remaining = await db.remainingProjects();
   } catch {
     return { error: MSG_SERIES_FAILED };
   }
-  if (!consumed) return { error: quotaError(await db.remainingProjects().catch(() => 0)) };
+  if (remaining < extra) return { error: quotaError(remaining) };
 
   const base: Interview = { ...(project.interview ?? {}), format: "series", episodes };
   const interview: Interview = { ...base, current: nextAfter(base, EPISODES_STEP) };
   let seriesId: string | null = null;
   let claimed = false;
-  let refunded = false;
-  // A cota consumida volta uma vez só, aconteça o que acontecer depois.
-  const refundOnce = async () => {
-    if (refunded) return;
-    refunded = true;
-    await db.refundProjects(extra).catch(() => undefined);
-  };
   try {
     seriesId = await db.createSeries(project.title);
     if (!seriesId) throw new Error("series");
@@ -106,7 +101,6 @@ export async function confirmSeriesWith(db: InterviewDb, projectId: string, inpu
       // Outra confirmação chegou antes: desfaz esta e devolve a que ficou.
       await db.deleteSeries(seriesId);
       seriesId = null;
-      await refundOnce();
       const now = await db.getProject(projectId);
       return now?.series_id ? { ids: await db.seriesProjectIds(now.series_id) } : { error: MSG_SERIES_FAILED };
     }
@@ -121,12 +115,16 @@ export async function confirmSeriesWith(db: InterviewDb, projectId: string, inpu
       episode_index: i + 2,
     }));
     const ids = await db.insertProjects(rows);
+    if (ids === "quota") {
+      await db.releaseSeries(project.id, { title: project.title, interview: project.interview ?? {} }).catch(() => undefined);
+      await db.deleteSeries(seriesId).catch(() => undefined);
+      return { error: quotaError(await db.remainingProjects().catch(() => 0)) };
+    }
     if (!ids || ids.length !== rows.length) throw new Error("insert");
     return { ids: [project.id, ...ids] };
   } catch {
     if (claimed) await db.releaseSeries(project.id, { title: project.title, interview: project.interview ?? {} }).catch(() => undefined);
     if (seriesId) await db.deleteSeries(seriesId).catch(() => undefined);
-    await refundOnce();
     return { error: MSG_SERIES_FAILED };
   }
 }

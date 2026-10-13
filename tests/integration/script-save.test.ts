@@ -40,9 +40,9 @@ beforeAll(async () => {
   client = createClient<Database>(URL, ANON, opts);
   const { error: e2 } = await client.auth.signInWithPassword({ email, password });
   if (e2) throw e2;
-  const { data: p, error: e3 } = await client
+  const { data: p, error: e3 } = await admin
     .from("projects")
-    .insert({ title: "P", source_kind: "text", source_text: "texto" })
+    .insert({ user_id: userId, title: "P", source_kind: "text", source_text: "texto" })
     .select("id")
     .single();
   if (e3) throw e3;

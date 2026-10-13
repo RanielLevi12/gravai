@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { scoreViral, withUserAi } from "@/lib/ai";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import { supabaseInterviewDb } from "./db";
 import { confirmSeriesWith, saveAnswerWith, type ConfirmSeriesResult, type SaveAnswerResult } from "./service";
@@ -18,7 +17,7 @@ async function session() {
   const { data } = await supabase.auth.getUser();
   if (!data.user) return null;
   const userId = data.user.id;
-  const db = supabaseInterviewDb({ supabase, admin: createAdminClient, userId });
+  const db = supabaseInterviewDb({ supabase });
   const deps: SuggestDeps = {
     db,
     ai: () => withUserAi(userId),
