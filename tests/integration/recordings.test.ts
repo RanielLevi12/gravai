@@ -20,20 +20,21 @@ async function newUser(tag: string): Promise<U> {
   return { id: data.user.id, client };
 }
 
+// Insere direto (service role) para não esbarrar na cota mensal de projetos.
 async function newProject(u: U): Promise<string> {
-  const { data, error } = await u.client.rpc("create_project", { p_title: "Vídeo", p_source_kind: "text", p_source_text: "texto", p_source_truncated: false, p_seconds: 0 });
-  if (error || !data) throw error ?? new Error("create_project");
-  return data as string;
+  const { data, error } = await admin.from("projects").insert({ user_id: u.id, title: "Vídeo", source_kind: "text", source_text: "texto" }).select("id").single();
+  if (error || !data) throw error ?? new Error("insert project");
+  return data.id;
 }
 
 let A: U;
 let B: U;
 let projectId: string;
 
-const rec = (project_id: string, extra: Record<string, unknown> = {}) => ({
+const rec = (project_id: string, extra: Record<string, unknown> = {}, owner: U = A) => ({
   project_id,
   kind: "take",
-  storage_path: `x/${crypto.randomUUID()}.webm`,
+  storage_path: `${owner.id}/${project_id}/${crypto.randomUUID()}.webm`,
   mime: "video/webm",
   size_bytes: 10,
   ...extra,
@@ -58,8 +59,40 @@ describe("recordings", () => {
   it("outro usuário não vê nem insere em projeto alheio", async () => {
     const { data } = await B.client.from("recordings").select("id").eq("project_id", projectId);
     expect(data ?? []).toHaveLength(0);
-    const { error } = await B.client.from("recordings").insert(rec(projectId));
+    const { error } = await B.client.from("recordings").insert(rec(projectId, {}, B));
     expect(error).not.toBeNull();
+    const { data: rows } = await admin.from("recordings").select("id").eq("project_id", projectId).eq("user_id", B.id);
+    expect(rows ?? []).toHaveLength(0);
+  });
+
+  it("recusa storage_path na pasta de outro usuário (insert e update) e size_bytes negativo", async () => {
+    const foreign = { storage_path: `${B.id}/${projectId}/v.webm` };
+    const ins = await A.client.from("recordings").insert(rec(projectId, foreign));
+    expect(ins.error).not.toBeNull();
+    const { data: rows } = await admin.from("recordings").select("id").eq("storage_path", foreign.storage_path);
+    expect(rows ?? []).toHaveLength(0);
+
+    const mine = await A.client.from("recordings").insert(rec(projectId)).select("id, storage_path").single();
+    const upd = await A.client.from("recordings").update(foreign).eq("id", mine.data!.id).select("id");
+    expect(upd.error ?? (upd.data?.length ? null : "sem linhas")).not.toBeNull();
+    const { data: after } = await admin.from("recordings").select("storage_path").eq("id", mine.data!.id).single();
+    expect(after?.storage_path).toBe(mine.data!.storage_path);
+
+    expect((await A.client.from("recordings").insert(rec(projectId, { size_bytes: -1 }))).error).not.toBeNull();
+  });
+
+  it("recusa block_id de outro usuário e de outro projeto do mesmo dono", async () => {
+    const pB = await newProject(B);
+    const bB = await admin.from("script_blocks").insert({ project_id: pB, user_id: B.id, position: 0, kind: "opening", text: "t" }).select("id").single();
+    const pA2 = await newProject(A);
+    const bA2 = await admin.from("script_blocks").insert({ project_id: pA2, user_id: A.id, position: 0, kind: "opening", text: "t" }).select("id").single();
+    const pA = await newProject(A);
+    for (const block_id of [bB.data!.id, bA2.data!.id]) {
+      const { error } = await A.client.from("recordings").insert(rec(pA, { kind: "block", block_id }));
+      expect(error).not.toBeNull();
+    }
+    const { data } = await admin.from("recordings").select("id").eq("project_id", pA);
+    expect(data ?? []).toHaveLength(0);
   });
 
   it("uma só gravação pronta por (projeto, bloco nulo)", async () => {

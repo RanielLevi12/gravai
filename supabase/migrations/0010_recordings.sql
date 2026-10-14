@@ -14,7 +14,7 @@ create table public.recordings (
   storage_path text not null,
   mime text not null,
   duration_seconds numeric(8, 2),
-  size_bytes bigint not null,
+  size_bytes bigint not null check (size_bytes >= 0),
   status text not null default 'uploading' check (status in ('uploading', 'ready')),
   created_at timestamptz not null default now()
 );
@@ -31,6 +31,8 @@ create policy recordings_own on public.recordings for all to authenticated
   using (user_id = (select auth.uid()))
   with check (
     user_id = (select auth.uid())
+    -- o arquivo tem de morar na pasta do próprio dono (o servidor apaga/assina por este caminho).
+    and (storage.foldername(storage_path))[1] = (select auth.uid())::text
     -- a FK não passa pela RLS: sem isto, daria para ligar uma gravação ao projeto/bloco de outra pessoa.
     and exists (select 1 from public.projects p where p.id = project_id and p.user_id = (select auth.uid()))
     and (block_id is null or exists (
