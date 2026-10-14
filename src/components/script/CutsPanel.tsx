@@ -2,6 +2,7 @@
 
 import { Minus, Plus, Scissors, Sparkles, Trash2 } from "lucide-react";
 import { useState, type CSSProperties } from "react";
+import { notifyCost } from "@/lib/ai/cost-events";
 import { Button } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { PLATFORM_LABELS, PLATFORMS } from "@/lib/interview/steps";
@@ -63,6 +64,7 @@ export function CutsPanel({
         return;
       }
       const r = await suggestCuts(projectId);
+      notifyCost();
       if ("error" in r) setError(r.error);
       else {
         onChange(r.cuts);

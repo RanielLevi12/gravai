@@ -3,6 +3,7 @@
 import { ArrowLeft, Cloud, CloudCheck, Info, RefreshCw, Timer, Video } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
+import { notifyCost } from "@/lib/ai/cost-events";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Sheet } from "@/components/ui/Sheet";
@@ -75,6 +76,7 @@ export function ScriptEditor({
     // A IA lê o texto salvo: tem que ser o que está na tela.
     if (!(await autosave.flush(block.id))) return { error: "Não consegui salvar suas edições antes de reescrever. Tente de novo." };
     const r = await rewriteBlock(block.id, mode);
+    notifyCost();
     if ("error" in r) return r;
     setUndo({ id: block.id, text: texts[block.id] });
     edit(block.id, r.text);
@@ -93,6 +95,7 @@ export function ScriptEditor({
         return;
       }
       const r = await rewriteBlock(block.id, mode);
+      notifyCost();
       if ("error" in r) {
         setToast(r.error);
         return;
@@ -118,6 +121,7 @@ export function ScriptEditor({
     }
     try {
       const r = await regenerateScript(projectId);
+      notifyCost();
       if ("error" in r) setRegenError(r);
       else {
         await autosave.reset(); // o script antigo saiu: nada dele pode ser gravado por cima do novo

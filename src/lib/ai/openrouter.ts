@@ -2,6 +2,7 @@ import "server-only";
 import OpenAI from "openai";
 import type { ChatCompletionContentPart, ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import { AiError, type OcrImage, type Transcription } from "./schemas";
+import type { AiUsage } from "./usage-types";
 import { probeAudio } from "./audio";
 
 // Ids conferidos em https://openrouter.ai/api/v1/models (13/10/2026).
@@ -45,7 +46,7 @@ export type OpenRouterAi = ReturnType<typeof createOpenRouterAi>;
  * Funções de IA cobradas na conta OpenRouter do usuário (`apiKey` = chave obtida no OAuth).
  * `opts.fetch` só para testes.
  */
-export function createOpenRouterAi(apiKey: string, opts: { fetch?: typeof fetch; timeoutMs?: number } = {}) {
+export function createOpenRouterAi(apiKey: string, opts: { fetch?: typeof fetch; timeoutMs?: number; onUsage?: (u: AiUsage) => void } = {}) {
   const client = new OpenAI({
     apiKey,
     baseURL: BASE_URL,
@@ -60,9 +61,15 @@ export function createOpenRouterAi(apiKey: string, opts: { fetch?: typeof fetch;
     params: Params,
     failMessage: string,
     request: { timeout?: number; maxRetries?: number } = {},
+    kind: AiUsage["kind"] = "text",
   ): Promise<{ text: string; truncated: boolean }> {
     try {
       const res = await client.chat.completions.create(params as ChatCompletionCreateParamsNonStreaming, request);
+      // O OpenRouter devolve o custo em dólares em `usage.cost` (o SDK da OpenAI não tipa esse campo).
+      const usage = res.usage as { cost?: unknown; prompt_tokens?: number; completion_tokens?: number } | undefined;
+      if (typeof usage?.cost === "number") {
+        opts.onUsage?.({ kind, model: String(res.model ?? params.model), costUsd: usage.cost, promptTokens: usage.prompt_tokens, completionTokens: usage.completion_tokens });
+      }
       const choice = res.choices[0];
       return { text: (choice?.message?.content ?? "").trim(), truncated: choice?.finish_reason === "length" };
     } catch (e) {
@@ -82,6 +89,7 @@ export function createOpenRouterAi(apiKey: string, opts: { fetch?: typeof fetch;
       },
       READ_FAIL,
       { timeout: opts.timeoutMs ?? FILE_TIMEOUT_MS, maxRetries: 0 },
+      "ocr",
     );
     if (truncated) console.warn("[ai] OCR truncado por max_tokens");
     if (text.length > MAX_OCR_CHARS) {
@@ -158,6 +166,7 @@ export function createOpenRouterAi(apiKey: string, opts: { fetch?: typeof fetch;
         },
         AUDIO_FAIL,
         { timeout: opts.timeoutMs ?? FILE_TIMEOUT_MS, maxRetries: 0 },
+        "audio",
       );
       return { text, seconds };
     },

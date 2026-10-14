@@ -13,6 +13,7 @@ const useMock = () => {
   return mock;
 };
 
+export const MOCK_COST_USD = 0.0123;
 const RETRY_DEADLINE_MS = 100_000;
 
 type RawJson = (jsonSchema: Record<string, unknown>, system: string, user: string) => Promise<string>;
@@ -49,12 +50,25 @@ export type UserAi = {
  */
 export async function withUserAi(userId: string): Promise<UserAi> {
   const provider = useMock()
-    ? await import("./mock")
+    ? await (async () => {
+        // Teste de ponta a ponta da barra de custos: cada chamada do mock "custa" um valor fixo.
+        const mock = await import("./mock");
+        const { recordAiUsage } = await import("./usage");
+        return {
+          ...mock,
+          rawJson: async (...args: Parameters<typeof mock.rawJson>) => {
+            const out = await mock.rawJson(...args);
+            await recordAiUsage(userId, { kind: "text", model: "mock", costUsd: MOCK_COST_USD });
+            return out;
+          },
+        };
+      })()
     : await (async () => {
         // Só em `next dev`: a chave do dono dispensa o OAuth nos testes locais. Em produção é ignorada.
         const key = (process.env.NODE_ENV === "development" && process.env.OPENROUTER_DEV_KEY) || (await (await import("./keys")).getUserAiKey(userId));
         if (!key) throw new AiError("Conecte sua conta de IA para continuar.", { code: "not_connected" });
-        return (await import("./openrouter")).createOpenRouterAi(key);
+        const { recordAiUsage } = await import("./usage");
+        return (await import("./openrouter")).createOpenRouterAi(key, { onUsage: (u) => void recordAiUsage(userId, u) });
       })();
   return userAiFrom(provider);
 }

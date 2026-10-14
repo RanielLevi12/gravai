@@ -1,0 +1,20 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-sm);
+  padding: 6px var(--space-md);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar b {
+  color: var(--ink);
+}
+
+.label {
+  font-weight: 700;
+  color: var(--ink);
+}

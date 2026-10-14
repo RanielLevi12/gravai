@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { CostBar } from "@/components/ui/CostBar";
 import { TabBar } from "@/components/ui/TabBar";
 import { createServerClient } from "@/lib/supabase/server";
 import styles from "./layout.module.css";
@@ -12,6 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className={styles.shell}>
+      <CostBar />
       <div className={styles.content}>{children}</div>
       <Suspense fallback={null}>
         <TabBar />
