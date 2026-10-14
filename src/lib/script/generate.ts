@@ -95,7 +95,7 @@ function withCta(text: string | undefined, cta: string | null): string | null {
 }
 
 /** Só as plataformas escolhidas; com CTA, a última linha é o CTA. */
-function finishDescriptions(raw: Descriptions | undefined, platforms: Platform[], cta: string | null): Descriptions {
+export function finishDescriptions(raw: Descriptions | undefined, platforms: Platform[], cta: string | null): Descriptions {
   const out: Descriptions = {};
   for (const p of platforms) {
     const d = withCta(raw?.[p], cta);

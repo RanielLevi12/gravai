@@ -8,10 +8,12 @@ import { Chip } from "@/components/ui/Chip";
 import { Sheet } from "@/components/ui/Sheet";
 import { Toast } from "@/components/ui/Toast";
 import { estimateSeconds } from "@/lib/rules/duration";
+import type { Cut } from "@/lib/script/cuts";
 import { regenerateScript, rewriteBlock, updateBlockText, type ActionError } from "@/lib/script/actions";
 import type { RewriteInstruction } from "@/lib/script/prompts";
 import { blockLabel, clock } from "./format";
 import { RewriteSheet } from "./RewriteSheet";
+import { CutsPanel } from "./CutsPanel";
 import { ScriptBlock, type ScriptBlockData } from "./ScriptBlock";
 import styles from "./script.module.css";
 import { useAutosave } from "./useAutosave";
@@ -32,6 +34,8 @@ export function ScriptEditor({
   blocks,
   warnings,
   stale,
+  cutSeconds,
+  initialCuts,
 }: {
   projectId: string;
   title: string;
@@ -39,7 +43,11 @@ export function ScriptEditor({
   warnings: string[];
   /** Respostas ou texto-fonte mudaram depois de este script ser gerado. */
   stale: boolean;
+  /** Tamanho do corte escolhido na entrevista; null = sem cortes. */
+  cutSeconds: number | null;
+  initialCuts: Cut[];
 }) {
+  const [cuts, setCuts] = useState(initialCuts);
   const [texts, setTexts] = useState(() => textsOf(blocks));
   const [rewriting, setRewriting] = useState<EditorBlock | null>(null);
   const [quickBusy, setQuickBusy] = useState<string | null>(null);
@@ -113,6 +121,7 @@ export function ScriptEditor({
       if ("error" in r) setRegenError(r);
       else {
         await autosave.reset(); // o script antigo saiu: nada dele pode ser gravado por cima do novo
+        setCuts([]); // os cortes apontavam para o texto antigo
         setTexts(r.texts);
         setUndo(null); // "Desfazer" é do texto antigo
         setToast(null);
@@ -128,6 +137,11 @@ export function ScriptEditor({
   const seconds = blocks.reduce((sum, b) => sum + estimateSeconds(texts[b.id] ?? ""), 0);
   let bodyNumber = 0;
   const labels = Object.fromEntries(blocks.map((b) => [b.id, b.kind === "body" ? `Trecho ${++bodyNumber}` : blockLabel(b.kind, b.cutIndex)]));
+  // Número do corte de cada bloco (posição = índice + 1); os cortes vêm ordenados pelo início.
+  const cutOfBlock = blocks.map((_, k) => {
+    const at = cuts.findIndex((c) => c.start <= k + 1 && k + 1 <= c.end);
+    return at >= 0 ? at + 1 : null;
+  });
 
   return (
     <main className={styles.page}>
@@ -181,10 +195,11 @@ export function ScriptEditor({
       ) : null}
 
       <div className={styles.blocks}>
-        {blocks.map((b) => (
+        {blocks.map((b, k) => (
           <ScriptBlock
             key={b.id}
             block={b}
+            cutNumber={cutOfBlock[k]}
             label={labels[b.id]}
             text={texts[b.id] ?? ""}
             busy={quickBusy === b.id}
@@ -195,6 +210,18 @@ export function ScriptEditor({
           />
         ))}
       </div>
+
+      {cutSeconds !== null ? (
+        <CutsPanel
+          projectId={projectId}
+          cutSeconds={cutSeconds}
+          cuts={cuts}
+          labels={blocks.map((b) => labels[b.id])}
+          texts={blocks.map((b) => texts[b.id] ?? "")}
+          onChange={setCuts}
+          flush={autosave.flushAll}
+        />
+      ) : null}
 
       <div className={styles.bottom}>
         <Button href={`/projetos/${projectId}/gravar`} icon={Video} className={styles.full}>

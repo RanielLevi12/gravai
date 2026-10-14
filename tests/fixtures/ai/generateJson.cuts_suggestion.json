@@ -1,0 +1,7 @@
+{
+  "cuts": [
+    { "start": 2, "end": 2, "title": "O pensamento que muda tudo", "coverPrompt": "Pessoa olhando para a câmera, luz de janela, texto grande: muda tudo", "descriptions": { "reels": "Um pensamento pequeno que muda o seu dia.", "tiktok": "O primeiro ponto que muda tudo.", "youtube": "Primeiro ponto da ideia.", "feed_instagram": "Primeiro ponto.", "facebook": "Primeiro ponto.", "x": "Primeiro ponto." } },
+    { "start": 3, "end": 3, "title": "Um passo pequeno e possível", "coverPrompt": "Mão apontando para um degrau, fundo claro", "descriptions": { "reels": "Um passo pequeno para hoje.", "tiktok": "O passo pequeno.", "youtube": "Um passo pequeno.", "feed_instagram": "Um passo pequeno.", "facebook": "Um passo pequeno.", "x": "Um passo pequeno." } },
+    { "start": 5, "end": 5, "title": "Pratique hoje", "coverPrompt": "Relógio e caderno sobre a mesa", "descriptions": { "reels": "Pratique hoje.", "tiktok": "Pratique hoje.", "youtube": "Pratique hoje.", "feed_instagram": "Pratique hoje.", "facebook": "Pratique hoje.", "x": "Pratique hoje." } }
+  ]
+}

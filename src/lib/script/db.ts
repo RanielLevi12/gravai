@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
 import type { InterviewProject } from "@/lib/interview/service";
 import type { Interview } from "@/lib/interview/steps";
+import type { Cut } from "./cuts";
+import type { CutsDb } from "./cuts-generate";
 import type { BlockKind, ScriptDb } from "./generate";
 import type { BlockDb } from "./rewrite";
 
@@ -43,7 +45,7 @@ export function supabaseScriptDb(deps: { supabase: SupabaseClient<Database>; use
       if (delError) return false;
       const { data, error: upError } = await supabase
         .from("projects")
-        .update({ descriptions: asJson(descriptions), cover_prompt: coverPrompt, interview: asJson(interview), status: "script", script_stale: false })
+        .update({ descriptions: asJson(descriptions), cover_prompt: coverPrompt, interview: asJson(interview), status: "script", script_stale: false, cuts: [] })
         .eq("id", projectId)
         .select("id");
       return !upError && (data?.length ?? 0) > 0;
@@ -84,6 +86,38 @@ export function supabaseBlockDb(deps: { supabase: SupabaseClient<Database> }): B
     },
     async saveBlockText(blockId, text) {
       const { data, error } = await supabase.from("script_blocks").update({ text }).eq("id", blockId).select("id");
+      return !error && (data?.length ?? 0) > 0;
+    },
+  };
+}
+
+/** CutsDb sobre o Supabase da sessão do usuário (RLS limita aos projetos dele). */
+export function supabaseCutsDb(deps: { supabase: SupabaseClient<Database> }): CutsDb {
+  const { supabase } = deps;
+  return {
+    async getProject(id) {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, title, source_kind, source_text, source_truncated, status, interview, series_id, episode_index, folder_id, folders(about)")
+        .eq("id", id)
+        .maybeSingle();
+      if (error) throw new Error("read project failed");
+      if (!data) return null;
+      const interview = data.interview && typeof data.interview === "object" && !Array.isArray(data.interview) ? data.interview : {};
+      const { folders, ...project } = data;
+      return { ...project, folder_about: folders?.about ?? null, interview: interview as unknown as Interview } satisfies InterviewProject;
+    },
+    async blocks(projectId) {
+      const { data, error } = await supabase.from("script_blocks").select("position, text").eq("project_id", projectId).order("position");
+      if (error) throw new Error("read blocks failed");
+      return data ?? [];
+    },
+    async cta(id) {
+      const { data } = await supabase.from("ctas").select("kind, label, value").eq("id", id).maybeSingle();
+      return data ? { kind: data.kind as "link" | "bio" | "whatsapp" | "phone", label: data.label, value: data.value } : null;
+    },
+    async saveCuts(projectId, cuts: Cut[]) {
+      const { data, error } = await supabase.from("projects").update({ cuts: asJson(cuts) }).eq("id", projectId).select("id");
       return !error && (data?.length ?? 0) > 0;
     },
   };

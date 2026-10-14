@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { AiError, checkScript, withUserAi } from "@/lib/ai";
 import { createServerClient } from "@/lib/supabase/server";
-import { supabaseBlockDb, supabaseScriptDb } from "./db";
+import type { Cut } from "./cuts";
+import { saveCutsWith, suggestCutsWith } from "./cuts-generate";
+import { supabaseBlockDb, supabaseCutsDb, supabaseScriptDb } from "./db";
 import { generateScriptWith } from "./generate";
 import { MSG_BLOCK_NOT_FOUND, rewriteBlockWith, updateBlockTextWith, type RewriteMode } from "./rewrite";
 
@@ -79,6 +81,35 @@ export async function regenerateScript(projectId: string): Promise<{ ok: true; t
     const { data } = await supabase.from("script_blocks").select("id, text").eq("project_id", projectId);
     revalidatePath(`/projetos/${projectId}/script`);
     return { ok: true, texts: Object.fromEntries((data ?? []).map((b) => [b.id, b.text])) };
+  } catch (e) {
+    return failure(e);
+  }
+}
+
+/** A IA sugere os cortes do script (substitui os atuais). Devolve a lista nova. */
+export async function suggestCuts(projectId: string): Promise<{ cuts: Cut[] } | ActionError> {
+  if (typeof projectId !== "string" || !UUID.test(projectId)) return { error: "Projeto não encontrado." };
+  const s = await sessionUser();
+  if (!s) return { error: MSG_EXPIRED };
+  try {
+    const cuts = await suggestCutsWith({ db: supabaseCutsDb({ supabase: s.supabase }), ai: () => withUserAi(s.userId) }, projectId);
+    revalidatePath("/(app)/projetos/[id]/script", "page");
+    return { cuts };
+  } catch (e) {
+    return failure(e);
+  }
+}
+
+/** Salva os cortes ajustados ou marcados à mão pelo usuário. */
+export async function saveCuts(projectId: string, input: unknown): Promise<{ cuts: Cut[] } | ActionError> {
+  if (typeof projectId !== "string" || !UUID.test(projectId)) return { error: "Projeto não encontrado." };
+  const s = await sessionUser();
+  if (!s) return { error: MSG_EXPIRED };
+  try {
+    const r = await saveCutsWith(supabaseCutsDb({ supabase: s.supabase }), projectId, input);
+    if (!r.ok) return { error: r.error };
+    revalidatePath("/(app)/projetos/[id]/script", "page");
+    return { cuts: r.cuts };
   } catch (e) {
     return failure(e);
   }

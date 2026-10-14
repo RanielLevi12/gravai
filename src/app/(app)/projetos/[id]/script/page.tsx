@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ScriptEditor, type EditorBlock } from "@/components/script/ScriptEditor";
 import { ScriptNotice } from "@/components/script/ScriptNotice";
 import { AiError } from "@/lib/ai/schemas";
+import { validateCuts } from "@/lib/script/cuts";
 import type { BlockKind } from "@/lib/script/generate";
 import { generateScript } from "@/lib/script/actions";
 import { createServerClient } from "@/lib/supabase/server";
@@ -34,7 +35,7 @@ export default async function ScriptPage({ params }: { params: Promise<{ id: str
   };
 
   // RLS limita aos projetos do usuário: projeto de outra pessoa cai no 404.
-  const { data: project } = await supabase.from("projects").select("id, title, interview, script_stale").eq("id", id).maybeSingle();
+  const { data: project } = await supabase.from("projects").select("id, title, interview, script_stale, cuts").eq("id", id).maybeSingle();
   if (!project) notFound();
 
   let rows = await loadBlocks();
@@ -66,6 +67,9 @@ export default async function ScriptPage({ params }: { params: Promise<{ id: str
   const checks = "scriptChecks" in interview && Array.isArray(interview.scriptChecks) ? interview.scriptChecks.filter((c) => typeof c === "string") : [];
   const chosen = "titles" in interview && interview.titles && typeof interview.titles === "object" && "chosen" in interview.titles ? interview.titles.chosen : null;
 
+  const cutSeconds = "cutSeconds" in interview && typeof interview.cutSeconds === "number" ? interview.cutSeconds : null;
+  const cutsRaw = validateCuts(project.cuts, rows.length);
+
   const blocks: EditorBlock[] = rows.map((b) => ({
     id: b.id,
     kind: b.kind as BlockKind,
@@ -81,6 +85,8 @@ export default async function ScriptPage({ params }: { params: Promise<{ id: str
       blocks={blocks}
       warnings={[...warning, ...(checks as string[])]}
       stale={project.script_stale}
+      cutSeconds={cutSeconds}
+      initialCuts={cutsRaw.ok ? cutsRaw.cuts : []}
     />
   );
 }

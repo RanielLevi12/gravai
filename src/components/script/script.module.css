@@ -335,3 +335,143 @@
     opacity: 0.5;
   }
 }
+
+/* Cortes sobre o script contínuo */
+.cuts {
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md) var(--space-lg);
+}
+
+.cutsTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.cutsLead {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.cutsActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.cutList {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cutCard {
+  display: grid;
+  gap: var(--space-xs);
+  padding: 14px 16px;
+  border: 2px solid var(--c);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+.cutHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.cutHead .dur {
+  flex: 1;
+}
+
+.cutTag {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-xs);
+  background: var(--c);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cutLabel {
+  display: grid;
+  gap: 4px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cutInput {
+  min-height: 44px;
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.stepperCaption {
+  flex: 1;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stepBtn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.stepBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.stepValue {
+  min-width: 96px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.cutMore {
+  font-size: 14px;
+}
+
+.cutMore > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.cutMore p {
+  margin: 0 0 var(--space-xs);
+  overflow-wrap: anywhere;
+}
