@@ -26,7 +26,7 @@ Decidido em entrevista (grill-me) em 2026-10-14. Esta é a próxima tarefa, ante
 - Já existem: `profiles`, `ctas`, `series`, `projects`, `script_blocks`, `usage_months`, `ai_connections`. Migrações 0001–0006 aplicadas em produção.
 - Telas: `src/app/(app)/projetos/page.tsx` (lista), `src/app/(app)/novo/page.tsx` (nova fonte).
 
-## Etapas (uma por sessão, com revisão)
+## Etapas (uma por sessão, com revisão) — todas feitas em 2026-10-14, PR haniellevi/gravai#3
 1. **Banco (migração 0007):** tabela `folders` (id, user_id default auth.uid(), name, color, about, settings jsonb, created_at) com RLS só do dono; `projects.folder_id uuid references folders(id) on delete set null`; índice em `folder_id`; ajustar `create_project` para aceitar `folder_id` e copiar `settings` para `interview` quando houver. Testes de integração (RLS, delete set null, cópia na criação).
 2. **Criar/editar/apagar projeto:** tela com nome, cor, "Sobre este projeto" e as opções com valores sugeridos numa tela só. Faixa de pastas na tela inicial. Apagar com confirmação.
 3. **Criar vídeo dentro do projeto:** entrada pela pasta, entrevista curta (título + resumo + "Mudar para este vídeo"). Herança e etiqueta "personalizado" + "voltar ao padrão".
