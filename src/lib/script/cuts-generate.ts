@@ -7,6 +7,7 @@ import { isPlatform } from "@/lib/interview/steps";
 import { estimateCutCount } from "@/lib/rules/cuts";
 import { buildCutsUser, CUTS_SYSTEM, CutsSchema, normalizeCuts, validateCuts, type Cut } from "./cuts";
 import { formatCta, type ScriptCta } from "./generate";
+import { cutReviewWarnings, type ReviewFn } from "./review";
 
 export interface CutsDb {
   getProject(id: string): Promise<InterviewProject | null>;
@@ -60,4 +61,16 @@ export async function saveCutsWith(db: CutsDb, projectId: string, input: unknown
   if (!v.ok) return v;
   if (!(await db.saveCuts(projectId, v.cuts))) return { ok: false, error: MSG_SAVE_FAILED };
   return { ok: true, cuts: v.cuts };
+}
+
+/** Avisos de gancho fraco por corte. Qualquer falha do jev vira lista vazia: os cortes já estão salvos. */
+export async function cutsWarnings(db: CutsDb, projectId: string, cuts: Cut[], review: ReviewFn): Promise<string[]> {
+  try {
+    const blocks = await db.blocks(projectId);
+    const texts = cuts.map((c) => blocks.filter((b) => b.position >= c.start && b.position <= c.end).map((b) => b.text).join("\n\n"));
+    return cutReviewWarnings((await review(texts, { restart: false })).hook);
+  } catch (e) {
+    console.error("[cortes] reviewExcerpts falhou", e instanceof Error ? e.message : e);
+    return [];
+  }
 }

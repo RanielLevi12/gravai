@@ -288,6 +288,15 @@
   font-size: 14px;
 }
 
+.cutsNote {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint);
+  color: var(--ink);
+  font-size: 14px;
+}
+
 .confirmText {
   margin: 0;
   color: var(--ink-2);

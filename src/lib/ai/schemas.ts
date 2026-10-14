@@ -25,6 +25,8 @@ export class AiError extends Error {
 export type OcrImage = { data: Buffer; mediaType: string };
 export type Transcription = { text: string; seconds: number };
 export type ScriptCheck = { toneOk: number; ctaPresent: number | null };
+/** Por trecho, em 0..1: força do gancho e chance de recomeçar o vídeo (null = não perguntado). */
+export type ExcerptReview = { hook: number[]; restart: number[] | null };
 
 export const transcriptionSchema = z.object({ text: z.string(), seconds: z.number() });
 export const scriptCheckSchema = z.object({

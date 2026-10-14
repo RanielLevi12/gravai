@@ -1,9 +1,10 @@
 import "server-only";
 import { noul, score, TypeSafeClient } from "@typesafe-ai/sdk";
-import { AiError, type ScriptCheck } from "./schemas";
+import { AiError, type ExcerptReview, type ScriptCheck } from "./schemas";
 
 export const JUDGE_MODEL = "jev-latest";
 const CHECK_TIMEOUT_MS = 15_000;
+const REVIEW_TIMEOUT_MS = 15_000;
 
 const VIRAL_LEVELS = [
   "Título sem gancho: genérico, confuso ou que ninguém clicaria",
@@ -11,6 +12,14 @@ const VIRAL_LEVELS = [
   "Título razoável: claro, com algum interesse",
   "Título forte: curiosidade ou benefício claro, específico",
   "Título excelente: gancho irresistível, específico e fácil de entender de relance",
+] as const;
+
+const HOOK_LEVELS = [
+  "Gancho inexistente: começa sem nada que prenda, genérico ou confuso",
+  "Gancho fraco: informa, mas não desperta curiosidade nem vontade de continuar",
+  "Gancho razoável: claro, com algum interesse",
+  "Gancho forte: curiosidade ou benefício claro logo nas primeiras frases",
+  "Gancho excelente: prende de imediato, específico e fácil de entender",
 ] as const;
 
 let client: TypeSafeClient | null = null;
@@ -69,6 +78,40 @@ export async function checkScript(
     const a = res.answers as Record<string, { noul: number }>;
     const clamp = (n: number) => Math.min(1, Math.max(0, n));
     return { toneOk: clamp(a.toneOk.noul), ctaPresent: opts.cta ? clamp(a.ctaPresent.noul) : null };
+  } catch (e) {
+    if (e instanceof AiError) throw e;
+    throw new AiError(undefined, { code: "provider", cause: e });
+  }
+}
+
+/** Nota de gancho (e, se pedido, de "recomeço") de cada texto. Uma chamada só, perguntas em paralelo. */
+export async function reviewExcerpts(texts: string[], opts: { restart: boolean }): Promise<ExcerptReview> {
+  if (texts.length === 0) return { hook: [], restart: opts.restart ? [] : null };
+  try {
+    const questions: Record<string, ReturnType<typeof noul> | ReturnType<typeof score>> = {};
+    texts.forEach((t, i) => {
+      questions[`h${i}`] = score(
+        { pergunta: "Quão forte é o gancho do começo deste trecho de vídeo curto?", trecho: t },
+        HOOK_LEVELS,
+      );
+      // O primeiro trecho abre o vídeo: cumprimentar ali é normal.
+      if (opts.restart && i > 0) {
+        questions[`r${i}`] = noul(
+          `Este trecho recomeça o vídeo, com nova saudação ou se apresentando de novo como se fosse o começo?\n\nTrecho: "${t}"`,
+        );
+      }
+    });
+    const res = await getClient().systemOne(
+      { state: { trechos: texts.length }, questions, model: JUDGE_MODEL },
+      { signal: AbortSignal.timeout(REVIEW_TIMEOUT_MS) },
+    );
+    const a = res.answers as Record<string, { score?: number; noul?: number }>;
+    const clamp = (n: number) => Math.min(1, Math.max(0, n));
+    const max = HOOK_LEVELS.length - 1;
+    return {
+      hook: texts.map((_, i) => clamp((a[`h${i}`].score ?? 0) / max)),
+      restart: opts.restart ? texts.map((_, i) => (i > 0 ? clamp(a[`r${i}`].noul ?? 0) : 0)) : null,
+    };
   } catch (e) {
     if (e instanceof AiError) throw e;
     throw new AiError(undefined, { code: "provider", cause: e });

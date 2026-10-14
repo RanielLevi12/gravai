@@ -34,6 +34,7 @@ export function CutsPanel({
 }) {
   const [busy, setBusy] = useState<"suggest" | "save" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notes, setNotes] = useState<string[]>([]);
   const [confirming, setConfirming] = useState(false);
   const n = labels.length;
 
@@ -58,6 +59,7 @@ export function CutsPanel({
   async function suggest() {
     setBusy("suggest");
     setError(null);
+    setNotes([]);
     try {
       if (!(await flush())) {
         setError("Não consegui salvar suas edições antes de sugerir. Tente de novo.");
@@ -68,6 +70,7 @@ export function CutsPanel({
       if ("error" in r) setError(r.error);
       else {
         onChange(r.cuts);
+        setNotes(r.warnings);
         setConfirming(false);
       }
     } catch {
@@ -110,6 +113,11 @@ export function CutsPanel({
         </p>
       ) : null}
 
+      {notes.map((w) => (
+        <p key={w} role="status" className={styles.cutsNote}>
+          {w}
+        </p>
+      ))}
       <ul className={styles.cutList}>
         {cuts.map((c, k) => {
           const prevEnd = k > 0 ? cuts[k - 1].end : 0;

@@ -1,7 +1,7 @@
 // Provedor falso. Sem "server-only" para poder ser usado direto em testes.
 import fs from "node:fs";
 import path from "node:path";
-import { AiError, type OcrImage, type ScriptCheck, type Transcription } from "./schemas";
+import { AiError, type OcrImage, type ExcerptReview, type ScriptCheck, type Transcription } from "./schemas";
 
 export type MockFn =
   | "ocrImages"
@@ -9,7 +9,8 @@ export type MockFn =
   | "transcribeAudio"
   | "generateJson"
   | "scoreViral"
-  | "checkScript";
+  | "checkScript"
+  | "reviewExcerpts";
 
 const calls: Record<string, number> = {};
 const queues: Record<string, unknown[]> = {};
@@ -99,6 +100,15 @@ export async function checkScript(
 ): Promise<ScriptCheck> {
   const v = next("checkScript") as ScriptCheck;
   return { toneOk: v.toneOk, ctaPresent: opts.cta ? (v.ctaPresent ?? 0) : null };
+}
+
+/** Resposta fixa/fila: `{ hook?: number[]; restart?: number[] }`. O que faltar vira "gancho forte, sem recomeço". */
+export async function reviewExcerpts(texts: string[], opts: { restart: boolean }): Promise<ExcerptReview> {
+  const v = next("reviewExcerpts") as { hook?: number[]; restart?: number[] };
+  return {
+    hook: texts.map((_, i) => v.hook?.[i] ?? 1),
+    restart: opts.restart ? texts.map((_, i) => v.restart?.[i] ?? 0) : null,
+  };
 }
 
 export { AiError };

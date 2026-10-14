@@ -164,6 +164,26 @@ describe("generateScript", () => {
     expect(db.project.interview.scriptChecks).toBeUndefined();
   });
 
+  it("gancho fraco e trecho que recomeça viram avisos; o fechamento não é avaliado", async () => {
+    const db = new FakeScriptDb(INTERVIEW);
+    // Mock: abertura, trechos 1..5 (o fechamento fica de fora). Abertura e trecho 2 fracos; trecho 3 recomeça.
+    setMockResponse("reviewExcerpts", { hook: [0.1, 1, 0.25, 1, 1, 1], restart: [0, 0, 0, 0.9, 0, 0] });
+    await generateScriptWith({ ...deps(db), review: mockProvider.reviewExcerpts }, "p1");
+    const w = db.project.interview.scriptChecks as string[];
+    expect(w).toEqual([expect.stringContaining("gancho da abertura e do trecho 2 está fraco"), expect.stringContaining("O trecho 3 parece recomeçar")]);
+    expect(db.blocks.at(-1)?.kind).toBe("closing");
+  });
+
+  it("se o jev falhar na revisão, o script salva do mesmo jeito", async () => {
+    const db = new FakeScriptDb(INTERVIEW);
+    const review = async () => {
+      throw new Error("fora do ar");
+    };
+    await generateScriptWith({ ...deps(db), review }, "p1");
+    expect(db.blocks).toHaveLength(7);
+    expect(db.project.interview.scriptChecks).toBeUndefined();
+  });
+
   it("entrevista incompleta ou projeto inexistente: erro sem chamar a IA", async () => {
     const db = new FakeScriptDb({});
     await expect(generateScriptWith(deps(db), "p1")).rejects.toThrow();
