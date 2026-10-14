@@ -14,6 +14,8 @@ export type InterviewProject = {
   episode_index: number | null;
   /** Projeto (pasta) do vídeo; nulo = vídeo solto. */
   folder_id?: string | null;
+  /** "Sobre este projeto": contexto que a IA lê ao escrever título e script. */
+  folder_about?: string | null;
 };
 
 export type NewEpisodeProject = Omit<InterviewProject, "id">;

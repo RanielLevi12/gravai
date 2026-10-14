@@ -124,3 +124,50 @@ test("não dá para criar vídeo no projeto de outra pessoa", async ({ page }) =
   });
   expect(r.status()).toBe(422);
 });
+
+test("mover vídeo entre projetos e para solto não muda as escolhas dele", async ({ page }) => {
+  await entrarComOnboardingFeito(page, "mover-video");
+  const criar = async (nome: string) => {
+    await page.goto("/pastas/nova");
+    await page.getByLabel("Nome do projeto").fill(nome);
+    await page.getByRole("button", { name: "Criar projeto" }).click();
+    await expect(page).toHaveURL(/\/pastas\/[0-9a-f-]{36}$/);
+    return page.url();
+  };
+  const urlA = await criar("Projeto A");
+  await criar("Projeto B");
+
+  // Vídeo nasce no projeto A.
+  await page.goto(urlA);
+  await page.getByRole("link", { name: "Novo vídeo neste projeto" }).click();
+  await page.getByRole("link", { name: /Colar texto/ }).click();
+  await page.getByLabel("Cole seu texto").fill(PALAVRAS_300);
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page).toHaveURL(/\/fonte$/);
+  const id = /\/projetos\/([0-9a-f-]{36})\//.exec(page.url())![1];
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page).toHaveURL(/\/entrevista\/titulos$/);
+
+  // A → B
+  await page.goto(urlA);
+  await page.getByRole("button", { name: "Mover" }).click();
+  await expect(page.getByRole("button", { name: "Projeto A (atual)" })).toBeDisabled();
+  await page.getByRole("dialog").getByRole("button", { name: "Projeto B" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page.getByText("Este projeto ainda não tem vídeos.")).toBeVisible();
+
+  // B → solto: aparece na tela inicial.
+  await page.getByRole("link", { name: /Seus vídeos/ }).click();
+  await page.getByRole("link", { name: /Projeto B/ }).click();
+  await page.getByRole("button", { name: "Mover" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Sem projeto (solto)" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await page.goto("/projetos");
+  await expect(page.getByRole("button", { name: "Mover" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Projeto A/ })).toContainText("0 vídeos");
+
+  // Mover não mexeu nas escolhas copiadas: ainda é a entrevista curta (só falta o título).
+  await page.goto(`/projetos/${id}/entrevista/resumo`);
+  await expect(page).toHaveURL(/\/entrevista\/titulos$/);
+  await expect(page.getByText("Escolhas do projeto")).toHaveCount(0);
+});

@@ -59,3 +59,18 @@ export async function deleteFolder(id: string): Promise<Result> {
   refresh(id);
   return { ok: true };
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Move um vídeo para um projeto (ou solta com `null`). Muda só a pasta: as configurações do vídeo ficam como estão. */
+export async function moveVideo(videoId: string, folderId: string | null): Promise<Result> {
+  if (typeof videoId !== "string" || !UUID.test(videoId)) return { ok: false, error: "Vídeo não encontrado." };
+  if (folderId !== null && (typeof folderId !== "string" || !UUID.test(folderId))) return { ok: false, error: "Projeto não encontrado." };
+  const { supabase } = await requireUser();
+  // RLS (projects_own) recusa pasta de outra pessoa; vídeo alheio não é atualizado.
+  const { data, error } = await supabase.from("projects").update({ folder_id: folderId }).eq("id", videoId).select("id");
+  if (error || (data?.length ?? 0) !== 1) return { ok: false, error: "Não foi possível mover o vídeo." };
+  revalidatePath("/(app)/projetos", "page");
+  revalidatePath("/(app)/pastas/[id]", "page");
+  return { ok: true };
+}

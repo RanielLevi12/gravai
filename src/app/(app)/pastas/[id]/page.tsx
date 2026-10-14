@@ -19,9 +19,10 @@ export default async function PastaPage({ params }: { params: Promise<{ id: stri
   const { data: pasta } = await supabase.from("folders").select("id, name, color, about, settings").eq("id", id).eq("user_id", auth.user.id).maybeSingle();
   if (!pasta) notFound();
 
-  const [{ data: videos }, ctas] = await Promise.all([
+  const [{ data: videos }, ctas, { data: todas }] = await Promise.all([
     supabase.from("projects").select("id, title, status, source_kind, interview").eq("user_id", auth.user.id).eq("folder_id", id).order("created_at", { ascending: false }).limit(50),
     loadCtas(supabase, auth.user.id),
+    supabase.from("folders").select("id, name").eq("user_id", auth.user.id).order("created_at", { ascending: false }),
   ]);
   const settings = toSettings(pasta.settings);
   const ctaLabel = ctas.find((c) => c.id === settings.ctaId)?.label;
@@ -52,7 +53,7 @@ export default async function PastaPage({ params }: { params: Promise<{ id: stri
           <h2 className={styles.sectionTitle}>Vídeos deste projeto</h2>
           <div className={styles.list}>
             {lista.map((p) => (
-              <ProjectRow key={p.id} project={p} />
+              <ProjectRow key={p.id} project={p} move={{ currentFolderId: id, folders: todas ?? [] }} />
             ))}
           </div>
         </>

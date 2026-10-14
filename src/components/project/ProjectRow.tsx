@@ -1,6 +1,7 @@
 import { ArrowRight, FolderOpen, Video, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { nextStepHref } from "@/lib/project/next-step";
+import { MoveVideo, type FolderChoice } from "./MoveVideo";
 import { origemDoProjeto } from "./origens";
 import styles from "./ProjectRow.module.css";
 
@@ -25,7 +26,7 @@ const ETAPAS: Record<string, Etapa> = {
 const TOTAL_ETAPAS = 5;
 
 /** Linha de "Continue de onde parou": capa (ou origem), etapa atual e a próxima ação. */
-export function ProjectRow({ project }: { project: ProjectRowData }) {
+export function ProjectRow({ project, move }: { project: ProjectRowData; move?: { currentFolderId: string | null; folders: FolderChoice[] } }) {
   const etapa = ETAPAS[project.status] ?? ETAPAS.fonte;
   const origem = origemDoProjeto(project.source_kind);
   const Origem = origem.icon;
@@ -54,6 +55,7 @@ export function ProjectRow({ project }: { project: ProjectRowData }) {
       </div>
       <div className={styles.next}>
         <span>{etapa.proxima}</span>
+        {move && (move.folders.length > 0 || move.currentFolderId) ? <MoveVideo videoId={project.id} currentFolderId={move.currentFolderId} folders={move.folders} /> : null}
         <Link href={nextStepHref(project)} className={styles.nextBtn}>
           <Acao size={17} strokeWidth={2} aria-hidden />
           {etapa.acao}

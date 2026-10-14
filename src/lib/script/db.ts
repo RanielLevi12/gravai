@@ -15,13 +15,14 @@ export function supabaseScriptDb(deps: { supabase: SupabaseClient<Database>; use
     async getProject(id) {
       const { data, error } = await supabase
         .from("projects")
-        .select("id, title, source_kind, source_text, source_truncated, status, interview, series_id, episode_index")
+        .select("id, title, source_kind, source_text, source_truncated, status, interview, series_id, episode_index, folder_id, folders(about)")
         .eq("id", id)
         .maybeSingle();
       if (error) throw new Error("read project failed");
       if (!data) return null;
       const interview = data.interview && typeof data.interview === "object" && !Array.isArray(data.interview) ? data.interview : {};
-      return { ...data, interview: interview as unknown as Interview } satisfies InterviewProject;
+      const { folders, ...project } = data;
+      return { ...project, folder_about: folders?.about ?? null, interview: interview as unknown as Interview } satisfies InterviewProject;
     },
     async profile() {
       const { data } = await supabase.from("profiles").select("niche, audience, tone, phrases").maybeSingle();

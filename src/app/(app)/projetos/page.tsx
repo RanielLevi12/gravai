@@ -94,7 +94,7 @@ export default async function ProjetosPage() {
           <h2 className={styles.sectionTitle}>Continue de onde parou</h2>
           <div className={styles.list}>
             {lista.map((p) => (
-              <ProjectRow key={p.id} project={p} />
+              <ProjectRow key={p.id} project={p} move={{ currentFolderId: null, folders: listaPastas.map((f) => ({ id: f.id, name: f.name })) }} />
             ))}
           </div>
         </>
