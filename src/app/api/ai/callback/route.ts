@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { encryptKey } from "@/lib/ai/keys";
+import { saveUserAiKey } from "@/lib/ai/connection";
 import { clearOAuthCookie, OAUTH_COOKIE, OPENROUTER_KEYS_URL, readOAuthCookie, sameString } from "@/lib/ai/oauth";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 
 /**
@@ -53,29 +52,6 @@ export async function GET(request: NextRequest) {
   }
   if (typeof key !== "string" || key.length < 8) return done("erro");
 
-  let keyCiphertext: string;
-  try {
-    keyCiphertext = encryptKey(key);
-  } catch {
-    console.warn("[ai] não foi possível cifrar a chave de IA (segredo de cifra indisponível)");
-    return done("erro");
-  }
-
-  const { error } = await createAdminClient()
-    .from("ai_connections")
-    .upsert(
-      {
-        user_id: user.id,
-        provider: "openrouter",
-        key_ciphertext: keyCiphertext,
-        key_hint: key.slice(-4),
-        created_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" },
-    );
-  if (error) {
-    console.warn("[ai] falha ao gravar conexão de IA");
-    return done("erro");
-  }
+  if (!(await saveUserAiKey(user.id, key))) return done("erro");
   return done("conectada");
 }
