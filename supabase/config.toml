@@ -244,6 +244,15 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Link + código de acesso (o código funciona em qualquer aparelho; o link só no navegador que pediu).
+[auth.email.template.magic_link]
+subject = "Seu código de acesso do Gravaí"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.confirmation]
+subject = "Seu código de acesso do Gravaí"
+content_path = "./supabase/templates/confirmation.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

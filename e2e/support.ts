@@ -22,12 +22,29 @@ export async function esperarLink(email: string, jaVistos: Set<string>): Promise
   throw new Error(`nenhum e-mail novo para ${email}`);
 }
 
+/** Espera o e-mail novo e devolve o código numérico de acesso que vem nele. */
+export async function esperarCodigo(email: string, jaVistos: Set<string>): Promise<{ id: string; codigo: string }> {
+  for (let i = 0; i < 40; i++) {
+    const res = await fetch(`${MAILPIT}/search?query=${encodeURIComponent(`to:${email}`)}`);
+    const { messages } = (await res.json()) as MailpitList;
+    const novo = messages.find((m) => !jaVistos.has(m.ID));
+    if (novo) {
+      const msg = (await (await fetch(`${MAILPIT}/message/${novo.ID}`)).json()) as { Text: string };
+      const codigo = /\b(\d{6})\b/.exec(msg.Text)?.[1];
+      if (!codigo) throw new Error("e-mail sem código de acesso");
+      return { id: novo.ID, codigo };
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`nenhum e-mail novo para ${email}`);
+}
+
 export async function pedirLink(page: Page, email: string) {
   await page.goto("/entrar");
   await expect(page.getByRole("heading", { name: "Entre no Gravaí" })).toBeVisible();
   await page.getByLabel("E-mail").fill(email);
-  await page.getByRole("button", { name: "Receber link de acesso" }).click();
-  await expect(page.getByText("Enviamos o link para")).toBeVisible();
+  await page.getByRole("button", { name: "Receber código de acesso" }).click();
+  await expect(page.getByText("Enviamos um código para")).toBeVisible();
 }
 
 /** Entra com um e-mail novo e pula o onboarding: termina em /projetos. */

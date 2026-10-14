@@ -17,7 +17,7 @@ export default async function EntrarPage({ searchParams }: { searchParams: Promi
       </header>
       {erro === "link" ? (
         <p role="alert" className={styles.alert}>
-          Esse link não funcionou. Peça um novo e abra no mesmo navegador em que pediu.
+          Esse link não funcionou. Peça um novo e digite o código que chega no e-mail.
         </p>
       ) : null}
       <EntrarForm />

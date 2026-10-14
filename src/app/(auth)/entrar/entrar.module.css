@@ -34,14 +34,6 @@
   gap: var(--space-md);
 }
 
-.or {
-  margin: 0;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink-2);
-}
-
 .hint {
   margin: 0;
   text-align: center;

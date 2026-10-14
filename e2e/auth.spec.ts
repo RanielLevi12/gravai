@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { esperarLink, pedirLink } from "./support";
+import { esperarCodigo, esperarLink, pedirLink } from "./support";
 
 test("magic link, onboarding completo e perfil", async ({ page }) => {
   const email = `onboarding-${Date.now()}@example.com`;
@@ -48,6 +48,20 @@ test("pular o onboarding leva a /projetos e o próximo login não volta a ele", 
   const segundo = await esperarLink(email, new Set([primeiro.id]));
   await page.goto(segundo.link);
   await expect(page).toHaveURL(/\/projetos$/);
+});
+
+test("código de 6 dígitos entra sem abrir o link (outro navegador)", async ({ page }) => {
+  const email = `codigo-${Date.now()}@example.com`;
+  await pedirLink(page, email);
+  const { codigo } = await esperarCodigo(email, new Set());
+
+  await page.getByLabel("Código do e-mail").fill("000000");
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page.getByText("Código errado ou vencido")).toBeVisible();
+
+  await page.getByLabel("Código do e-mail").fill(codigo);
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page).toHaveURL(/\/boas-vindas\/nicho$/);
 });
 
 test("sem sessão, rotas do app levam a /entrar", async ({ page }) => {
