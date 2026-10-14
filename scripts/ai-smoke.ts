@@ -3,7 +3,7 @@
 // Chama cada função real uma vez:
 //  - jev (scoreViral, checkScript) com TYPESAFE_API_KEY;
 //  - OpenRouter (generateJson, ocrImages, ocrPdf, transcribeAudio) com OPENROUTER_DEV_KEY,
-//    a chave do dono, usada SÓ aqui. O app nunca lê OPENROUTER_DEV_KEY (usa a chave do OAuth de cada usuário).
+//    a chave do dono, usada SÓ aqui. O app só lê OPENROUTER_DEV_KEY em `next dev` (src/lib/ai/index.ts); em produção usa a chave do OAuth de cada usuário.
 // Nenhuma chave é impressa.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
