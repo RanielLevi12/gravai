@@ -20,6 +20,7 @@ const ETAPAS: Record<string, Etapa> = {
   entrevista: { indice: 1, meta: "Entrevista", proxima: "Faltam algumas perguntas", acao: "Continuar", icon: ArrowRight },
   script: { indice: 2, meta: "Script", proxima: "Revise o script", acao: "Continuar", icon: ArrowRight },
   gravacao: { indice: 3, meta: "Gravação", proxima: "Script pronto", acao: "Gravar", icon: Video },
+  gravado: { indice: 4, meta: "Gravado", proxima: "Vídeo guardado", acao: "Ver", icon: FolderOpen },
   pronto: { indice: 5, meta: "Pronto", proxima: "Vídeos prontos", acao: "Abrir", icon: FolderOpen },
 };
 

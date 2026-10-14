@@ -40,7 +40,7 @@ export function TeleprompterScreen({
   }, [rec.stream]);
   useEffect(() => {
     if (rec.state !== "stopped" || !rec.result) return;
-    const q = new URLSearchParams({ gravacao: rec.result.recordingId, modo });
+    const q = new URLSearchParams({ gravacao: rec.result.recordingId, dur: String(rec.result.durationSeconds) });
     if (blockId) q.set("bloco", blockId);
     router.push(`/projetos/${projectId}/gravar/aprovar?${q}`);
   }, [rec.state, rec.result, router, projectId, modo, blockId]);
