@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Cloud, CloudCheck, Info, RefreshCw, Scissors, Timer, Video } from "lucide-react";
+import { ArrowLeft, Cloud, CloudCheck, Info, RefreshCw, Timer, Video } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -42,6 +42,7 @@ export function ScriptEditor({
 }) {
   const [texts, setTexts] = useState(() => textsOf(blocks));
   const [rewriting, setRewriting] = useState<EditorBlock | null>(null);
+  const [quickBusy, setQuickBusy] = useState<string | null>(null);
   const [undo, setUndo] = useState<{ id: string; text: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -74,6 +75,30 @@ export function ScriptEditor({
     return null;
   }
 
+  /** Botão rápido ao lado do texto: reescreve o bloco na hora, com "Desfazer". */
+  async function quick(block: EditorBlock, mode: RewriteInstruction) {
+    if (quickBusy) return;
+    setQuickBusy(block.id);
+    try {
+      if (!(await autosave.flush(block.id))) {
+        setToast("Não consegui salvar suas edições antes de ajustar. Tente de novo.");
+        return;
+      }
+      const r = await rewriteBlock(block.id, mode);
+      if ("error" in r) {
+        setToast(r.error);
+        return;
+      }
+      setUndo({ id: block.id, text: texts[block.id] });
+      edit(block.id, r.text);
+      setToast("Texto ajustado");
+    } catch {
+      setToast("Não foi possível ajustar agora. Tente de novo.");
+    } finally {
+      setQuickBusy(null);
+    }
+  }
+
   async function regenerate() {
     setRegenerating(true);
     setRegenError(null);
@@ -101,7 +126,8 @@ export function ScriptEditor({
   }
 
   const seconds = blocks.reduce((sum, b) => sum + estimateSeconds(texts[b.id] ?? ""), 0);
-  const cuts = blocks.filter((b) => b.kind === "cut").length;
+  let bodyNumber = 0;
+  const labels = Object.fromEntries(blocks.map((b) => [b.id, b.kind === "body" ? `Trecho ${++bodyNumber}` : blockLabel(b.kind, b.cutIndex)]));
 
   return (
     <main className={styles.page}>
@@ -121,7 +147,6 @@ export function ScriptEditor({
           <span data-testid="tempo-total">
             <Chip icon={Timer}>{clock(seconds)}</Chip>
           </span>
-          <Chip icon={Scissors}>{cuts === 1 ? "1 corte" : `${cuts} cortes`}</Chip>
           <Chip icon={autosave.status === "saved" ? CloudCheck : Cloud} tone={autosave.status === "saved" ? "saved" : "neutral"}>
             {autosave.status === "saved" ? "Salvo" : autosave.status === "saving" ? "Salvando…" : "Não salvou"}
           </Chip>
@@ -157,7 +182,17 @@ export function ScriptEditor({
 
       <div className={styles.blocks}>
         {blocks.map((b) => (
-          <ScriptBlock key={b.id} block={b} text={texts[b.id] ?? ""} onChange={(t) => edit(b.id, t)} onRewrite={() => setRewriting(b)} />
+          <ScriptBlock
+            key={b.id}
+            block={b}
+            label={labels[b.id]}
+            text={texts[b.id] ?? ""}
+            busy={quickBusy === b.id}
+            disabled={quickBusy !== null}
+            onChange={(t) => edit(b.id, t)}
+            onRewrite={() => setRewriting(b)}
+            onQuick={(mode) => quick(b, mode)}
+          />
         ))}
       </div>
 
@@ -168,7 +203,7 @@ export function ScriptEditor({
       </div>
 
       <RewriteSheet
-        label={rewriting ? blockLabel(rewriting.kind, rewriting.cutIndex) : null}
+        label={rewriting ? labels[rewriting.id] : null}
         onClose={() => setRewriting(null)}
         onSubmit={rewrite}
       />

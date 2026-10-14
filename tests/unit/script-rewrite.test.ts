@@ -24,6 +24,13 @@ const CUT: BlockContext = { kind: "cut", text: PALAVRAS(75), previous: "antes", 
 const deps = (db: BlockDb) => ({ db, ai: async () => userAiFrom(mockProvider) });
 
 describe("buildRewriteUser", () => {
+
+  it("\"tirar saudação\" manda começar direto na ideia e é aceito pelo servidor", async () => {
+    const u = buildRewriteUser({ ...base, kind: "body", instruction: "noGreeting" });
+    expect(u).toMatch(/Tire a saudação/);
+    expect(u).toMatch(/Fala, pessoal/);
+    await expect(rewriteBlockWith(deps(new FakeBlockDb({ ...CUT, kind: "body", cutSeconds: null })), "b1", "noGreeting")).resolves.toHaveProperty("text");
+  });
   const base = { kind: "cut" as const, text: "texto atual", previous: "texto antes", next: "texto depois", tone: "didático", cutSeconds: 30 };
 
   it("leva o pedido, o tom, os vizinhos como contexto e o limite do corte", () => {

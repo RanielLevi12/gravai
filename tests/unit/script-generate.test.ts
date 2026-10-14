@@ -55,27 +55,31 @@ function deps(db: ScriptDb): ScriptDeps {
 describe("generateScript", () => {
   beforeEach(() => resetMock());
 
-  it("grava 5 cortes numerados, com posições contíguas e status script", async () => {
+  it("grava o script contínuo: abertura, 5 trechos e fechamento, posições contíguas e status script", async () => {
     const db = new FakeScriptDb(INTERVIEW);
     await generateScriptWith(deps(db), "p1");
     expect(db.blocks.map((b) => b.position)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(db.blocks.filter((b) => b.kind === "cut").map((b) => b.cut_index)).toEqual([1, 2, 3, 4, 5]);
-    expect(db.blocks[0].kind).toBe("opening");
-    expect(db.blocks[6].kind).toBe("closing");
+    expect(db.blocks.map((b) => b.kind)).toEqual(["opening", "body", "body", "body", "body", "body", "closing"]);
+    expect(db.blocks.every((b) => b.cut_index === null && b.cut_title === null && b.cover_prompt === null)).toBe(true);
     expect(db.project.status).toBe("script");
     expect(db.coverPrompt).toBe("Capa do vídeo principal");
-    expect(db.blocks.find((b) => b.cut_index === 3)!.cover_prompt).toBe("Capa da dica 3");
     expect(db.project.interview.scriptWarning).toBeUndefined();
     expect(getMockCalls("generateJson")).toBe(1);
   });
 
-  it("anexa o CTA como última linha das descrições, só nas plataformas escolhidas", async () => {
+  it("não pede cortes à IA: o prompt manda um vídeo só e cumprimento uma vez", async () => {
+    const { SCRIPT_SYSTEM } = await import("@/lib/script/prompts");
+    expect(SCRIPT_SYSTEM).toMatch(/UM vídeo/);
+    expect(SCRIPT_SYSTEM).toMatch(/no máximo UMA vez/);
+    expect(SCRIPT_SYSTEM).not.toMatch(/"cut"/);
+  });
+
+  it("anexa o CTA como última linha da descrição do vídeo, só nas plataformas escolhidas", async () => {
     const db = new FakeScriptDb(INTERVIEW);
     await generateScriptWith(deps(db), "p1");
-    const cut2 = db.blocks.find((b) => b.cut_index === 2)!;
-    expect(cut2.descriptions.reels?.split("\n").at(-1)).toBe("Chama no WhatsApp: https://wa.me/5511999990000");
-    expect(Object.keys(cut2.descriptions).sort()).toEqual(["reels", "youtube"]);
     const main = db.descriptions as Record<string, string>;
+    expect(Object.keys(main).sort()).toEqual(["reels", "youtube"]);
+    expect(main.reels.split("\n").at(-1)).toBe("Chama no WhatsApp: https://wa.me/5511999990000");
     expect(main.youtube.endsWith("Chama no WhatsApp: https://wa.me/5511999990000")).toBe(true);
   });
 
@@ -89,14 +93,14 @@ describe("generateScript", () => {
       const db = new FakeScriptDb(INTERVIEW);
       db.ctaRow = cta;
       await generateScriptWith(deps(db), "p1");
-      expect(db.blocks.find((b) => b.cut_index === 1)!.descriptions.reels?.endsWith(`\n${linha}`)).toBe(true);
+      expect((db.descriptions as Record<string, string>).reels.endsWith(`\n${linha}`)).toBe(true);
     }
   });
 
   it("sem CTA, a descrição fica como veio", async () => {
     const db = new FakeScriptDb({ ...INTERVIEW, ctaId: null });
     await generateScriptWith(deps(db), "p1");
-    expect(db.blocks.find((b) => b.cut_index === 1)!.descriptions.reels).toBe("Dica 1 #dicas");
+    expect((db.descriptions as Record<string, string>).reels).toBe("Vídeo completo #dicas");
   });
 
   it("CTA escolhido que não existe mais: script sai sem ele e avisa em scriptChecks", async () => {
@@ -106,16 +110,12 @@ describe("generateScript", () => {
     expect(db.project.interview.scriptChecks).toEqual([expect.stringContaining("foi removida do perfil")]);
   });
 
-  it("corte longo demais: tenta duas vezes e grava o aviso", async () => {
+  it("script longo demais: tenta duas vezes e grava o aviso", async () => {
     const db = new FakeScriptDb(INTERVIEW);
     const longo = {
       blocks: [
         { kind: "opening", text: PALAVRAS(30) },
-        { kind: "cut", text: PALAVRAS(140), cutTitle: "Longo", descriptions: { reels: "d" } },
-        { kind: "cut", text: PALAVRAS(70), cutTitle: "B", descriptions: { reels: "d" } },
-        { kind: "cut", text: PALAVRAS(70), cutTitle: "C", descriptions: { reels: "d" } },
-        { kind: "cut", text: PALAVRAS(70), cutTitle: "D", descriptions: { reels: "d" } },
-        { kind: "cut", text: PALAVRAS(70), cutTitle: "E", descriptions: { reels: "d" } },
+        { kind: "body", text: PALAVRAS(900) },
         { kind: "closing", text: PALAVRAS(30) },
       ],
       mainDescriptions: { reels: "d" },
@@ -124,8 +124,8 @@ describe("generateScript", () => {
     setMockResponse("generateJson", longo);
     await generateScriptWith(deps(db), "p1");
     expect(getMockCalls("generateJson")).toBe(2);
-    expect(db.blocks).toHaveLength(7);
-    expect(db.project.interview.scriptWarning).toMatch(/corte 1/);
+    expect(db.blocks).toHaveLength(3);
+    expect(db.project.interview.scriptWarning).toMatch(/o vídeo todo tem/);
   });
 
   it("a segunda tentativa que acerta não deixa aviso", async () => {

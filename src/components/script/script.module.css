@@ -37,6 +37,7 @@
 
 .iconBtn:focus-visible,
 .mini:focus-visible,
+.quickBtn:focus-visible,
 .editor:focus-visible {
   outline: 3px solid transparent;
   outline-offset: 2px;
@@ -192,6 +193,41 @@
   margin: 10px 0 0;
   font-size: 14px;
   color: var(--ink-2);
+}
+
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.quickBtn {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--surface-2);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--ui), system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.quickBtn:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.quickBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.quickWait {
+  font-size: 14px;
+  color: var(--ink-soft, var(--ink));
 }
 
 .actions {

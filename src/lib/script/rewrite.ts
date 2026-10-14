@@ -12,7 +12,7 @@ export const RewriteSchema = z.object({ text: z.string() }).meta({ title: "block
 
 export const MAX_BLOCK_TEXT = 6000;
 const CUT_TOLERANCE = 1.2;
-const MODES = ["shorter", "direct", "emotional", "hook", "simpler"] as const;
+const MODES = ["noGreeting", "shorter", "direct", "emotional", "hook", "simpler"] as const;
 
 export type BlockContext = {
   kind: BlockKind;

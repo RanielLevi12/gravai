@@ -6,26 +6,18 @@ import { AiError } from "@/lib/ai/schemas";
 import type { CtaKind } from "@/lib/profile/schema";
 import { MSG_NOT_FOUND, type InterviewProject } from "@/lib/interview/service";
 import { PLATFORMS, isPlatform, type Interview, type Platform } from "@/lib/interview/steps";
-import { estimateCutCount } from "@/lib/rules/cuts";
 import { estimateSeconds } from "@/lib/rules/duration";
 import { buildScriptUser, SCRIPT_SYSTEM, type ScriptProfile } from "./prompts";
 
-export type BlockKind = "opening" | "bridge" | "cut" | "closing";
+/** "body" = trecho do script contínuo; "bridge" e "cut" só existem em scripts gerados antes. */
+export type BlockKind = "opening" | "body" | "bridge" | "cut" | "closing";
 export type Descriptions = Partial<Record<Platform, string>>;
 
 const DescriptionsSchema = z.object(Object.fromEntries(PLATFORMS.map((p) => [p, z.string().optional()])));
 
 export const ScriptSchema = z
   .object({
-    blocks: z.array(
-      z.object({
-        kind: z.enum(["opening", "bridge", "cut", "closing"]),
-        text: z.string(),
-        cutTitle: z.string().optional(),
-        descriptions: DescriptionsSchema.optional(),
-        coverPrompt: z.string().optional(),
-      }),
-    ),
+    blocks: z.array(z.object({ kind: z.enum(["opening", "body", "closing"]), text: z.string() })),
     mainDescriptions: DescriptionsSchema,
     mainCoverPrompt: z.string(),
   })
@@ -63,7 +55,6 @@ export type ScriptDeps = {
 
 const MSG_SAVE_FAILED = "Não foi possível salvar o script agora. Tente de novo.";
 const MSG_INCOMPLETE = "Termine a entrevista antes de gerar o script.";
-const CUT_TOLERANCE = 1.2;
 const TOTAL_MIN = 0.8;
 const TOTAL_MAX = 1.2;
 const CHECK_MIN = 0.5;
@@ -88,20 +79,8 @@ export function formatCta(cta: ScriptCta): string | null {
 }
 
 /** Problemas de duração do script; lista vazia = ok. */
-export function validateScript(blocks: { kind: BlockKind; text: string }[], mainSeconds: number, cutSeconds: number | null): string[] {
+export function validateScript(blocks: { kind: BlockKind; text: string }[], mainSeconds: number): string[] {
   const problems: string[] = [];
-  if (cutSeconds) {
-    const limit = cutSeconds * CUT_TOLERANCE;
-    blocks
-      .filter((b) => b.kind === "cut")
-      .forEach((b, n) => {
-        const s = estimateSeconds(b.text);
-        if (s > limit) problems.push(`o corte ${n + 1} tem ~${s} s e o limite é ${Math.round(limit)} s`);
-      });
-    const expected = estimateCutCount(mainSeconds, cutSeconds);
-    const got = blocks.filter((b) => b.kind === "cut").length;
-    if (got !== expected) problems.push(`vieram ${got} cortes e eram ${expected}`);
-  }
   const total = blocks.reduce((sum, b) => sum + estimateSeconds(b.text), 0);
   if (total < mainSeconds * TOTAL_MIN || total > mainSeconds * TOTAL_MAX) {
     problems.push(`o vídeo todo tem ~${total} s e deveria ter entre ${Math.round(mainSeconds * TOTAL_MIN)} e ${Math.round(mainSeconds * TOTAL_MAX)} s`);
@@ -132,7 +111,6 @@ export async function generateScriptWith(deps: ScriptDeps, projectId: string): P
   const platforms = (i.platforms ?? []).filter(isPlatform);
   if (platforms.length === 0 || !i.mainSeconds) throw new AiError(MSG_INCOMPLETE, { code: "invalid_input" });
   const mainSeconds = i.mainSeconds;
-  const cutSeconds = i.cutSeconds ?? null;
 
   const ai = await deps.ai();
   const profile = await deps.db.profile().catch(() => null);
@@ -145,27 +123,26 @@ export async function generateScriptWith(deps: ScriptDeps, projectId: string): P
     ai.generateJson(
       ScriptSchema,
       SCRIPT_SYSTEM,
-      buildScriptUser({ sourceText: project.source_text, interview: i, profile, episode, platforms, mainSeconds, cutSeconds, problem }),
+      buildScriptUser({ sourceText: project.source_text, interview: i, profile, episode, platforms, mainSeconds, problem }),
     );
 
   const started = deps.now?.() ?? Date.now();
   let script = await generate();
-  let problems = validateScript(script.blocks, mainSeconds, cutSeconds);
+  let problems = validateScript(script.blocks, mainSeconds);
   // maxDuration=300 (ver RETRY_BUDGET_MS): se a primeira já demorou, não tenta de novo; o problema vira aviso no script.
   if (problems.length > 0 && (deps.now?.() ?? Date.now()) - started < RETRY_BUDGET_MS) {
     script = await generate(problems.join("; "));
-    problems = validateScript(script.blocks, mainSeconds, cutSeconds);
+    problems = validateScript(script.blocks, mainSeconds);
   }
 
-  let cutIndex = 0;
   const blocks: NewScriptBlock[] = script.blocks.map((b, n) => ({
     position: n + 1,
     kind: b.kind,
     text: b.text.trim(),
-    cut_index: b.kind === "cut" ? ++cutIndex : null,
-    cut_title: b.kind === "cut" ? (b.cutTitle?.trim() ?? null) : null,
-    descriptions: b.kind === "cut" ? finishDescriptions(b.descriptions, platforms, ctaLine) : {},
-    cover_prompt: b.coverPrompt?.trim() || null,
+    cut_index: null,
+    cut_title: null,
+    descriptions: {},
+    cover_prompt: null,
   }));
 
   const checks: string[] = [];
