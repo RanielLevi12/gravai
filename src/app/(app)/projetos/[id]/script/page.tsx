@@ -4,6 +4,7 @@ import { ScriptEditor, type EditorBlock } from "@/components/script/ScriptEditor
 import { ScriptNotice } from "@/components/script/ScriptNotice";
 import { AiError } from "@/lib/ai/schemas";
 import { validateCuts } from "@/lib/script/cuts";
+import { isPlatform, type Platform } from "@/lib/interview/steps";
 import type { BlockKind } from "@/lib/script/generate";
 import { generateScript } from "@/lib/script/actions";
 import { createServerClient } from "@/lib/supabase/server";
@@ -35,7 +36,14 @@ export default async function ScriptPage({ params }: { params: Promise<{ id: str
   };
 
   // RLS limita aos projetos do usuário: projeto de outra pessoa cai no 404.
-  const { data: project } = await supabase.from("projects").select("id, title, interview, script_stale, cuts").eq("id", id).maybeSingle();
+  const loadProject = () =>
+    supabase
+      .from("projects")
+      .select("id, title, interview, script_stale, cuts, descriptions, cover_prompt")
+      .eq("id", id)
+      .abortSignal(new AbortController().signal)
+      .maybeSingle();
+  let { data: project } = await loadProject();
   if (!project) notFound();
 
   let rows = await loadBlocks();
@@ -60,6 +68,8 @@ export default async function ScriptPage({ params }: { params: Promise<{ id: str
       );
     }
     rows = await loadBlocks();
+    // A geração mudou título, entrevista, descrições e capa.
+    project = (await loadProject()).data ?? project;
   }
 
   const interview = project.interview && typeof project.interview === "object" && !Array.isArray(project.interview) ? project.interview : {};
@@ -69,6 +79,10 @@ export default async function ScriptPage({ params }: { params: Promise<{ id: str
 
   const cutSeconds = "cutSeconds" in interview && typeof interview.cutSeconds === "number" ? interview.cutSeconds : null;
   const cutsRaw = validateCuts(project.cuts, rows.length);
+
+  const rawDescriptions = project.descriptions && typeof project.descriptions === "object" && !Array.isArray(project.descriptions) ? project.descriptions : {};
+  const descriptions: Partial<Record<Platform, string>> = {};
+  for (const [k, v] of Object.entries(rawDescriptions)) if (isPlatform(k) && typeof v === "string" && v) descriptions[k] = v;
 
   const blocks: EditorBlock[] = rows.map((b) => ({
     id: b.id,
@@ -87,6 +101,7 @@ export default async function ScriptPage({ params }: { params: Promise<{ id: str
       stale={project.script_stale}
       cutSeconds={cutSeconds}
       initialCuts={cutsRaw.ok ? cutsRaw.cuts : []}
+      info={{ coverPrompt: project.cover_prompt, descriptions }}
     />
   );
 }

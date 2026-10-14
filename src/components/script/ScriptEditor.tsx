@@ -15,6 +15,7 @@ import type { RewriteInstruction } from "@/lib/script/prompts";
 import { blockLabel, clock } from "./format";
 import { RewriteSheet } from "./RewriteSheet";
 import { CutsPanel } from "./CutsPanel";
+import { VideoInfo, type MainInfo } from "./VideoInfo";
 import { ScriptBlock, type ScriptBlockData } from "./ScriptBlock";
 import styles from "./script.module.css";
 import { useAutosave } from "./useAutosave";
@@ -37,6 +38,7 @@ export function ScriptEditor({
   stale,
   cutSeconds,
   initialCuts,
+  info,
 }: {
   projectId: string;
   title: string;
@@ -47,6 +49,7 @@ export function ScriptEditor({
   /** Tamanho do corte escolhido na entrevista; null = sem cortes. */
   cutSeconds: number | null;
   initialCuts: Cut[];
+  info: MainInfo;
 }) {
   const [cuts, setCuts] = useState(initialCuts);
   const [texts, setTexts] = useState(() => textsOf(blocks));
@@ -226,6 +229,8 @@ export function ScriptEditor({
           flush={autosave.flushAll}
         />
       ) : null}
+
+      <VideoInfo info={info} />
 
       <div className={styles.bottom}>
         <Button href={`/projetos/${projectId}/gravar`} icon={Video} className={styles.full}>
