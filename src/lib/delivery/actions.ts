@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { createServerClient } from "@/lib/supabase/server";
 import { supabaseDeliveryDb } from "./db";
-import { MSG_ALREADY_RUNNING, MSG_NOT_RECORDED, MSG_PROJECT_NOT_FOUND, createRenderJobWith, type JobView } from "./service";
+import { MSG_ALREADY_RUNNING, MSG_FILE_NOT_FOUND, MSG_NOT_RECORDED, MSG_PROJECT_NOT_FOUND, createRenderJobWith, signedUrlWith, type JobView } from "./service";
 import { wakeWorker } from "./trigger";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MSG_EXPIRED = "Sua sessão expirou. Entre de novo.";
 const MSG_UNAVAILABLE = "Não foi possível agora. Tente de novo.";
-const SAFE = new Set([MSG_ALREADY_RUNNING, MSG_NOT_RECORDED, MSG_PROJECT_NOT_FOUND]);
+const SAFE = new Set([MSG_ALREADY_RUNNING, MSG_FILE_NOT_FOUND, MSG_NOT_RECORDED, MSG_PROJECT_NOT_FOUND]);
 
 export type ActionError = { error: string };
 
@@ -44,6 +44,19 @@ export async function getJobStatus(projectId: string): Promise<{ job: JobView | 
   if (!db) return { error: MSG_EXPIRED };
   try {
     return { job: await db.latestJob(projectId) };
+  } catch (e) {
+    return failure(e);
+  }
+}
+
+/** Link novo (5 min) para baixar ou assistir um arquivo; gerado na hora do clique para nunca estar vencido. */
+export async function signedUrl(projectId: string, exportId: string, opts: { download?: boolean } = {}): Promise<{ url: string } | ActionError> {
+  if (typeof projectId !== "string" || !UUID.test(projectId)) return { error: MSG_PROJECT_NOT_FOUND };
+  if (typeof exportId !== "string" || !UUID.test(exportId)) return { error: MSG_FILE_NOT_FOUND };
+  const db = await sessionDb();
+  if (!db) return { error: MSG_EXPIRED };
+  try {
+    return await signedUrlWith(db, projectId, exportId, { download: opts?.download !== false });
   } catch (e) {
     return failure(e);
   }

@@ -2,10 +2,16 @@ import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import styles from "@/components/record/record.module.css";
+import { clock } from "@/components/script/format";
 import scriptStyles from "@/components/script/script.module.css";
 import { Button } from "@/components/ui/Button";
 import { supabaseDeliveryDb } from "@/lib/delivery/db";
+import { WARN_DAYS, daysLeft } from "@/lib/delivery/rules";
+import { SIGNED_URL_SECONDS, type ExportRow } from "@/lib/delivery/service";
+import { PLATFORM_LABELS, PLATFORMS } from "@/lib/interview/steps";
 import { createServerClient } from "@/lib/supabase/server";
+import { CutCard, type CardFile } from "./CutCard";
+import entrega from "./entrega.module.css";
 import { JobPanel } from "./JobProgress";
 
 export const metadata: Metadata = { title: "Entrega · Gravaí" };
@@ -22,8 +28,19 @@ export default async function EntregaPage({ params }: { params: Promise<{ id: st
   if (!project) notFound();
   if (project.status !== "gravado" && project.status !== "pronto") redirect(`/projetos/${id}/gravar`);
 
-  const job = await db.latestJob(id);
-  const done = job?.status === "done";
+  const [job, exports, cuts] = await Promise.all([db.latestJob(id), db.exportsOf(id), db.cuts(id)]);
+  const generating = job?.status === "queued" || job?.status === "running";
+  const ready = exports.length > 0 && !generating;
+
+  const files = new Map<string, CardFile>();
+  if (ready) {
+    await Promise.all(
+      exports.map(async (e: ExportRow) => files.set(e.id, { id: e.id, url: await db.signUrl(e.storagePath, SIGNED_URL_SECONDS, null) })),
+    );
+  }
+  const find = (kind: ExportRow["kind"], cutId: string | null) => exports.find((e) => e.kind === kind && e.cutId === cutId);
+  const final = find("final", null);
+  const soonest = ready ? Math.min(...exports.map((e) => daysLeft(new Date(e.expiresAt), new Date()))) : null;
 
   return (
     <main className={styles.page}>
@@ -32,13 +49,47 @@ export default async function EntregaPage({ params }: { params: Promise<{ id: st
           Voltar
         </Button>
       </nav>
-      <h1 className={styles.title}>{done ? "Seus vídeos estão prontos." : "Gerar vídeos"}</h1>
-      <p className={styles.hint}>
-        {done
-          ? "Em breve você poderá baixar o vídeo final e os cortes aqui."
-          : "Montamos o vídeo final e um vídeo para cada corte. Leva alguns minutos."}
-      </p>
-      {done ? null : <JobPanel projectId={id} initial={job} />}
+      <h1 className={styles.title}>{ready ? "Seus vídeos estão prontos." : "Gerar vídeos"}</h1>
+      {ready ? null : (
+        <p className={styles.hint}>Montamos o vídeo final e um vídeo para cada corte. Leva alguns minutos.</p>
+      )}
+      {ready && soonest !== null && soonest <= WARN_DAYS ? (
+        <p className={styles.alert} role="status">
+          {soonest === 0 ? "Estes arquivos somem hoje." : `Estes arquivos somem em ${soonest} ${soonest === 1 ? "dia" : "dias"}.`} Baixe antes.
+        </p>
+      ) : null}
+      {ready ? (
+        <ul className={entrega.list}>
+          {final ? (
+            <CutCard
+              projectId={id}
+              title="Vídeo final"
+              meta={final.durationSeconds ? clock(final.durationSeconds) : ""}
+              video={files.get(final.id)!}
+              cover={null}
+              descriptions={[]}
+            />
+          ) : null}
+          {cuts.flatMap((cut, i) => {
+            const video = find("cut", cut.id);
+            if (!video) return [];
+            const cover = find("cover", cut.id);
+            return [
+              <CutCard
+                key={cut.id}
+                projectId={id}
+                title={`Corte ${i + 1}${cut.title ? ` · ${cut.title}` : ""}`}
+                meta={video.durationSeconds ? clock(video.durationSeconds) : ""}
+                video={files.get(video.id)!}
+                cover={cover ? files.get(cover.id)! : null}
+                descriptions={PLATFORMS.filter((p) => cut.descriptions[p]).map((p) => ({ platform: PLATFORM_LABELS[p], text: cut.descriptions[p]! }))}
+              />,
+            ];
+          })}
+        </ul>
+      ) : (
+        <JobPanel projectId={id} initial={job} />
+      )}
     </main>
   );
 }

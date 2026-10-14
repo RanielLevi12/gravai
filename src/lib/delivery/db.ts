@@ -1,8 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { MSG_ALREADY_RUNNING, MSG_NOT_RECORDED, MSG_PROJECT_NOT_FOUND, type DeliveryDb } from "./service";
-import type { JobStatus } from "./rules";
+import type { Descriptions } from "@/lib/script/generate";
+import { MSG_ALREADY_RUNNING, MSG_NOT_RECORDED, MSG_PROJECT_NOT_FOUND, type CutInfo, type DeliveryDb } from "./service";
+import type { ExportKind, JobStatus } from "./rules";
 
 /** DeliveryDb sobre o Supabase da sessão do usuário (RLS limita tudo ao dono). */
 export function supabaseDeliveryDb(deps: { supabase: SupabaseClient<Database> }): DeliveryDb {
@@ -33,6 +34,42 @@ export function supabaseDeliveryDb(deps: { supabase: SupabaseClient<Database> })
         throw new Error("create job failed");
       }
       return data as string;
+    },
+    async exportsOf(projectId) {
+      const { data, error } = await supabase
+        .from("exports")
+        .select("id, kind, cut_id, storage_path, mime, duration_seconds, size_bytes, expires_at")
+        .eq("project_id", projectId)
+        .order("created_at");
+      if (error) throw new Error("read exports failed");
+      return (data ?? []).map((r) => ({
+        id: r.id,
+        kind: r.kind as ExportKind,
+        cutId: r.cut_id,
+        storagePath: r.storage_path,
+        mime: r.mime,
+        durationSeconds: r.duration_seconds === null ? null : Number(r.duration_seconds),
+        sizeBytes: Number(r.size_bytes),
+        expiresAt: r.expires_at,
+      }));
+    },
+    async cuts(projectId) {
+      const { data, error } = await supabase.from("projects").select("cuts").eq("id", projectId).maybeSingle();
+      if (error) throw new Error("read cuts failed");
+      const list = Array.isArray(data?.cuts) ? (data.cuts as unknown[]) : [];
+      const cuts: CutInfo[] = [];
+      for (const c of list) {
+        const o = c as Record<string, unknown> | null;
+        if (!o || typeof o.id !== "string" || !Number.isInteger(o.start) || !Number.isInteger(o.end)) continue;
+        const descriptions = o.descriptions && typeof o.descriptions === "object" ? (o.descriptions as Descriptions) : {};
+        cuts.push({ id: o.id, title: typeof o.title === "string" ? o.title : "", start: o.start as number, end: o.end as number, descriptions });
+      }
+      return cuts.sort((a, b) => a.start - b.start);
+    },
+    async signUrl(storagePath, seconds, downloadName) {
+      const { data, error } = await supabase.storage.from("exports").createSignedUrl(storagePath, seconds, downloadName ? { download: downloadName } : undefined);
+      if (error || !data) throw new Error("sign url failed");
+      return data.signedUrl;
     },
   };
 }

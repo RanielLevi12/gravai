@@ -48,3 +48,49 @@ test("projeto que ainda não foi gravado volta para a tela Gravar", async ({ pag
   await page.goto(`/projetos/${id}/entrega`);
   await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar$`));
 });
+
+test("entrega pronta: lista vídeo final e cortes, baixa, copia a descrição e avisa que vai vencer", async ({ page, context }) => {
+  test.setTimeout(90_000);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const id = await projetoGravado(page, "entrega-pronta");
+  const db = adminDb();
+  const { data: p } = await db.from("projects").select("user_id").eq("id", id).single();
+  const user = p!.user_id as string;
+  await db
+    .from("projects")
+    .update({
+      cuts: [
+        { id: "c1", start: 1, end: 2, title: "Primeiro", coverPrompt: null, descriptions: { youtube: "Texto do YouTube do corte 1" } },
+        { id: "c2", start: 3, end: 3, title: "Segundo", coverPrompt: null, descriptions: {} },
+      ],
+    })
+    .eq("id", id);
+
+  const dias = (n: number) => new Date(Date.now() + n * 86_400_000 + 3_600_000).toISOString();
+  const arquivo = async (kind: string, cutId: string | null, mime: string, expires: string) => {
+    const path = `${user}/${id}/${crypto.randomUUID()}.${mime === "image/jpeg" ? "jpg" : "mp4"}`;
+    const up = await db.storage.from("exports").upload(path, Buffer.from("conteudo de teste"), { contentType: mime });
+    expect(up.error).toBeNull();
+    const { error } = await db.from("exports").insert({ user_id: user, project_id: id, kind, cut_id: cutId, storage_path: path, mime, size_bytes: 17, duration_seconds: kind === "cover" ? null : 65, expires_at: expires });
+    expect(error).toBeNull();
+  };
+  await arquivo("final", null, "video/mp4", dias(20));
+  await arquivo("cut", "c1", "video/mp4", dias(3));
+  await arquivo("cover", "c1", "image/jpeg", dias(3));
+  await arquivo("cut", "c2", "video/mp4", dias(20));
+
+  await page.goto(`/projetos/${id}/entrega`);
+  await expect(page.getByRole("heading", { name: "Seus vídeos estão prontos." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vídeo final" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Corte 1 · Primeiro" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Corte 2 · Segundo" })).toBeVisible();
+  await expect(page.getByText("1:05").first()).toBeVisible();
+  await expect(page.getByText("Estes arquivos somem em 3 dias. Baixe antes.")).toBeVisible();
+
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("listitem").filter({ hasText: "Corte 1" }).getByRole("button", { name: "Baixar vídeo" }).click()]);
+  expect(download.suggestedFilename()).toBe("corte-01.mp4");
+
+  await page.getByRole("button", { name: "Copiar descrição" }).click();
+  await expect(page.getByRole("button", { name: "Copiado" })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("Texto do YouTube do corte 1");
+});

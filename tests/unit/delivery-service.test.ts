@@ -21,6 +21,15 @@ function fakeDb(status: string | null): DeliveryDb & { jobs: JobView[] } {
       jobs.push(job);
       return job.id;
     },
+    async exportsOf() {
+      return [];
+    },
+    async cuts() {
+      return [];
+    },
+    async signUrl() {
+      return "";
+    },
   };
 }
 
