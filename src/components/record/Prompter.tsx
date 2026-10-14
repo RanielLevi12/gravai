@@ -6,6 +6,8 @@ import type { PrompterPrefs } from "./PrompterSettings";
 import styles from "./record.module.css";
 
 const LINE_HEIGHT = 1.4;
+/** Abaixo disso o toque conta como toque (pausar/continuar), não como arraste. */
+const DRAG_THRESHOLD_PX = 8;
 
 /** Quebra o texto em frases; cada uma vira um trecho que muda de cor conforme passa pela barra de leitura. */
 function sentences(text: string): string[] {
@@ -30,6 +32,8 @@ export function Prompter({
   onToggle: () => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
+  // Dedo na tela: o texto fica parado e acompanha o arraste; ao soltar, segue de onde parou.
+  const drag = useRef({ active: false, startY: 0, startTop: 0, moved: false, dirty: false });
   const parts = useMemo(() => sentences(text), [text]);
 
   useEffect(() => {
@@ -62,7 +66,11 @@ export function Prompter({
     const frame = (now: number) => {
       const dt = (now - last) / 1000;
       last = now;
-      if (playing && !reduce) {
+      if (drag.current.dirty) {
+        acc = el.scrollTop;
+        drag.current.dirty = false;
+      }
+      if (playing && !reduce && !drag.current.active) {
         acc = Math.min(el.scrollHeight - el.clientHeight, acc + speed * dt);
         el.scrollTop = acc;
       }
@@ -86,7 +94,37 @@ export function Prompter({
         ["--prompter-ink" as string]: prefs.color === "sun" ? "var(--sun)" : "#fff",
         transform: prefs.mirror ? "scaleX(-1)" : undefined,
       }}
-      onClick={onToggle}
+      onPointerDown={(e) => {
+        const el = box.current;
+        if (!el) return;
+        el.setPointerCapture(e.pointerId);
+        drag.current = { active: true, startY: e.clientY, startTop: el.scrollTop, moved: false, dirty: false };
+      }}
+      onPointerMove={(e) => {
+        const el = box.current;
+        const d = drag.current;
+        if (!el || !d.active) return;
+        const dy = e.clientY - d.startY;
+        if (!d.moved && Math.abs(dy) < DRAG_THRESHOLD_PX) return;
+        d.moved = true;
+        el.scrollTop = d.startTop - dy;
+        d.dirty = true;
+      }}
+      onPointerUp={() => {
+        const d = drag.current;
+        if (!d.active) return;
+        d.active = false;
+        d.dirty = true;
+      }}
+      // Toque, leitor de tela e chave de acesso chegam como click; só o click logo após um arraste é ignorado.
+      onClick={() => {
+        if (drag.current.moved) return;
+        onToggle();
+      }}
+      onPointerCancel={() => {
+        drag.current.active = false;
+        drag.current.dirty = true;
+      }}
       role="button"
       tabIndex={0}
       aria-label={playing ? "Pausar texto" : "Continuar texto"}
