@@ -198,6 +198,7 @@ describe("supabaseRecordDb (serviço real)", () => {
     const cur = await A.client.storage.from("recordings").download(b.path);
     expect(cur.error).toBeNull();
 
+    await admin.from("projects").update({ status: "script" }).eq("id", p);
     expect(await approveWith(db, p, "blocks")).toEqual({ ok: true });
     const st = await admin.from("projects").select("status").eq("id", p).single();
     expect(st.data?.status).toBe("gravado");
@@ -210,5 +211,25 @@ describe("supabaseRecordDb (serviço real)", () => {
   it("removeFiles ignora caminhos de outro usuário", async () => {
     const db = supabaseRecordDb({ supabase: A.client as never, userId: A.id });
     await expect(db.removeFiles([`${B.id}/x/y.webm`])).resolves.toBeUndefined();
+  });
+
+  it("deleteRow só apaga 'uploading'; setProjectStatus não sobrescreve estado posterior", async () => {
+    const p = await newProject(A);
+    const db = supabaseRecordDb({ supabase: A.client as never, userId: A.id });
+    const a = await startRecordingWith(db, { projectId: p, kind: "take", blockId: null, mime: "video/webm" });
+    await finishRecordingWith(db, a.id, { sizeBytes: 1, durationSeconds: 1 });
+    expect(await db.deleteRow(a.id)).toBe("ready");
+    expect((await admin.from("recordings").select("id").eq("id", a.id)).data).toHaveLength(1);
+    const b = await startRecordingWith(db, { projectId: p, kind: "external", blockId: null, mime: "video/mp4" });
+    expect(await db.deleteRow(b.id)).toEqual({ path: b.path });
+    expect(await db.deleteRow(b.id)).toBeNull();
+
+    await admin.from("projects").update({ status: "fonte" }).eq("id", p);
+    expect(await db.setProjectStatus(p, "gravado")).toBe(false);
+    await admin.from("projects").update({ status: "pronto" }).eq("id", p);
+    expect(await db.setProjectStatus(p, "gravado")).toBe(false);
+    expect((await admin.from("projects").select("status").eq("id", p).single()).data?.status).toBe("pronto");
+    await admin.from("projects").update({ status: "script" }).eq("id", p);
+    expect(await db.setProjectStatus(p, "gravado")).toBe(true);
   });
 });

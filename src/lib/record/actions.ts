@@ -5,6 +5,8 @@ import { createServerClient } from "@/lib/supabase/server";
 import { supabaseRecordDb } from "./db";
 import type { RecordMode } from "./rules";
 import {
+  MSG_ALREADY_SENT,
+  MSG_EMPTY_VIDEO,
   MSG_BLOCK_NOT_FOUND,
   MSG_PROJECT_NOT_FOUND,
   MSG_RECORDING_NOT_FOUND,
@@ -19,6 +21,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MSG_EXPIRED = "Sua sessão expirou. Entre de novo.";
 const MSG_UNAVAILABLE = "Não foi possível agora. Tente de novo.";
 const SAFE = new Set([
+  MSG_ALREADY_SENT,
+  MSG_EMPTY_VIDEO,
   MSG_BLOCK_NOT_FOUND,
   MSG_PROJECT_NOT_FOUND,
   MSG_RECORDING_NOT_FOUND,

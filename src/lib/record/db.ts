@@ -11,7 +11,8 @@ export interface RecordDb {
   blockIds(projectId: string): Promise<string[]>;
   insertUploading(row: { projectId: string; kind: Kind; blockId: string | null; mime: string }): Promise<{ id: string; path: string }>;
   markReady(id: string, v: { sizeBytes: number; durationSeconds: number | null }): Promise<{ replacedPaths: string[] } | null>;
-  deleteRow(id: string): Promise<string | null>;
+  /** Só apaga gravação em envio ("uploading"). "ready" = já salva, nada é apagado. */
+  deleteRow(id: string): Promise<{ path: string } | "ready" | null>;
   readyRows(projectId: string): Promise<{ id: string; kind: Kind; blockId: string | null; path: string; durationSeconds: number | null }[]>;
   setProjectStatus(projectId: string, status: "gravado"): Promise<boolean>;
   removeFiles(paths: string[]): Promise<void>;
@@ -64,9 +65,11 @@ export function supabaseRecordDb(deps: { supabase: SupabaseClient<Database>; use
       return { replacedPaths: data ?? [] };
     },
     async deleteRow(id) {
-      const { data, error } = await supabase.from("recordings").delete().eq("id", id).select("storage_path");
+      const { data, error } = await supabase.from("recordings").delete().eq("id", id).eq("status", "uploading").select("storage_path");
       if (error) throw new Error("delete recording failed");
-      return data?.[0]?.storage_path ?? null;
+      if (data?.[0]) return { path: data[0].storage_path };
+      const { data: left } = await supabase.from("recordings").select("status").eq("id", id).maybeSingle();
+      return left?.status === "ready" ? "ready" : null;
     },
     async readyRows(projectId) {
       const { data, error } = await supabase
@@ -84,7 +87,7 @@ export function supabaseRecordDb(deps: { supabase: SupabaseClient<Database>; use
       }));
     },
     async setProjectStatus(projectId, status) {
-      const { data, error } = await supabase.from("projects").update({ status }).eq("id", projectId).select("id");
+      const { data, error } = await supabase.from("projects").update({ status }).eq("id", projectId).in("status", ["script", "gravacao"]).select("id");
       return !error && (data?.length ?? 0) > 0;
     },
     async removeFiles(paths) {
