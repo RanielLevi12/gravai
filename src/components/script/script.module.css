@@ -484,3 +484,38 @@
   margin: 0 0 var(--space-xs);
   overflow-wrap: anywhere;
 }
+
+.infoList {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.infoCard {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border: 2px solid var(--line, var(--primary-tint));
+  border-radius: var(--radius-sm);
+}
+
+.infoHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+}
+
+.infoLabel {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.infoText {
+  margin: 0;
+  font-size: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

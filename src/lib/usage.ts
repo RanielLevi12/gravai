@@ -6,29 +6,18 @@ export const TRANSCRIPTION_LIMIT_SECONDS = 3600;
 export const MSG_PROJECTS_QUOTA = "Você usou seus 5 projetos grátis deste mês.";
 export const MSG_AUDIO_QUOTA = "Você usou seus 60 minutos de transcrição deste mês.";
 
-/** Consome a cota do usuário logado (RPC security definer). false = acima do limite. */
-export async function consumeUsage(supabase: SupabaseClient, projects: number, seconds: number): Promise<boolean> {
-  const { data, error } = await supabase.rpc("consume_usage", { p_projects: projects, p_seconds: Math.ceil(seconds) });
-  if (error) throw new Error("consume_usage failed");
-  return data === true;
-}
-
-/** Devolve a cota (só service_role pode chamar refund_usage). */
-export async function refundUsage(admin: SupabaseClient, userId: string, projects: number, seconds: number): Promise<void> {
-  const { error } = await admin.rpc("refund_usage", { p_user: userId, p_projects: projects, p_seconds: Math.ceil(seconds) });
-  if (error) console.error("[usage] refund_usage falhou", error.code ?? "", error.message);
-}
-
 /**
  * Confere (sem consumir) se ainda cabe 1 projeto + `seconds` de transcrição. Serve para recusar cedo,
  * antes de gastar IA; quem consome de verdade é o banco (`create_project`), de forma atômica.
  */
 export async function quotaFits(supabase: SupabaseClient, seconds: number): Promise<boolean> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("usage_months")
     .select("projects, transcription_seconds")
     .eq("month", currentMonth())
     .maybeSingle();
+  // Erro de leitura não pode virar "cabe": quem chama trata como falha.
+  if (error) throw new Error("usage_months read failed");
   if (!data) return true;
   return data.projects + 1 <= PROJECTS_LIMIT && data.transcription_seconds + Math.ceil(seconds) <= TRANSCRIPTION_LIMIT_SECONDS;
 }

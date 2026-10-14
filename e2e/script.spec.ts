@@ -44,6 +44,11 @@ test("mostra o script contínuo, ajusta com botão rápido, salva a edição e r
   await expect(page.getByText(/Corte \d/)).toHaveCount(0);
   await expect(page.getByText(/\d cortes?$/)).toHaveCount(0);
 
+  // Capa e descrições do vídeo principal aparecem prontas para copiar
+  await expect(page.getByRole("heading", { name: "Capa e descrições" })).toBeVisible();
+  await expect(page.getByText("Capa do vídeo principal")).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Copiar: Descrição/ }).first()).toBeVisible();
+
   // Botão rápido ao lado do texto: "Tirar saudação" age na hora e tem Desfazer
   const abertura = bloco(page, "Abertura");
   await expect(abertura).toContainText("Fala, pessoal");
