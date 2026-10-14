@@ -8,6 +8,7 @@ import { signOut } from "@/lib/auth/actions";
 import { isTone, TONE_LABELS } from "@/lib/profile/schema";
 import { createServerClient } from "@/lib/supabase/server";
 import { InstalarApp } from "./InstalarApp";
+import { ColarChave } from "./ColarChave";
 import styles from "./perfil.module.css";
 
 export const metadata: Metadata = { title: "Perfil · Gravaí" };
@@ -82,6 +83,7 @@ export default async function PerfilPage({ searchParams }: { searchParams: Promi
             <a href="/api/ai/connect" className={`${buttonStyles.button} ${buttonStyles.primary} ${styles.acaoIa}`}>
               Conectar sua IA
             </a>
+            <ColarChave />
           </>
         )}
       </section>
