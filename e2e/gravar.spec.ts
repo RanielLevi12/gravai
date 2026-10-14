@@ -146,3 +146,36 @@ test("câmera negada: explica como liberar e continua oferecendo vídeo de fora"
   await page.getByRole("link", { name: "Enviar vídeo feito fora" }).click();
   await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar$`));
 });
+
+test("teleprompter: arrastar com o dedo move o texto e segura enquanto o dedo está na tela", async ({ page }) => {
+  test.setTimeout(60_000);
+  const id = await projetoComScript(page, "gravar-arrastar");
+  await page.goto(`/projetos/${id}/gravar/teleprompter?modo=take`);
+  const texto = page.getByRole("button", { name: /Pausar texto|Continuar texto/ });
+  await expect(texto).toBeVisible();
+  const caixa = (await texto.boundingBox())!;
+  const x = caixa.x + caixa.width / 2;
+  const topo = () => texto.evaluate((el) => el.scrollTop);
+
+  // Arrastar para cima leva o texto para cima (rola para frente).
+  await page.mouse.move(x, caixa.y + caixa.height * 0.7);
+  await page.mouse.down();
+  await page.mouse.move(x, caixa.y + caixa.height * 0.3, { steps: 8 });
+  const durante = await topo();
+  expect(durante).toBeGreaterThan(50);
+  await page.waitForTimeout(500);
+  expect(await topo()).toBe(durante); // dedo parado: texto parado
+  await page.mouse.up();
+
+  // Arrastar para baixo puxa o texto de volta.
+  await page.mouse.move(x, caixa.y + caixa.height * 0.3);
+  await page.mouse.down();
+  await page.mouse.move(x, caixa.y + caixa.height * 0.6, { steps: 8 });
+  expect(await topo()).toBeLessThan(durante);
+  await page.mouse.up();
+
+  // Arrastar não pausa; um toque pausa.
+  await expect(texto).toHaveAccessibleName("Pausar texto");
+  await texto.click();
+  await expect(texto).toHaveAccessibleName("Continuar texto");
+});
