@@ -28,14 +28,17 @@ export function buildScriptUser(input: {
   episode: ScriptEpisode | null;
   platforms: Platform[];
   mainSeconds: number;
+  /** "Sobre este projeto" (vídeo dentro de um projeto). */
+  about?: string | null;
   problem?: string;
 }): string {
-  const { interview: i, profile, episode, platforms, mainSeconds, problem } = input;
+  const { interview: i, profile, episode, platforms, mainSeconds, about, problem } = input;
   const lines: string[] = [];
   if (profile?.niche) lines.push(`Nicho: ${profile.niche}`);
   if (profile?.audience) lines.push(`Público: ${profile.audience}`);
   if (profile?.tone) lines.push(`Tom de voz: ${profile.tone}`);
   if (profile?.phrases) lines.push(`Frases e expressões da pessoa: ${profile.phrases}`);
+  if (about?.trim()) lines.push(`Sobre o projeto deste vídeo (tema e público do canal): ${about.trim()}`);
   if (episode) lines.push(`Este vídeo é o episódio ${episode.index} de uma série: ${episode.title}. ${episode.summary}`);
   if (i.titles?.chosen) lines.push(`Título do vídeo: ${i.titles.chosen}`);
   if (i.scenery) lines.push(`Cenário: ${i.scenery.mode === "ai" ? i.scenery.aiPrompt : i.scenery.natural}`);

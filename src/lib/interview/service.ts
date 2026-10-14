@@ -12,6 +12,10 @@ export type InterviewProject = {
   interview: Interview;
   series_id: string | null;
   episode_index: number | null;
+  /** Projeto (pasta) do vídeo; nulo = vídeo solto. */
+  folder_id?: string | null;
+  /** "Sobre este projeto": contexto que a IA lê ao escrever título e script. */
+  folder_about?: string | null;
 };
 
 export type NewEpisodeProject = Omit<InterviewProject, "id">;
@@ -115,6 +119,7 @@ export async function confirmSeriesWith(db: InterviewDb, projectId: string, inpu
       interview,
       series_id: seriesId,
       episode_index: i + 2,
+      folder_id: project.folder_id ?? null,
     }));
     const ids = await db.insertProjects(rows);
     if (ids === "quota") {

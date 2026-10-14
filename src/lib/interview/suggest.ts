@@ -193,7 +193,8 @@ export async function suggestTitlesWith(deps: TitleDeps, projectId: string): Pro
   ]
     .filter(Boolean)
     .join("\n");
-  const user = `${profileLines(profile)}${episode}${context}
+  const about = project.folder_about?.trim() ? `Sobre o projeto deste vídeo (tema e público do canal): ${project.folder_about.trim()}\n` : "";
+  const user = `${profileLines(profile)}${about}${episode}${context}
 
 Texto:
 """

@@ -337,3 +337,81 @@
     transform: rotate(360deg);
   }
 }
+
+/* Vídeo dentro de um projeto */
+.badge {
+  margin-left: var(--space-xs);
+  padding: 1px var(--space-xs);
+  border-radius: var(--radius-pill);
+  background: var(--primary-tint);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.resetLine {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-xs) var(--space-md) 0;
+}
+
+.resetBtn {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.resetBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.resetError {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.inherit {
+  display: grid;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.inheritLabel {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.inheritSummary {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.inheritMore > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.inheritMore[open] > summary {
+  margin-bottom: var(--space-xs);
+}

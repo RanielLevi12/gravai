@@ -23,10 +23,15 @@ import {
 } from "@/lib/interview/steps";
 import { CUT_DURATIONS, allowedCutDurations, estimateCutCount, suggestCutDuration } from "@/lib/rules/cuts";
 import { targetWords, type MainDurationOption } from "@/lib/rules/duration";
+import type { InheritedStep } from "@/lib/folders/inherit";
+import type { SummaryRow } from "@/lib/interview/rows";
 import { InterviewFrame } from "./InterviewFrame";
+import { SummaryList } from "./SummaryList";
 import styles from "./entrevista.module.css";
 
 export type CtaOption = { id: string; label: string; detail: string };
+/** Vídeo dentro de um projeto: resumo das escolhas herdadas e o que foi mudado só neste vídeo. */
+export type InheritInfo = { folderName: string; summary: string; rows: SummaryRow[]; custom: InheritedStep[]; inSeries: boolean };
 
 type Props = {
   projectId: string;
@@ -42,6 +47,7 @@ type Props = {
   titleOptions: TitleOption[];
   titlesFailed: boolean;
   defaultTitle: string;
+  inherit?: InheritInfo;
 };
 
 const QUESTIONS: Record<AnswerStep, string> = {
@@ -401,6 +407,19 @@ export function InterviewStep(props: Props) {
           ) : null}
         </>
       );
+      if (props.inherit) {
+        const h = props.inherit;
+        extra = (
+          <section className={styles.inherit} aria-label="Escolhas do projeto">
+            <p className={styles.inheritLabel}>Escolhas do projeto {h.folderName}</p>
+            <p className={styles.inheritSummary}>{h.summary}</p>
+            <details className={styles.inheritMore} open={h.custom.length > 0}>
+              <summary>Mudar para este vídeo</summary>
+              <SummaryList projectId={projectId} rows={h.rows} custom={h.custom} inSeries={h.inSeries} />
+            </details>
+          </section>
+        );
+      }
       break;
     }
 

@@ -21,7 +21,7 @@ type Erro = { texto: string; conectar?: boolean };
 type Envio = { kind: UploadKind | "text" | "gdocs"; text?: string; url?: string; files?: File[] };
 
 /** Sobe os arquivos direto ao Storage (o corpo da requisição na Vercel é limitado) e cria o projeto. */
-function useCriarProjeto(userId: string) {
+function useCriarProjeto(userId: string, folderId: string | null) {
   const router = useRouter();
   const [pendente, setPendente] = useState(false);
   const [progresso, setProgresso] = useState<string | null>(null);
@@ -37,6 +37,7 @@ function useCriarProjeto(userId: string) {
     try {
       const form = new FormData();
       form.set("kind", kind);
+      if (folderId) form.set("folder_id", folderId);
       if (text !== undefined) form.set("text", text);
       if (url !== undefined) form.set("url", url);
 
@@ -120,8 +121,8 @@ function tamanho(bytes: number): string {
 
 /* ---------- Texto ---------- */
 
-function TextoForm({ userId }: { userId: string }) {
-  const { enviar, pendente, progresso, erro } = useCriarProjeto(userId);
+function TextoForm({ userId, folderId }: { userId: string; folderId: string | null }) {
+  const { enviar, pendente, progresso, erro } = useCriarProjeto(userId, folderId);
   const [texto, setTexto] = useState("");
   const vazio = texto.trim() === "";
 
@@ -158,8 +159,8 @@ function TextoForm({ userId }: { userId: string }) {
 
 type Pagina = { id: string; file: File; url: string };
 
-function FotoForm({ userId }: { userId: string }) {
-  const { enviar, pendente, progresso, erro, setErro } = useCriarProjeto(userId);
+function FotoForm({ userId, folderId }: { userId: string; folderId: string | null }) {
+  const { enviar, pendente, progresso, erro, setErro } = useCriarProjeto(userId, folderId);
   const [paginas, setPaginas] = useState<Pagina[]>([]);
   const urls = useRef(new Set<string>());
 
@@ -265,8 +266,8 @@ const ACEITA_ARQUIVO =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document," +
   "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
-function ArquivoForm({ userId }: { userId: string }) {
-  const { enviar, pendente, progresso, erro, setErro } = useCriarProjeto(userId);
+function ArquivoForm({ userId, folderId }: { userId: string; folderId: string | null }) {
+  const { enviar, pendente, progresso, erro, setErro } = useCriarProjeto(userId, folderId);
   const [arquivos, setArquivos] = useState<File[]>([]);
   const kind = kindForFiles(arquivos);
   const valido = kind !== null && kind !== "misto" && kind !== "audio" && arquivos.length <= MAX_ARQUIVOS;
@@ -326,8 +327,8 @@ function ArquivoForm({ userId }: { userId: string }) {
 
 /* ---------- Link do Google Docs ---------- */
 
-function LinkForm({ userId }: { userId: string }) {
-  const { enviar, pendente, progresso, erro } = useCriarProjeto(userId);
+function LinkForm({ userId, folderId }: { userId: string; folderId: string | null }) {
+  const { enviar, pendente, progresso, erro } = useCriarProjeto(userId, folderId);
   const [url, setUrl] = useState("");
   const vazio = url.trim() === "";
 
@@ -378,8 +379,8 @@ function relogio(s: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-function AudioForm({ userId }: { userId: string }) {
-  const { enviar, pendente, progresso, erro, setErro } = useCriarProjeto(userId);
+function AudioForm({ userId, folderId }: { userId: string; folderId: string | null }) {
+  const { enviar, pendente, progresso, erro, setErro } = useCriarProjeto(userId, folderId);
   const [formato, setFormato] = useState<Gravacao | null>(null);
   const [estado, setEstado] = useState<"parado" | "gravando">("parado");
   const [segundos, setSegundos] = useState(0);
@@ -507,7 +508,7 @@ function AudioForm({ userId }: { userId: string }) {
 
 /* ---------- Tela ---------- */
 
-const FORMS: Record<OrigemId, (p: { userId: string }) => ReactNode> = {
+const FORMS: Record<OrigemId, (p: { userId: string; folderId: string | null }) => ReactNode> = {
   foto: FotoForm,
   texto: TextoForm,
   arquivo: ArquivoForm,
@@ -524,23 +525,26 @@ const TITULOS: Record<OrigemId, string> = {
 };
 
 /** Novo vídeo: escolhe a origem do conteúdo e mostra o formulário dela (?origem=...). */
-export function SourcePicker({ origem, userId }: { origem: OrigemId | null; userId: string }) {
+export function SourcePicker({ origem, userId, folder }: { origem: OrigemId | null; userId: string; folder: { id: string; name: string } | null }) {
+  const folderId = folder?.id ?? null;
+  const query = folderId ? `&projeto=${folderId}` : "";
   if (!origem) {
     return (
       <main className={flow.page}>
         <nav className={flow.nav}>
-          <Link href="/projetos" className={flow.back}>
+          <Link href={folder ? `/pastas/${folder.id}` : "/projetos"} className={flow.back}>
             <ArrowLeft size={20} strokeWidth={2} aria-hidden />
             Voltar
           </Link>
         </nav>
         <div className={flow.body}>
           <h1 className="display">Novo vídeo</h1>
+          {folder ? <p className={flow.lead}>No projeto {folder.name}. As escolhas do projeto já vêm prontas.</p> : null}
           <p className={flow.lead}>De onde vem o conteúdo?</p>
           <ul className={styles.options}>
             {ORIGENS.map(({ id, titulo, dica, icon: Icon }) => (
               <li key={id}>
-                <Link href={`/novo?origem=${id}`} className={styles.option}>
+                <Link href={`/novo?origem=${id}${query}`} className={styles.option}>
                   <span className={styles.optionIc}>
                     <Icon size={22} strokeWidth={2} aria-hidden />
                   </span>
@@ -562,14 +566,14 @@ export function SourcePicker({ origem, userId }: { origem: OrigemId | null; user
   return (
     <main className={flow.page}>
       <nav className={flow.nav}>
-        <Link href="/novo" className={flow.back}>
+        <Link href={folderId ? `/novo?projeto=${folderId}` : "/novo"} className={flow.back}>
           <ArrowLeft size={20} strokeWidth={2} aria-hidden />
           Voltar
         </Link>
         <h1 className={flow.navTitle}>{TITULOS[origem]}</h1>
         <span />
       </nav>
-      <Form key={origem} userId={userId} />
+      <Form key={origem} userId={userId} folderId={folderId} />
     </main>
   );
 }

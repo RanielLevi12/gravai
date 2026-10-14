@@ -51,6 +51,20 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"folders": {
+                  Row: {
+                    "about": string | null,"color": string,"created_at": string,"id": string,"name": string,"settings": NonNullable<Json>,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "about"?: string | null,"color"?: string,"created_at"?: string,"id"?: string,"name": string,"settings"?: NonNullable<Json>,"user_id"?: string
+                  }
+                  Update: {
+                    "about"?: string | null,"color"?: string,"created_at"?: string,"id"?: string,"name"?: string,"settings"?: NonNullable<Json>,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"profiles": {
                   Row: {
                     "audience": string | null,"niche": string | null,"onboarded": boolean,"phrases": string | null,"tone": string | null,"user_id": string
@@ -67,17 +81,23 @@ export type Database = {
                   ]
                 },"projects": {
                   Row: {
-                    "cover_prompt": string | null,"created_at": string,"descriptions": NonNullable<Json>,"episode_index": number | null,"id": string,"interview": NonNullable<Json>,"script_stale": boolean,"series_id": string | null,"source_kind": string,"source_text": string,"source_truncated": boolean,"status": string,"title": string,"user_id": string
+                    "cover_prompt": string | null,"created_at": string,"descriptions": NonNullable<Json>,"episode_index": number | null,"folder_id": string | null,"id": string,"interview": NonNullable<Json>,"script_stale": boolean,"series_id": string | null,"source_kind": string,"source_text": string,"source_truncated": boolean,"status": string,"title": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "cover_prompt"?: string | null,"created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind": string,"source_text": string,"source_truncated"?: boolean,"status"?: string,"title": string,"user_id"?: string
+                    "cover_prompt"?: string | null,"created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"folder_id"?: string | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind": string,"source_text": string,"source_truncated"?: boolean,"status"?: string,"title": string,"user_id"?: string
                   }
                   Update: {
-                    "cover_prompt"?: string | null,"created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind"?: string,"source_text"?: string,"source_truncated"?: boolean,"status"?: string,"title"?: string,"user_id"?: string
+                    "cover_prompt"?: string | null,"created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"folder_id"?: string | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind"?: string,"source_text"?: string,"source_truncated"?: boolean,"status"?: string,"title"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "projects_folder_id_fkey"
+      columns: ["folder_id"]
+isOneToOne: false
+      referencedRelation: "folders"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "projects_series_id_fkey"
       columns: ["series_id"]
 isOneToOne: false
@@ -148,7 +168,7 @@ isOneToOne: false
             }[]
                            },
 "create_project":
-{ Args: { "p_seconds"?: number,"p_source_kind": string,"p_source_text": string,"p_source_truncated"?: boolean,"p_title": string }; Returns: string
+{ Args: { "p_folder_id"?: string,"p_seconds"?: number,"p_source_kind": string,"p_source_text": string,"p_source_truncated"?: boolean,"p_title": string }; Returns: string
                            },
 "refund_usage":
 { Args: { "p_projects": number,"p_seconds": number,"p_user": string }; Returns: undefined

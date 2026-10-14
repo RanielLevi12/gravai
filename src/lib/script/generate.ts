@@ -123,7 +123,7 @@ export async function generateScriptWith(deps: ScriptDeps, projectId: string): P
     ai.generateJson(
       ScriptSchema,
       SCRIPT_SYSTEM,
-      buildScriptUser({ sourceText: project.source_text, interview: i, profile, episode, platforms, mainSeconds, problem }),
+      buildScriptUser({ sourceText: project.source_text, interview: i, profile, episode, platforms, mainSeconds, about: project.folder_about, problem }),
     );
 
   const started = deps.now?.() ?? Date.now();
