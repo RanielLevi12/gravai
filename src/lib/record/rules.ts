@@ -1,3 +1,5 @@
+import { MAX_FILE_BYTES, MSG_FILE_TOO_BIG } from "./limits";
+
 export type RecordMode = "take" | "blocks" | "external";
 
 export function allowedModes(mainSeconds: number): RecordMode[] {
@@ -36,4 +38,15 @@ export function canApprove(input: {
         ? "Envie o vídeo antes de aprovar."
         : "Grave o vídeo antes de aprovar.",
   };
+}
+
+const EXTERNAL_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
+
+export function validateExternalFile(file: {
+  size: number;
+  type: string;
+}): { ok: true } | { ok: false; error: string } {
+  if (file.size > MAX_FILE_BYTES) return { ok: false, error: MSG_FILE_TOO_BIG };
+  if (!EXTERNAL_TYPES.includes(file.type)) return { ok: false, error: "Use um vídeo em MP4, MOV ou WebM." };
+  return { ok: true };
 }
