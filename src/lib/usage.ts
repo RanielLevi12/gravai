@@ -19,6 +19,20 @@ export async function refundUsage(admin: SupabaseClient, userId: string, project
   if (error) console.error("[usage] refund_usage falhou", error.code ?? "", error.message);
 }
 
+/**
+ * Confere (sem consumir) se ainda cabe 1 projeto + `seconds` de transcrição. Serve para recusar cedo,
+ * antes de gastar IA; quem consome de verdade é o banco (`create_project`), de forma atômica.
+ */
+export async function quotaFits(supabase: SupabaseClient, seconds: number): Promise<boolean> {
+  const { data } = await supabase
+    .from("usage_months")
+    .select("projects, transcription_seconds")
+    .eq("month", currentMonth())
+    .maybeSingle();
+  if (!data) return true;
+  return data.projects + 1 <= PROJECTS_LIMIT && data.transcription_seconds + Math.ceil(seconds) <= TRANSCRIPTION_LIMIT_SECONDS;
+}
+
 /** Primeiro dia do mês corrente em America/Sao_Paulo (mesma regra da migração 0002). */
 export function currentMonth(now = new Date()): string {
   return `${now.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }).slice(0, 7)}-01`;

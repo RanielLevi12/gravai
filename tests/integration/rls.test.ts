@@ -33,30 +33,42 @@ beforeAll(async () => {
 
 describe("RLS", () => {
   it("usuário B não vê nem altera o projeto de A", async () => {
-    const { data: proj, error } = await A.client
-      .from("projects")
-      .insert({ user_id: A.id, title: "Meu projeto", source_kind: "texto", source_text: "olá" })
-      .select()
-      .single();
+    const { data: id, error } = await A.client.rpc("create_project", { p_title: "Meu projeto", p_source_kind: "text", p_source_text: "olá" });
     expect(error).toBeNull();
+    const proj = { id: id as string };
 
-    const { data: seen } = await B.client.from("projects").select("*").eq("id", proj!.id);
+    const { data: seen } = await B.client.from("projects").select("*").eq("id", proj.id);
     expect(seen).toEqual([]);
 
     const { data: upd } = await B.client
       .from("projects")
       .update({ title: "invadido" })
-      .eq("id", proj!.id)
+      .eq("id", proj.id)
       .select();
     expect(upd).toEqual([]);
 
-    const { data: own } = await A.client.from("projects").select("title").eq("id", proj!.id).single();
+    const { data: own } = await A.client.from("projects").select("title").eq("id", proj.id).single();
     expect(own!.title).toBe("Meu projeto");
 
     const { error: insErr } = await B.client
       .from("projects")
-      .insert({ user_id: A.id, title: "x", source_kind: "texto", source_text: "y" });
+      .insert({ user_id: A.id, title: "x", source_kind: "text", source_text: "y" });
     expect(insErr).not.toBeNull();
+  });
+
+  it("usuário não insere projeto direto na tabela (a cota só vale pela função)", async () => {
+    const u = await newUser("direto");
+    const { error } = await u.client.from("projects").insert({ title: "burla", source_kind: "text", source_text: "x" });
+    expect(error).not.toBeNull();
+    expect(error!.message).toMatch(/permission denied/i);
+    const { count } = await u.client.from("projects").select("id", { count: "exact", head: true });
+    expect(count).toBe(0);
+  });
+
+  it("create_project recusa usuário anônimo", async () => {
+    const anon = createClient(URL, ANON, opts);
+    const { error } = await anon.rpc("create_project", { p_title: "x", p_source_kind: "text", p_source_text: "y" });
+    expect(error).not.toBeNull();
   });
 });
 
@@ -121,5 +133,22 @@ describe("consume_usage", () => {
     const { data: row2 } = await u.client.from("usage_months").select("*").single();
     expect(row2!.projects).toBe(0);
     expect(row2!.transcription_seconds).toBe(0);
+  });
+});
+
+describe("syncCtas (ids dos CTAs)", () => {
+  it("editar o perfil mantém o id do CTA escolhido; só o removido some", async () => {
+    const { syncCtas } = await import("@/lib/profile/sync");
+    const u = await newUser("ctas");
+    await syncCtas(u.client, u.id, [
+      { kind: "whatsapp", label: "WhatsApp", value: "11999990000" },
+      { kind: "bio", label: "Instagram", value: "@eu" },
+    ]);
+    const before = (await u.client.from("ctas").select("id, kind")).data!;
+    const wa = before.find((c) => c.kind === "whatsapp")!.id;
+
+    await syncCtas(u.client, u.id, [{ kind: "whatsapp", label: "WhatsApp", value: "11988880000" }]);
+    const after = (await u.client.from("ctas").select("id, kind, value")).data!;
+    expect(after).toEqual([{ id: wa, kind: "whatsapp", value: "11988880000" }]);
   });
 });

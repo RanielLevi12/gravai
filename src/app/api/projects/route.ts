@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@/lib/supabase/server";
 import { createProject } from "@/lib/ingest/create";
+
+// Chamadas de IA nesta rota/página (e nas ações que ela usa): os timeouts de src/lib/ai/openrouter.ts cabem aqui.
+export const maxDuration = 300;
 
 /** Mesma origem que o host atendido (proteção CSRF). */
 function sameOrigin(request: NextRequest): boolean {
@@ -30,6 +32,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Envio inválido." }, { status: 400 });
   }
 
-  const { status, body } = await createProject({ supabase, admin: createAdminClient(), userId: user.id }, form);
+  const { status, body } = await createProject({ supabase, userId: user.id }, form);
   return NextResponse.json(body, { status });
 }

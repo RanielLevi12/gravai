@@ -14,6 +14,13 @@ const MAX_OCR_CHARS = 60_000;
 // O OpenRouter reserva crédito por max_tokens; um teto alto demais dá 402 em contas com pouco saldo.
 const OCR_MAX_TOKENS = 16_000;
 const AUDIO_MAX_TOKENS = 8_000;
+// Script + descrições de todos os cortes vêm num único JSON; passou disso a resposta é recusada (não repetida).
+const TEXT_MAX_TOKENS = 16_000;
+
+// Tempo máximo de cada chamada, abaixo do `maxDuration = 300` das páginas e rotas que usam IA:
+// texto = (70 s × 2 tentativas) por chamada; leitura de arquivo e áudio, 1 tentativa de 120 s.
+const TEXT_TIMEOUT_MS = 70_000;
+const FILE_TIMEOUT_MS = 120_000;
 
 const OCR_INSTRUCTION =
   "Transcreva fielmente o texto de cada página, na ordem, sem comentar nem explicar. " +
@@ -38,17 +45,24 @@ export type OpenRouterAi = ReturnType<typeof createOpenRouterAi>;
  * Funções de IA cobradas na conta OpenRouter do usuário (`apiKey` = chave obtida no OAuth).
  * `opts.fetch` só para testes.
  */
-export function createOpenRouterAi(apiKey: string, opts: { fetch?: typeof fetch } = {}) {
+export function createOpenRouterAi(apiKey: string, opts: { fetch?: typeof fetch; timeoutMs?: number } = {}) {
   const client = new OpenAI({
     apiKey,
     baseURL: BASE_URL,
     defaultHeaders: { "X-Title": "Gravai" },
+    // O padrão do SDK é 10 min × 3 tentativas: a função da Vercel morreria antes (e a cota ficaria consumida).
+    timeout: opts.timeoutMs ?? TEXT_TIMEOUT_MS,
+    maxRetries: 1,
     ...(opts.fetch ? { fetch: opts.fetch } : {}),
   });
 
-  async function complete(params: Params, failMessage: string): Promise<{ text: string; truncated: boolean }> {
+  async function complete(
+    params: Params,
+    failMessage: string,
+    request: { timeout?: number; maxRetries?: number } = {},
+  ): Promise<{ text: string; truncated: boolean }> {
     try {
-      const res = await client.chat.completions.create(params as ChatCompletionCreateParamsNonStreaming);
+      const res = await client.chat.completions.create(params as ChatCompletionCreateParamsNonStreaming, request);
       const choice = res.choices[0];
       return { text: (choice?.message?.content ?? "").trim(), truncated: choice?.finish_reason === "length" };
     } catch (e) {
@@ -67,6 +81,7 @@ export function createOpenRouterAi(apiKey: string, opts: { fetch?: typeof fetch 
         ...extras,
       },
       READ_FAIL,
+      { timeout: opts.timeoutMs ?? FILE_TIMEOUT_MS, maxRetries: 0 },
     );
     if (truncated) console.warn("[ai] OCR truncado por max_tokens");
     if (text.length > MAX_OCR_CHARS) {
@@ -79,9 +94,10 @@ export function createOpenRouterAi(apiKey: string, opts: { fetch?: typeof fetch 
   return {
     /** Texto JSON bruto com saída estruturada strict (validação fica em index.ts). */
     async rawJson(jsonSchema: Record<string, unknown>, system: string, user: string): Promise<string> {
-      const { text } = await complete(
+      const { text, truncated } = await complete(
         {
           model: TEXT_MODEL,
+          max_tokens: TEXT_MAX_TOKENS,
           messages: [
             { role: "system", content: system },
             { role: "user", content: user },
@@ -92,6 +108,10 @@ export function createOpenRouterAi(apiKey: string, opts: { fetch?: typeof fetch 
         },
         "A IA não respondeu como esperado. Tente de novo.",
       );
+      // Resposta cortada pelo limite de tamanho: repetir só gastaria outra chamada inteira.
+      if (truncated) {
+        throw new AiError("O script ficou grande demais para a IA. Tente um vídeo mais curto ou menos cortes.", { code: "invalid_output" });
+      }
       return text;
     },
 
@@ -137,6 +157,7 @@ export function createOpenRouterAi(apiKey: string, opts: { fetch?: typeof fetch 
           ],
         },
         AUDIO_FAIL,
+        { timeout: opts.timeoutMs ?? FILE_TIMEOUT_MS, maxRetries: 0 },
       );
       return { text, seconds };
     },

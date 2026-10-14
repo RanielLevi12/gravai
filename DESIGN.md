@@ -265,7 +265,7 @@ As quatro cores de corte, sempre nesta ordem: **Tangerina** (`tangerine`) = cort
 
 ### Tertiary
 Pares tinta-clara + tinta-escura para estados do sistema, nunca como campo sólido vivo:
-- **Céu-Claro / Céu-Profundo** (`sky-tint` / `sky-ink`): caixa de explicação ("por que marcamos essa opção"). `sky` sólido também é o anel de foco (3px, offset 2px).
+- **Céu-Claro / Céu-Profundo** (`sky-tint` / `sky-ink`): caixa de explicação ("por que marcamos essa opção"). `sky` sólido também é o anel de foco (3px, offset 2px). Por fora dele vai um filete `ink` de 1px: `sky` sobre branco dá só 2,9:1 (abaixo de 3:1), e o filete garante o contraste do indicador.
 - **Menta-Clara / Menta-Profunda** (`mint-tint` / `mint-ink`): confirmação ("Salvo"); `mint` colore o ícone de sucesso no toast.
 
 ### Neutral
@@ -340,7 +340,7 @@ Cantos generosos e consistentes: 24px para painéis e containers grandes (painel
 Táteis e confiantes, sempre largos o bastante para o polegar.
 - **Shape:** cantos suaves (16px), altura mínima 56px, largura total no rodapé; versão compacta 44px / 12px dentro de cards.
 - **Primary:** fundo coral-magenta, texto branco 17px/700, ícone Lucide à esquerda ou seta à direita, sombra de ação.
-- **Hover / Focus / Active:** hover escurece para `primary-press`; pressão encolhe para 98% (180ms, ease-out exponencial); foco = anel `sky` de 3px com offset 2px.
+- **Hover / Focus / Active:** hover escurece para `primary-press`; pressão encolhe para 98% (180ms, ease-out exponencial); foco = anel `sky` de 3px com offset 2px e filete `ink` de 1px por fora.
 - **Soft:** fundo `surface`, texto tinta; vira branco quando está sobre `surface`. Usado em ações secundárias e em "Baixar tudo".
 - **Next (próxima ação do card):** tinta sólida, texto branco 14.5px/700, 38px, raio 12px.
 - **Mini:** 34px, raio 10px, `surface`, ícone 16px + rótulo 14px/600 ("Reescrever", "Editar", "Copiar").

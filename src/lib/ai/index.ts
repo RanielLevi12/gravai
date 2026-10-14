@@ -13,13 +13,18 @@ const useMock = () => {
   return mock;
 };
 
+const RETRY_DEADLINE_MS = 100_000;
+
 type RawJson = (jsonSchema: Record<string, unknown>, system: string, user: string) => Promise<string>;
 
 /** Saída estruturada validada por zod; uma nova tentativa se falhar; depois AiError. */
 async function generateJsonWith<T>(rawJson: RawJson, schema: z.ZodType<T>, system: string, user: string): Promise<T> {
   const jsonSchema = toStrictJsonSchema(schema);
   const { $schema: _s, ...original } = z.toJSONSchema(schema) as Record<string, unknown>;
+  const startedAt = Date.now();
   for (let attempt = 0; attempt < 2; attempt++) {
+    // Sem folga para uma segunda chamada dentro do `maxDuration`: desiste em vez de a função ser morta.
+    if (attempt > 0 && Date.now() - startedAt > RETRY_DEADLINE_MS) break;
     const raw = await rawJson(jsonSchema, system, user);
     try {
       const parsed = schema.safeParse(stripOptionalNulls(JSON.parse(raw), original));
@@ -40,13 +45,14 @@ export type UserAi = {
 
 /**
  * IA cobrada na conta OpenRouter do usuário. Sem conexão → AiError code 'not_connected'.
- * Com AI_MOCK=1 devolve o mock sem exigir conexão.
+ * Com AI_MOCK=1 devolve o mock sem exigir conexão; em `next dev`, OPENROUTER_DEV_KEY vale como conexão.
  */
 export async function withUserAi(userId: string): Promise<UserAi> {
   const provider = useMock()
     ? await import("./mock")
     : await (async () => {
-        const key = await (await import("./keys")).getUserAiKey(userId);
+        // Só em `next dev`: a chave do dono dispensa o OAuth nos testes locais. Em produção é ignorada.
+        const key = (process.env.NODE_ENV === "development" && process.env.OPENROUTER_DEV_KEY) || (await (await import("./keys")).getUserAiKey(userId));
         if (!key) throw new AiError("Conecte sua conta de IA para continuar.", { code: "not_connected" });
         return (await import("./openrouter")).createOpenRouterAi(key);
       })();

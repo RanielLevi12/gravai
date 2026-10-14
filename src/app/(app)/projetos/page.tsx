@@ -1,13 +1,73 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ORIGENS } from "@/components/project/origens";
+import { ProjectRow } from "@/components/project/ProjectRow";
+import { createServerClient } from "@/lib/supabase/server";
+import { currentMonth, PROJECTS_LIMIT } from "@/lib/usage";
+import styles from "./projetos.module.css";
 
-export const metadata: Metadata = { title: "Projetos · Gravaí" };
+export const metadata: Metadata = { title: "Seus vídeos · Gravaí" };
 
-// Esqueleto: a lista de projetos chega na Tarefa 4.
-export default function ProjetosPage() {
+export default async function ProjetosPage() {
+  const supabase = await createServerClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) redirect("/entrar");
+
+  const [{ data: projetos }, { data: uso }] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, title, status, source_kind, interview")
+      .eq("user_id", auth.user.id)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase.from("usage_months").select("projects").eq("user_id", auth.user.id).eq("month", currentMonth()).maybeSingle(),
+  ]);
+
+  const usados = Math.min(uso?.projects ?? 0, PROJECTS_LIMIT);
+  const lista = projetos ?? [];
+
   return (
-    <main style={{ padding: "var(--space-xl) var(--space-lg)", display: "grid", gap: "var(--space-sm)" }}>
-      <h1 className="display">Projetos</h1>
-      <p style={{ margin: 0, color: "var(--ink-2)" }}>Seus vídeos aparecem aqui. Toque em + para começar o primeiro.</p>
+    <main className={styles.page}>
+      <h1 className={`display ${styles.title}`}>Seus vídeos</h1>
+      <p className={styles.usage}>
+        <span className={styles.meter} aria-hidden>
+          <i style={{ width: `${(usados / PROJECTS_LIMIT) * 100}%` }} />
+        </span>
+        <span className="tnum">
+          {usados} de {PROJECTS_LIMIT} vídeos este mês
+        </span>
+      </p>
+
+      <section className={styles.newPanel} aria-labelledby="novo-video">
+        <h2 id="novo-video" className={styles.newTitle}>
+          Novo vídeo
+        </h2>
+        <p className={styles.newLead}>De onde vem o conteúdo?</p>
+        <div className={styles.sources}>
+          {ORIGENS.map(({ id, curto, icon: Icon }) => (
+            <Link key={id} href={`/novo?origem=${id}`} className={styles.source}>
+              <span className={styles.sourceIc}>
+                <Icon size={20} strokeWidth={2} aria-hidden />
+              </span>
+              {curto}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {lista.length > 0 ? (
+        <>
+          <h2 className={styles.sectionTitle}>Continue de onde parou</h2>
+          <div className={styles.list}>
+            {lista.map((p) => (
+              <ProjectRow key={p.id} project={p} />
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className={styles.empty}>Seus vídeos aparecem aqui. Escolha acima de onde vem o conteúdo do primeiro.</p>
+      )}
     </main>
   );
 }

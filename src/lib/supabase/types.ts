@@ -67,14 +67,14 @@ export type Database = {
                   ]
                 },"projects": {
                   Row: {
-                    "created_at": string,"descriptions": NonNullable<Json>,"episode_index": number | null,"id": string,"interview": NonNullable<Json>,"series_id": string | null,"source_kind": string,"source_text": string,"source_truncated": boolean,"status": string,"title": string,"user_id": string
+                    "cover_prompt": string | null,"created_at": string,"descriptions": NonNullable<Json>,"episode_index": number | null,"id": string,"interview": NonNullable<Json>,"script_stale": boolean,"series_id": string | null,"source_kind": string,"source_text": string,"source_truncated": boolean,"status": string,"title": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"series_id"?: string | null,"source_kind": string,"source_text": string,"source_truncated"?: boolean,"status"?: string,"title": string,"user_id"?: string
+                    "cover_prompt"?: string | null,"created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind": string,"source_text": string,"source_truncated"?: boolean,"status"?: string,"title": string,"user_id"?: string
                   }
                   Update: {
-                    "created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"series_id"?: string | null,"source_kind"?: string,"source_text"?: string,"source_truncated"?: boolean,"status"?: string,"title"?: string,"user_id"?: string
+                    "cover_prompt"?: string | null,"created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind"?: string,"source_text"?: string,"source_truncated"?: boolean,"status"?: string,"title"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -141,6 +141,14 @@ isOneToOne: false
           Functions: {
             "consume_usage":
 { Args: { "p_projects": number,"p_seconds": number }; Returns: boolean
+                           },
+"create_episode_projects":
+{ Args: { "p_rows": Json }; Returns: {
+              "ep_index": number,"project_id": string
+            }[]
+                           },
+"create_project":
+{ Args: { "p_seconds"?: number,"p_source_kind": string,"p_source_text": string,"p_source_truncated"?: boolean,"p_title": string }; Returns: string
                            },
 "refund_usage":
 { Args: { "p_projects": number,"p_seconds": number,"p_user": string }; Returns: undefined

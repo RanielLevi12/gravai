@@ -144,4 +144,40 @@ describe("openrouter.ts", () => {
     expect(err.userMessage).not.toContain(KEY);
     expect(err.message).not.toContain(KEY);
   });
+
+  it("rawJson: define max_tokens e recusa resposta cortada (finish_reason length) sem repetir", async () => {
+    const sink: Captured[] = [];
+    const cortada = () =>
+      new Response(
+        JSON.stringify({
+          id: "g", object: "chat.completion", created: 0, model: "x",
+          choices: [{ index: 0, finish_reason: "length", message: { role: "assistant", content: '{"blocks":[' } }],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    const ai = createOpenRouterAi(KEY, { fetch: fakeFetch(cortada, sink) });
+    const err = await ai.rawJson({ type: "object" }, "s", "u").catch((e) => e);
+    expect(err).toBeInstanceOf(AiError);
+    expect(err.code).toBe("invalid_output");
+    expect(sink).toHaveLength(1);
+    expect(sink[0].body.max_tokens).toBe(16_000);
+  });
+
+  it("chamada que trava vira AiError 'provider' pelo timeout, com uma nova tentativa só", async () => {
+    let calls = 0;
+    const travado = (async (_i: RequestInfo | URL, init?: RequestInit) => {
+      calls++;
+      return new Promise<Response>((_, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+      });
+    }) as typeof fetch;
+    const ai = createOpenRouterAi(KEY, { fetch: travado, timeoutMs: 40 });
+    const err = await ai.rawJson({ type: "object" }, "s", "u").catch((e) => e);
+    expect(err).toBeInstanceOf(AiError);
+    expect(err.code).toBe("provider");
+    expect(calls).toBe(2);
+    calls = 0;
+    await expect(ai.ocrImages([{ data: Buffer.from("x"), mediaType: "image/png" }])).rejects.toBeInstanceOf(AiError);
+    expect(calls).toBe(1);
+  });
 });
