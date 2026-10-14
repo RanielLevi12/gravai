@@ -281,4 +281,4 @@ export function changesScriptInputs(prev: Interview, next: Interview): boolean {
 }
 
 /** O projeto já tem script gerado (e portanto pode ficar desatualizado). */
-export const hasScript = (status: string): boolean => status === "script" || status === "gravacao" || status === "pronto";
+export const hasScript = (status: string): boolean => status === "script" || status === "gravacao" || status === "gravado" || status === "pronto";

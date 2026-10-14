@@ -1,0 +1,148 @@
+import { createClient } from "@supabase/supabase-js";
+import { expect, test, type Page } from "@playwright/test";
+import { readFileSync, writeFileSync, truncateSync } from "node:fs";
+import { novoProjetoNoScript } from "./support";
+
+/** Espera o script aparecer inteiro: a tela gera os blocos ao abrir. */
+async function projetoComScript(page: Page, prefixo: string) {
+  const id = await novoProjetoNoScript(page, prefixo);
+  await expect(page.getByText("Fechamento", { exact: true })).toBeVisible({ timeout: 30_000 });
+  return id;
+}
+
+// Rodar com AI_MOCK=1 (script de mentirinha: abertura + 5 trechos + fechamento = 7 blocos), Supabase local
+// e câmera falsa (ver playwright.config.ts).
+
+const BLOCOS = 7;
+
+/** Cliente admin do Supabase local, só para conferir o banco e mudar a duração do vídeo. */
+function admin() {
+  const env = Object.fromEntries(
+    readFileSync(".env.local", "utf8")
+      .split("\n")
+      .map((l) => /^([A-Z_]+)=(.*)$/.exec(l))
+      .filter((m): m is RegExpExecArray => !!m)
+      .map((m) => [m[1], m[2].replace(/^["']|["']$/g, "")]),
+  );
+  const url = env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!/127\.0\.0\.1|localhost/.test(url)) throw new Error("e2e só roda contra o Supabase local");
+  return createClient(url, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+}
+
+/** Começa a gravar, espera a contagem, deixa gravar `segundos` e para. Termina na prévia. */
+async function gravar(page: Page, segundos: number) {
+  const botao = page.getByRole("button", { name: "Começar a gravar" });
+  await expect(botao).toBeEnabled({ timeout: 15_000 });
+  await botao.click();
+  const parar = page.getByRole("button", { name: "Parar gravação" });
+  await expect(parar).toBeVisible({ timeout: 10_000 });
+  await page.waitForTimeout(segundos * 1000);
+  await parar.click();
+  await expect(page).toHaveURL(/\/gravar\/aprovar\?gravacao=/);
+  await expect(page.locator("video")).toBeVisible();
+}
+
+test("take único: grava, vê a prévia, usa e aprova", async ({ page }) => {
+  test.setTimeout(120_000);
+  const id = await projetoComScript(page, "gravar-take");
+  await page.goto(`/projetos/${id}/gravar`);
+  await page.getByText("Tudo de uma vez").click();
+  await page.getByRole("link", { name: "Gravar tudo de uma vez" }).click();
+  await expect(page).toHaveURL(/teleprompter\?modo=take/);
+
+  await gravar(page, 3);
+  await page.getByRole("button", { name: "Usar este" }).click();
+  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar$`));
+  await page.getByRole("button", { name: "Aprovar e guardar" }).click();
+  await expect(page.getByText("Seu vídeo está guardado")).toBeVisible();
+
+  await page.goto("/projetos");
+  await expect(page.getByText("Gravado", { exact: true })).toBeVisible();
+
+  const { data } = await admin().from("recordings").select("kind, status").eq("project_id", id);
+  expect(data).toEqual([{ kind: "take", status: "ready" }]);
+});
+
+test("por blocos: refaz o 1º, grava todos e fica uma gravação pronta por bloco", async ({ page }) => {
+  test.setTimeout(240_000);
+  const id = await projetoComScript(page, "gravar-blocos");
+  await page.goto(`/projetos/${id}/gravar`);
+  await page.getByRole("link", { name: "Gravar por blocos" }).click();
+  await expect(page).toHaveURL(/teleprompter\?modo=blocos/);
+  await expect(page.getByText(`bloco 1 de ${BLOCOS}`)).toBeVisible();
+
+  // 1º bloco: grava, refaz e grava de novo
+  await gravar(page, 2);
+  await page.getByRole("button", { name: "Refazer" }).click();
+  await expect(page).toHaveURL(/teleprompter\?modo=blocos&bloco=/);
+  await gravar(page, 2);
+  await page.getByRole("button", { name: "Usar este" }).click();
+  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar$`));
+
+  // Demais blocos, um por um, pela lista
+  for (let n = 2; n <= BLOCOS; n++) {
+    await page.getByRole("link", { name: "Gravar", exact: true }).first().click();
+    await expect(page.getByText(`bloco ${n} de ${BLOCOS}`)).toBeVisible();
+    await gravar(page, 2);
+    await page.getByRole("button", { name: "Usar este" }).click();
+    await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar$`));
+  }
+
+  await page.getByRole("button", { name: "Aprovar e guardar" }).click();
+  await expect(page.getByText("Seu vídeo está guardado")).toBeVisible();
+
+  const { data } = await admin().from("recordings").select("block_id, status").eq("project_id", id);
+  expect(data).toHaveLength(BLOCOS);
+  expect(data!.every((r) => r.status === "ready")).toBe(true);
+  expect(new Set(data!.map((r) => r.block_id)).size).toBe(BLOCOS);
+});
+
+test("vídeo de fora: aceita um pequeno e recusa um de 51 MB", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  const id = await projetoComScript(page, "gravar-fora");
+  await page.goto(`/projetos/${id}/gravar`);
+  await page.getByText("Já gravei").click();
+  const arquivo = page.getByLabel("Escolher vídeo");
+
+  // O Playwright não aceita buffer acima de 50 MB: o arquivo grande vai por caminho (esparso, quase sem disco).
+  const grande = testInfo.outputPath("grande.webm");
+  writeFileSync(grande, "");
+  truncateSync(grande, 51 * 1024 * 1024);
+  await arquivo.setInputFiles(grande);
+  await expect(page.getByText("Este vídeo passa de 50 MB. Grave por blocos no app ou reduza o tamanho antes de enviar.")).toBeVisible();
+
+  await arquivo.setInputFiles({ name: "pequeno.webm", mimeType: "video/webm", buffer: Buffer.alloc(200 * 1024, 1) });
+  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar$`));
+  await page.getByRole("button", { name: "Aprovar e guardar" }).click();
+  await expect(page.getByText("Seu vídeo está guardado")).toBeVisible();
+
+  const { data } = await admin().from("recordings").select("kind, status").eq("project_id", id);
+  expect(data).toEqual([{ kind: "external", status: "ready" }]);
+});
+
+test("vídeo de 5 min: 'Tudo de uma vez' fica desabilitado com o motivo", async ({ page }) => {
+  test.setTimeout(60_000);
+  const id = await projetoComScript(page, "gravar-5min");
+  const db = admin();
+  const { data: p } = await db.from("projects").select("interview").eq("id", id).single();
+  await db.from("projects").update({ interview: { ...(p!.interview as object), mainSeconds: 300 } }).eq("id", id);
+
+  await page.goto(`/projetos/${id}/gravar`);
+  await expect(page.getByRole("radio", { name: /Tudo de uma vez/ })).toBeDisabled();
+  await expect(page.getByText("Vídeo de 5 min: grave por blocos.")).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Por partes/ })).toBeEnabled();
+});
+
+test("câmera negada: explica como liberar e continua oferecendo vídeo de fora", async ({ page }) => {
+  test.setTimeout(60_000);
+  const id = await projetoComScript(page, "gravar-negada");
+  // A janela de permissão é automática por causa da câmera falsa; aqui o navegador "nega" de verdade.
+  await page.addInitScript(() => {
+    navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException("negado", "NotAllowedError"));
+  });
+  await page.goto(`/projetos/${id}/gravar/teleprompter?modo=take`);
+  await expect(page.getByRole("heading", { name: "Preciso da câmera e do microfone" })).toBeVisible();
+  await expect(page.getByText(/Toque no cadeado/)).toBeVisible();
+  await page.getByRole("link", { name: "Enviar vídeo feito fora" }).click();
+  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar$`));
+});

@@ -1,30 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
-import { entrarComOnboardingFeito } from "./support";
+import { novoProjetoNoScript } from "./support";
 
 // Rodar com AI_MOCK=1: o script vem de tests/fixtures/ai/generateJson.script_generation.json
 // (abertura + 5 trechos + fechamento) e a reescrita de generateJson.block_rewrite.json.
 
-const PALAVRAS_300 = Array.from({ length: 300 }, (_, i) => `palavra${i + 1}`).join(" ");
 const TEXTO_REESCRITO = "Texto curto vindo da fixture de reescrita.";
-
-/** Cria um projeto de texto, responde a entrevista só tocando Próxima e abre a tela do script. */
-async function novoProjetoNoScript(page: Page, prefixo: string): Promise<string> {
-  await entrarComOnboardingFeito(page, prefixo);
-  await page.goto("/novo?origem=texto");
-  await page.getByLabel("Cole seu texto").fill(PALAVRAS_300);
-  await page.getByRole("button", { name: "Continuar" }).click();
-  await expect(page).toHaveURL(/\/projetos\/[0-9a-f-]{36}\/fonte$/);
-  await page.getByRole("button", { name: "Continuar" }).click();
-  await expect(page).toHaveURL(/\/entrevista\/plataformas$/);
-  const id = /\/projetos\/([0-9a-f-]{36})\//.exec(page.url())![1];
-  for (const passo of ["formato", "duracao", "cortes", "cenario", "titulos", "capa", "cta", "resumo"]) {
-    await page.getByRole("button", { name: "Próxima" }).click();
-    await expect(page).toHaveURL(new RegExp(`/entrevista/${passo}$`));
-  }
-  await page.getByRole("link", { name: "Gerar script" }).click();
-  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/script$`));
-  return id;
-}
 
 const bloco = (page: Page, nome: string) => page.getByRole("region", { name: nome });
 const duracaoSegundos = async (b: ReturnType<typeof bloco>) => {
@@ -85,7 +65,7 @@ test("mostra o script contínuo, ajusta com botão rápido, salva a edição e r
   // Gravar leva à tela provisória
   await page.getByRole("link", { name: "Gravar" }).click();
   await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar$`));
-  await expect(page.getByRole("heading", { name: "Gravação chega na próxima versão" })).toBeVisible();
+  await expect(page.getByText("Como quer gravar?")).toBeVisible();
 });
 
 test("gerar de novo pede confirmação antes de substituir o script", async ({ page }) => {
