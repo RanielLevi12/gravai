@@ -57,3 +57,24 @@ export async function entrarComOnboardingFeito(page: Page, prefixo: string) {
   await page.getByRole("button", { name: "Pular por agora" }).click();
   await expect(page).toHaveURL(/\/projetos$/);
 }
+
+const PALAVRAS_300 = Array.from({ length: 300 }, (_, i) => `palavra${i + 1}`).join(" ");
+
+/** Cria um projeto de texto, responde a entrevista só tocando Próxima e abre a tela do script. */
+export async function novoProjetoNoScript(page: Page, prefixo: string): Promise<string> {
+  await entrarComOnboardingFeito(page, prefixo);
+  await page.goto("/novo?origem=texto");
+  await page.getByLabel("Cole seu texto").fill(PALAVRAS_300);
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page).toHaveURL(/\/projetos\/[0-9a-f-]{36}\/fonte$/);
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page).toHaveURL(/\/entrevista\/plataformas$/);
+  const id = /\/projetos\/([0-9a-f-]{36})\//.exec(page.url())![1];
+  for (const passo of ["formato", "duracao", "cortes", "cenario", "titulos", "capa", "cta", "resumo"]) {
+    await page.getByRole("button", { name: "Próxima" }).click();
+    await expect(page).toHaveURL(new RegExp(`/entrevista/${passo}$`));
+  }
+  await page.getByRole("link", { name: "Gerar script" }).click();
+  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/script$`));
+  return id;
+}
