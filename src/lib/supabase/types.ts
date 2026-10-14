@@ -119,6 +119,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"recordings": {
+                  Row: {
+                    "block_id": string | null,"created_at": string,"duration_seconds": number | null,"id": string,"kind": string,"mime": string,"project_id": string,"size_bytes": number,"status": string,"storage_path": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "block_id"?: string | null,"created_at"?: string,"duration_seconds"?: number | null,"id"?: string,"kind": string,"mime": string,"project_id": string,"size_bytes": number,"status"?: string,"storage_path": string,"user_id"?: string
+                  }
+                  Update: {
+                    "block_id"?: string | null,"created_at"?: string,"duration_seconds"?: number | null,"id"?: string,"kind"?: string,"mime"?: string,"project_id"?: string,"size_bytes"?: number,"status"?: string,"storage_path"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recordings_block_id_fkey"
+      columns: ["block_id"]
+isOneToOne: false
+      referencedRelation: "script_blocks"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "recordings_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"script_blocks": {
                   Row: {
                     "cover_prompt": string | null,"cut_index": number | null,"cut_title": string | null,"descriptions": NonNullable<Json>,"id": string,"kind": string,"position": number,"project_id": string,"text": string,"user_id": string
@@ -183,6 +209,9 @@ isOneToOne: false
                            },
 "create_project":
 { Args: { "p_folder_id"?: string,"p_seconds"?: number,"p_source_kind": string,"p_source_text": string,"p_source_truncated"?: boolean,"p_title": string }; Returns: string
+                           },
+"finish_recording":
+{ Args: { "p_duration": number,"p_id": string,"p_size_bytes": number }; Returns: (string)[]
                            },
 "refund_usage":
 { Args: { "p_projects": number,"p_seconds": number,"p_user": string }; Returns: undefined
