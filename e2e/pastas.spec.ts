@@ -60,3 +60,67 @@ test("projeto de outro usuário não abre", async ({ page, browser }) => {
   expect(r?.status()).toBe(404);
   await outro.close();
 });
+
+const PALAVRAS_300 = Array.from({ length: 300 }, (_, i) => `palavra${i + 1}`).join(" ");
+
+test("vídeo novo dentro do projeto: entrevista curta, personalizado e voltar ao padrão", async ({ page }) => {
+  await entrarComOnboardingFeito(page, "video-no-projeto");
+  await page.goto("/pastas/nova");
+  await page.getByLabel("Nome do projeto").fill("Devocional");
+  await page.getByRole("button", { name: "Criar projeto" }).click();
+  await expect(page).toHaveURL(/\/pastas\/[0-9a-f-]{36}$/);
+  const pastaUrl = page.url();
+
+  // Entrada pela página do projeto.
+  await page.getByRole("link", { name: "Novo vídeo neste projeto" }).click();
+  await expect(page.getByText("No projeto Devocional.")).toBeVisible();
+  await page.getByRole("link", { name: /Colar texto/ }).click();
+  await page.getByLabel("Cole seu texto").fill(PALAVRAS_300);
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page).toHaveURL(/\/projetos\/[0-9a-f-]{36}\/fonte$/);
+  const id = /\/projetos\/([0-9a-f-]{36})\//.exec(page.url())![1];
+  await page.getByRole("button", { name: "Continuar" }).click();
+
+  // Entrevista curta: cai direto no título, com o resumo herdado do projeto.
+  await expect(page).toHaveURL(/\/entrevista\/titulos$/);
+  await expect(page.getByText("Escolhas do projeto Devocional")).toBeVisible();
+  await expect(page.getByText("Reels · vídeo único · 60 s · cortes de 30 s · sem chamada")).toBeVisible();
+  await page.getByRole("button", { name: "Próxima" }).click();
+  await expect(page).toHaveURL(/\/entrevista\/resumo$/);
+  await expect(page.getByText("personalizado")).toHaveCount(0);
+
+  // O vídeo aparece na página do projeto e não entre os soltos.
+  await page.goto(pastaUrl);
+  await expect(page.getByText("Vídeos deste projeto")).toBeVisible();
+  await page.goto("/projetos");
+  await expect(page.getByRole("link", { name: /Devocional/ })).toContainText("1 vídeo");
+
+  // Mudar só este vídeo: a resposta ganha "personalizado".
+  await page.goto(`/projetos/${id}/entrevista/duracao`);
+  await page.getByRole("radio", { name: "30 s" }).check({ force: true });
+  await page.getByRole("button", { name: "Próxima" }).click();
+  await expect(page).toHaveURL(/\/entrevista\/cortes$/);
+  await page.getByRole("radio", { name: "10 s" }).check({ force: true });
+  await page.getByRole("button", { name: "Próxima" }).click();
+  await expect(page).toHaveURL(/\/entrevista\/resumo$/);
+  await expect(page.getByText("personalizado")).toHaveCount(2);
+
+  // Voltar ao padrão do projeto tira a etiqueta.
+  await page.getByRole("button", { name: "Voltar ao padrão do projeto" }).first().click();
+  await expect(page.getByText("personalizado")).toHaveCount(1);
+  await page.getByRole("button", { name: "Voltar ao padrão do projeto" }).click();
+  await expect(page.getByText("personalizado")).toHaveCount(0);
+  await expect(page.getByText("60 s", { exact: true })).toBeVisible();
+});
+
+test("não dá para criar vídeo no projeto de outra pessoa", async ({ page }) => {
+  await entrarComOnboardingFeito(page, "projeto-alheio");
+  await page.goto("/novo?origem=texto&projeto=00000000-0000-4000-8000-000000000000");
+  // Projeto inexistente (ou de outra pessoa): a tela segue como vídeo solto, sem o aviso do projeto.
+  await expect(page.getByLabel("Cole seu texto")).toBeVisible();
+  const r = await page.request.post("/api/projects", {
+    headers: { origin: new URL(page.url()).origin },
+    multipart: { kind: "text", text: PALAVRAS_300, folder_id: "00000000-0000-4000-8000-000000000000" },
+  });
+  expect(r.status()).toBe(422);
+});

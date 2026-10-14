@@ -13,11 +13,15 @@ import {
   type RouteStep,
   type TitleOption,
 } from "@/lib/interview/steps";
+import { customSteps } from "@/lib/folders/inherit";
+import { toSettings } from "@/lib/folders/queries";
+import { summarizeSettings } from "@/lib/folders/schema";
+import { summaryRows } from "@/lib/interview/rows";
 import { countWords, mainDurationOptions } from "@/lib/rules/duration";
 import { DEFAULT_CTA_LABELS, isCtaKind } from "@/lib/profile/schema";
 import { createServerClient } from "@/lib/supabase/server";
 import { EpisodesStep } from "./EpisodesStep";
-import { InterviewStep, type CtaOption } from "./InterviewStep";
+import { InterviewStep, type CtaOption, type InheritInfo } from "./InterviewStep";
 import { Summary } from "./Summary";
 
 export const metadata: Metadata = { title: "Entrevista · Gravaí" };
@@ -49,7 +53,7 @@ export default async function EntrevistaPage({ params }: { params: Promise<{ id:
   // RLS limita aos projetos do usuário: projeto de outra pessoa cai no 404.
   const { data: project } = await supabase
     .from("projects")
-    .select("id, title, status, source_text, interview, series_id, episode_index")
+    .select("id, title, status, source_text, interview, series_id, episode_index, folder_id")
     .eq("id", id)
     .maybeSingle();
   if (!project) notFound();
@@ -61,6 +65,13 @@ export default async function EntrevistaPage({ params }: { params: Promise<{ id:
   // O passo vem da URL; só abre se os anteriores estiverem respondidos.
   if (!canOpen(interview, passo)) redirect(`/projetos/${id}/entrevista/${firstMissing(interview)}`);
 
+  // Vídeo dentro de um projeto: as respostas vieram do projeto e só o título falta (entrevista curta).
+  const { data: folder } = project.folder_id
+    ? await supabase.from("folders").select("name, settings").eq("id", project.folder_id).maybeSingle()
+    : { data: null };
+  const folderSettings = folder ? toSettings(folder.settings) : null;
+  const custom = folderSettings ? customSteps(interview, folderSettings) : [];
+
   const base = `/projetos/${id}/entrevista`;
   const backHref = previousHref(id, passo, interview);
 
@@ -68,12 +79,13 @@ export default async function EntrevistaPage({ params }: { params: Promise<{ id:
     const { data: ctas } = await supabase.from("ctas").select("id, kind, label");
     const cta = ctas?.find((c) => c.id === interview.ctaId);
     const ctaLabel = cta ? cta.label || (isCtaKind(cta.kind) ? DEFAULT_CTA_LABELS[cta.kind] : "Chamada") : null;
-    return <Summary projectId={id} backHref={backHref} interview={interview} ctaLabel={ctaLabel} ctaRemoved={Boolean(interview.ctaId) && !cta} episodeIndex={project.episode_index} />;
+    return <Summary projectId={id} backHref={backHref} interview={interview} ctaLabel={ctaLabel} ctaRemoved={Boolean(interview.ctaId) && !cta} episodeIndex={project.episode_index} custom={custom} inSeries={Boolean(project.series_id)} />;
   }
 
   // Sugestão da IA: uma vez, logo depois do texto-fonte; falha não é repetida a cada passo.
   // Sem IA conectada (ou após falha) a entrevista segue sem ela.
-  const loaded = await loadInterviewSuggestion(id, interview);
+  // Vídeo de projeto não pede sugestão: as escolhas já vêm do projeto (e a IA custa).
+  const loaded = folderSettings ? { suggestion: null, noAi: false } : await loadInterviewSuggestion(id, interview);
   const suggestion: InterviewSuggestion | null = loaded.suggestion;
   let noAi = loaded.noAi;
   if (suggestion) interview = { ...interview, suggestion };
@@ -106,13 +118,28 @@ export default async function EntrevistaPage({ params }: { params: Promise<{ id:
   }
 
   let ctas: CtaOption[] = [];
-  if (passo === "cta") {
+  if (passo === "cta" || (passo === "titulos" && folderSettings)) {
     const { data } = await supabase.from("ctas").select("id, kind, label, value").order("id");
     ctas = (data ?? []).map((c) => ({
       id: c.id,
       label: c.label || (isCtaKind(c.kind) ? DEFAULT_CTA_LABELS[c.kind] : "Chamada"),
       detail: c.value ?? "",
     }));
+  }
+
+  let inherit: InheritInfo | undefined;
+  if (folder && folderSettings && passo === "titulos") {
+    const cta = ctas.find((c) => c.id === interview.ctaId);
+    inherit = {
+      folderName: folder.name,
+      summary: summarizeSettings(
+        { platforms: interview.platforms, format: interview.format, mainSeconds: interview.mainSeconds, cutSeconds: interview.cutSeconds, ctaId: interview.ctaId },
+        cta?.label,
+      ),
+      rows: summaryRows(interview, cta?.label ?? null, Boolean(interview.ctaId) && !cta, project.episode_index).filter((r) => r.step !== "titulos"),
+      custom,
+      inSeries: Boolean(project.series_id),
+    };
   }
 
   return (
@@ -131,6 +158,7 @@ export default async function EntrevistaPage({ params }: { params: Promise<{ id:
       titleOptions={titleOptions}
       titlesFailed={titlesFailed}
       defaultTitle={project.title}
+      inherit={inherit}
     />
   );
 }

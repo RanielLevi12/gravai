@@ -40,6 +40,7 @@ export default async function PastaPage({ params }: { params: Promise<{ id: stri
         <p className={styles.meta}>{summarizeSettings(settings, ctaLabel)}</p>
         {pasta.about ? <p className={styles.about}>{pasta.about}</p> : null}
         <div className={styles.headActions}>
+          <Button href={`/novo?projeto=${pasta.id}`}>Novo vídeo neste projeto</Button>
           <Button href={`/pastas/${pasta.id}/editar`} variant="soft">
             Editar projeto
           </Button>

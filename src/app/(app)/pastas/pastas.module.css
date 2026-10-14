@@ -49,6 +49,7 @@
 
 .headActions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-xs);
   margin-top: var(--space-xs);
 }

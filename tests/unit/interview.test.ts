@@ -197,6 +197,13 @@ describe("confirmSeries", () => {
     expect(db.projects.size).toBe(1);
   });
 
+  it("episódios de uma série ficam no mesmo projeto (pasta) do episódio 1", async () => {
+    const p = db.add({ folder_id: "pasta-1", interview: { platforms: ["reels"], format: "series", current: "episodios" } });
+    const r = await confirmSeriesWith(db, p.id, EPISODIOS(3));
+    if (!("ids" in r)) throw new Error(r.error);
+    expect(r.ids.map((id) => db.projects.get(id)!.folder_id)).toEqual(["pasta-1", "pasta-1", "pasta-1"]);
+  });
+
   it("cria a série, um projeto por episódio e consome 1 cota por episódio novo", async () => {
     const p = db.add({ title: "Hábitos", interview: { platforms: ["reels"], format: "series", current: "episodios" } });
     const r = await confirmSeriesWith(db, p.id, EPISODIOS(3));

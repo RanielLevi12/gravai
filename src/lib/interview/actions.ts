@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isInheritedStep, projectValue } from "@/lib/folders/inherit";
+import { toSettings } from "@/lib/folders/queries";
 import { scoreViral, withUserAi } from "@/lib/ai";
 import { createServerClient } from "@/lib/supabase/server";
 import { supabaseInterviewDb } from "./db";
@@ -47,6 +49,28 @@ export async function saveAnswer<S extends AnswerStep>(projectId: string, step: 
     return r;
   } catch {
     return { error: "Não foi possível salvar agora. Tente de novo." };
+  }
+}
+
+/** "Voltar ao padrão do projeto": regrava uma resposta do vídeo com o valor atual do projeto. */
+export async function resetToProjectDefault(projectId: string, step: unknown): Promise<{ ok: true } | { error: string }> {
+  if (typeof projectId !== "string" || !UUID.test(projectId)) return { error: NOT_FOUND };
+  if (!isInheritedStep(step)) return { error: "Passo inválido." };
+  const s = await session();
+  if (!s) return { error: EXPIRED };
+  try {
+    const project = await s.db.getProject(projectId);
+    if (!project) return { error: NOT_FOUND };
+    if (!project.folder_id) return { error: "Este vídeo não está num projeto." };
+    const supabase = await createServerClient();
+    const { data: folder } = await supabase.from("folders").select("settings").eq("id", project.folder_id).maybeSingle();
+    if (!folder) return { error: "Projeto não encontrado." };
+    const r = await saveAnswerWith(s.db, projectId, step, projectValue(step, toSettings(folder.settings)));
+    if ("error" in r) return r;
+    revalidatePath(`/projetos/${projectId}`, "layout");
+    return { ok: true };
+  } catch {
+    return { error: "Não foi possível voltar ao padrão agora. Tente de novo." };
   }
 }
 

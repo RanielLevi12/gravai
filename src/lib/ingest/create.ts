@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { AiError, withUserAi, type UserAi } from "@/lib/ai";
+import { toSettings } from "@/lib/folders/queries";
+import { mainDurationOptions } from "@/lib/rules/duration";
 import { quotaFits, quotaMessage } from "@/lib/usage";
 import { AI_KINDS, AUDIO_TOO_BIG, MAX_AUDIO_BYTES, SOURCE_KINDS, extractText, inspectAudio, IngestError, validateImages, type SourceKind } from "./index";
 
@@ -7,6 +9,7 @@ const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MAX_FILES = 10;
 const MAX_PASTED_CHARS = 500_000;
 const NOT_CONNECTED = "Conecte sua conta de IA para continuar.";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const GENERIC = "Não consegui ler este material. Tente de novo.";
 
 export type CreateResult = { status: 201 | 400 | 402 | 412 | 422 | 500; body: Record<string, unknown> };
@@ -40,6 +43,17 @@ export async function createProject(
     return { status: 422, body: { error: `Envie no máximo ${MAX_FILES} arquivos.` } };
   if (kind === "audio" && uploaded.length + paths.length > 1)
     return { status: 422, body: { error: "Envie um áudio por vez." } };
+  const folderField = form.get("folder_id");
+  const folderId = typeof folderField === "string" && UUID.test(folderField) ? folderField : null;
+  if (folderField && !folderId) return { status: 400, body: { error: "Projeto inválido." } };
+  // Projeto de outra pessoa (ou apagado) não existe para o usuário: RLS devolve nada.
+  let folderSettings: ReturnType<typeof toSettings> | null = null;
+  if (folderId) {
+    const { data } = await supabase.from("folders").select("settings").eq("id", folderId).maybeSingle();
+    if (!data) return { status: 422, body: { error: "Não encontrei esse projeto." } };
+    folderSettings = toSettings(data.settings);
+  }
+
   if ((text?.length ?? 0) > MAX_PASTED_CHARS) return { status: 422, body: { error: "Texto grande demais para colar." } };
 
   // Arquivos já enviados direto ao Storage: caminho estrito na pasta do próprio usuário.
@@ -102,13 +116,33 @@ export async function createProject(
       p_source_text: r.text,
       p_source_truncated: r.truncated,
       p_seconds: Math.ceil(audioSeconds),
+      ...(folderId ? { p_folder_id: folderId } : {}),
     });
     if (error) return { status: 500, body: { error: "Não consegui criar o projeto. Tente de novo." } };
     // null = a cota estourou entre a conferência e a criação (outra aba, por exemplo).
     if (!data) return { status: 402, body: { error: await quotaMessage(supabase, audioSeconds) } };
+    if (folderSettings) await dropDurationThatDoesNotFit(supabase, data, folderSettings.mainSeconds, r.text);
     return { status: 201, body: { id: data } };
   } catch (e) {
     const message = e instanceof IngestError ? e.message : e instanceof AiError ? e.userMessage : GENERIC;
     return { status: 422, body: { error: message } };
+  }
+}
+
+/**
+ * O vídeo copiou a duração do projeto, mas o texto pode ser curto demais para ela. Nesse caso a
+ * duração (e o corte, que depende dela) saem da cópia e a entrevista volta a perguntar.
+ * Falha aqui não derruba a criação: o vídeo já existe e a cota já foi usada.
+ */
+async function dropDurationThatDoesNotFit(supabase: SupabaseClient, id: string, mainSeconds: number, sourceText: string) {
+  if (mainDurationOptions(sourceText).some((o) => o.seconds === mainSeconds && o.enabled)) return;
+  try {
+    const { data } = await supabase.from("projects").select("interview").eq("id", id).maybeSingle();
+    const interview = { ...((data?.interview as Record<string, unknown> | null) ?? {}) };
+    delete interview.mainSeconds;
+    delete interview.cutSeconds;
+    await supabase.from("projects").update({ interview }).eq("id", id);
+  } catch (e) {
+    console.error("[projetos] não consegui ajustar a duração herdada", e instanceof Error ? e.message : e);
   }
 }

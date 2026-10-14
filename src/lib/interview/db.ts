@@ -5,7 +5,7 @@ import { currentMonth, PROJECTS_LIMIT } from "@/lib/usage";
 import type { InterviewDb, InterviewProject } from "./service";
 import type { Interview } from "./steps";
 
-const PROJECT_FIELDS = "id, title, source_kind, source_text, source_truncated, status, interview, series_id, episode_index";
+const PROJECT_FIELDS = "id, title, source_kind, source_text, source_truncated, status, interview, series_id, episode_index, folder_id";
 
 const asJson = (i: unknown) => i as unknown as NonNullable<Json>;
 
