@@ -37,6 +37,20 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"ai_usage": {
+                  Row: {
+                    "completion_tokens": number | null,"cost_usd": number,"created_at": string,"id": string,"kind": string,"model": string,"prompt_tokens": number | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "completion_tokens"?: number | null,"cost_usd": number,"created_at"?: string,"id"?: string,"kind": string,"model": string,"prompt_tokens"?: number | null,"user_id": string
+                  }
+                  Update: {
+                    "completion_tokens"?: number | null,"cost_usd"?: number,"created_at"?: string,"id"?: string,"kind"?: string,"model"?: string,"prompt_tokens"?: number | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"ctas": {
                   Row: {
                     "id": string,"kind": string,"label": string | null,"user_id": string,"value": string | null
