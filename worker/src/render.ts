@@ -1,0 +1,168 @@
+import { stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { progress } from "./claim";
+import { makeCover } from "./covers";
+import { UserError } from "./errors";
+import { probe, run } from "./ffmpeg";
+import type { JobContext } from "./jobs";
+import { MAX_FILE_BYTES, blockRanges, cutRange, expiresAt, missingBlocks, targetBitrates } from "./plan";
+import { download, upload } from "./storage";
+
+const SAFE_BYTES = MAX_FILE_BYTES * 0.93;
+const SCALE = "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1";
+const MSG_TOO_BIG = "O vídeo ficou grande demais (mais de 50 MB). Grave por blocos mais curtos.";
+
+type Cut = { id: string; start: number; end: number; title: string };
+type NewExport = {
+  kind: "final" | "cut" | "cover";
+  cut_id: string | null;
+  storage_path: string;
+  mime: string;
+  duration_seconds: number | null;
+  size_bytes: number;
+  start_seconds: number | null;
+  end_seconds: number | null;
+};
+
+function must<T>(res: { data: T; error: { message: string } | null }, what: string): NonNullable<T> {
+  if (res.error || res.data === null || res.data === undefined) throw new Error(`${what}: ${res.error?.message ?? "vazio"}`);
+  return res.data as NonNullable<T>;
+}
+
+const isCut = (c: unknown): c is Cut => {
+  const o = c as Record<string, unknown> | null;
+  return !!o && typeof o.id === "string" && Number.isInteger(o.start) && Number.isInteger(o.end) && typeof o.title === "string";
+};
+
+/** Vídeo do bloco → 1080×1920, 30 fps, H.264 + AAC, volume uniforme (sem áudio ganha silêncio). */
+async function normalize(input: string, output: string, videoKbps: number): Promise<void> {
+  const { hasAudio } = await probe(input);
+  const args = ["-y", "-i", input];
+  if (!hasAudio) args.push("-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo");
+  args.push("-vf", SCALE, "-map", "0:v:0", "-map", hasAudio ? "0:a:0" : "1:a:0");
+  if (hasAudio) args.push("-af", "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000");
+  args.push("-shortest", ...encodeArgs(videoKbps), output);
+  await run(args);
+}
+
+function encodeArgs(videoKbps: number): string[] {
+  return [
+    "-c:v", "libx264", "-preset", "veryfast", "-r", "30", "-pix_fmt", "yuv420p",
+    "-b:v", `${videoKbps}k`, "-maxrate", `${videoKbps}k`, "-bufsize", `${videoKbps * 2}k`,
+    "-c:a", "aac", "-b:a", "96k", "-ar", "48000", "-ac", "2",
+    "-movflags", "+faststart",
+  ];
+}
+
+async function sizeOk(file: string): Promise<number> {
+  const { size } = await stat(file);
+  if (size > MAX_FILE_BYTES) throw new UserError(MSG_TOO_BIG);
+  return size;
+}
+
+/** Gravações por blocos → vídeo final, um vídeo e uma capa por corte, tudo no bucket `exports`. */
+export async function renderProject({ db, job, workdir }: JobContext): Promise<void> {
+  const projectId = job.project_id;
+  await progress(db, job.id, "preparando", 5);
+
+  const project = must(await db.from("projects").select("cuts").eq("id", projectId).single(), "ler projeto");
+  const blocks = must(await db.from("script_blocks").select("id, position").eq("project_id", projectId).order("position"), "ler blocos");
+  const recs = must(
+    await db.from("recordings").select("kind, block_id, storage_path, duration_seconds").eq("project_id", projectId).eq("status", "ready"),
+    "ler gravações",
+  );
+
+  if (blocks.length === 0) throw new UserError("O script não tem blocos para gerar.");
+  if (recs.some((r) => r.kind !== "block")) {
+    throw new UserError("Por enquanto só dá para gerar vídeos de gravações feitas por blocos.");
+  }
+  const byBlock = new Map(recs.map((r) => [r.block_id as string, r]));
+  const missing = missingBlocks(blocks.map((b) => b.id), new Set(byBlock.keys()));
+  if (missing.length > 0) throw new UserError(`Faltam gravações nos blocos: ${missing.join(", ")}.`);
+
+  const cuts = (Array.isArray(project.cuts) ? project.cuts : []).filter(isCut).sort((a, b) => a.start - b.start);
+  const total = recs.reduce((sum, r) => sum + Number(r.duration_seconds ?? 0), 0);
+  const { videoKbps } = targetBitrates(total > 0 ? total : 60, SAFE_BYTES);
+
+  // 1. Cada bloco: baixar e padronizar.
+  const normalized: string[] = [];
+  for (const [i, block] of blocks.entries()) {
+    await progress(db, job.id, "juntando", 10 + (35 * i) / blocks.length);
+    const rec = byBlock.get(block.id)!;
+    const raw = path.join(workdir, `raw-${i}${path.extname(rec.storage_path)}`);
+    const norm = path.join(workdir, `bloco-${i}.mp4`);
+    await download(db, "recordings", rec.storage_path, raw);
+    await normalize(raw, norm, videoKbps);
+    normalized.push(norm);
+  }
+
+  // 2. Juntar na ordem do script. O tempo de cada bloco é o da gravação já padronizada.
+  const durations = await Promise.all(normalized.map(async (f) => (await probe(f)).duration));
+  const ranges = blockRanges(durations);
+  const list = path.join(workdir, "lista.txt");
+  await writeFile(list, normalized.map((f) => `file '${f}'`).join("\n"));
+  const finalFile = path.join(workdir, "final.mp4");
+  await run(["-y", "-f", "concat", "-safe", "0", "-i", list, "-c", "copy", "-movflags", "+faststart", finalFile]);
+  const finalSize = await sizeOk(finalFile);
+
+  // 3. Um vídeo e uma capa por corte.
+  const outputs: { row: NewExport; file: string }[] = [
+    {
+      file: finalFile,
+      row: { kind: "final", cut_id: null, storage_path: "", mime: "video/mp4", duration_seconds: (await probe(finalFile)).duration, size_bytes: finalSize, start_seconds: null, end_seconds: null },
+    },
+  ];
+  for (const [k, cut] of cuts.entries()) {
+    await progress(db, job.id, "cortando", 50 + (30 * k) / cuts.length);
+    let range;
+    try {
+      range = cutRange(ranges, cut);
+    } catch (e) {
+      throw new UserError((e as Error).message);
+    }
+    const seconds = range.endSeconds - range.startSeconds;
+    const cutFile = path.join(workdir, `corte-${k}.mp4`);
+    await run(["-y", "-ss", range.startSeconds.toFixed(3), "-i", finalFile, "-t", seconds.toFixed(3), ...encodeArgs(videoKbps), cutFile]);
+    outputs.push({
+      file: cutFile,
+      row: { kind: "cut", cut_id: cut.id, storage_path: "", mime: "video/mp4", duration_seconds: seconds, size_bytes: await sizeOk(cutFile), start_seconds: range.startSeconds, end_seconds: range.endSeconds },
+    });
+
+    await progress(db, job.id, "capas", 80 + (10 * k) / cuts.length);
+    const coverFile = path.join(workdir, `capa-${k}.jpg`);
+    await makeCover(finalFile, range.startSeconds + Math.min(1, seconds / 2), cut.title, coverFile);
+    outputs.push({
+      file: coverFile,
+      row: { kind: "cover", cut_id: cut.id, storage_path: "", mime: "image/jpeg", duration_seconds: null, size_bytes: (await stat(coverFile)).size, start_seconds: null, end_seconds: null },
+    });
+  }
+
+  // 4. Subir os novos e só então trocar as linhas e apagar os arquivos antigos.
+  await progress(db, job.id, "enviando", 92);
+  const old = must(await db.from("exports").select("id, storage_path").eq("project_id", projectId), "ler arquivos antigos");
+  const uploaded: string[] = [];
+  const expires = expiresAt(new Date()).toISOString();
+  try {
+    for (const o of outputs) {
+      o.row.storage_path = `${job.user_id}/${projectId}/${crypto.randomUUID()}.${o.row.mime === "image/jpeg" ? "jpg" : "mp4"}`;
+      await upload(db, o.row.storage_path, o.file, o.row.mime);
+      uploaded.push(o.row.storage_path);
+    }
+    if (old.length > 0) {
+      const del = await db.from("exports").delete().eq("project_id", projectId);
+      if (del.error) throw new Error(`apagar linhas antigas: ${del.error.message}`);
+    }
+    const ins = await db.from("exports").insert(outputs.map((o) => ({ ...o.row, user_id: job.user_id, project_id: projectId, expires_at: expires })));
+    if (ins.error) throw new Error(`gravar arquivos: ${ins.error.message}`);
+  } catch (e) {
+    await db.storage.from("exports").remove(uploaded).catch(() => {});
+    throw e;
+  }
+  if (old.length > 0) {
+    const gone = await db.storage.from("exports").remove(old.map((o) => o.storage_path));
+    if (gone.error) console.error("[worker] não consegui apagar arquivos antigos:", gone.error.message);
+  }
+
+  const done = await db.from("projects").update({ status: "pronto" }).eq("id", projectId);
+  if (done.error) throw new Error(`marcar projeto pronto: ${done.error.message}`);
+}
