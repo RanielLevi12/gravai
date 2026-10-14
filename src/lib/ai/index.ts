@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { AiError, toStrictJsonSchema, stripOptionalNulls, type OcrImage, type ScriptCheck, type Transcription } from "./schemas";
+import { AiError, toStrictJsonSchema, stripOptionalNulls, type ExcerptReview, type OcrImage, type ScriptCheck, type Transcription } from "./schemas";
 
 export { AiError } from "./schemas";
 export type { AiErrorCode, OcrImage, ScriptCheck, Transcription } from "./schemas";
@@ -96,4 +96,10 @@ export async function checkScript(text: string, opts: { tone: string; cta?: stri
   return useMock()
     ? (await import("./mock")).checkScript(text, opts)
     : (await import("./typesafe")).checkScript(text, opts);
+}
+
+export async function reviewExcerpts(texts: string[], opts: { restart: boolean }): Promise<ExcerptReview> {
+  return useMock()
+    ? (await import("./mock")).reviewExcerpts(texts, opts)
+    : (await import("./typesafe")).reviewExcerpts(texts, opts);
 }

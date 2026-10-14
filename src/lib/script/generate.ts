@@ -8,6 +8,7 @@ import { MSG_NOT_FOUND, type InterviewProject } from "@/lib/interview/service";
 import { PLATFORMS, isPlatform, type Interview, type Platform } from "@/lib/interview/steps";
 import { estimateSeconds } from "@/lib/rules/duration";
 import { buildScriptUser, SCRIPT_SYSTEM, type ScriptProfile } from "./prompts";
+import { scriptReviewWarnings, type ReviewFn } from "./review";
 
 /** "body" = trecho do script contínuo; "bridge" e "cut" só existem em scripts gerados antes. */
 export type BlockKind = "opening" | "body" | "bridge" | "cut" | "closing";
@@ -49,6 +50,8 @@ export type ScriptDeps = {
   db: ScriptDb;
   ai: () => Promise<UserAi>;
   check: (text: string, opts: { tone: string; cta?: string }) => Promise<ScriptCheck>;
+  /** Gancho por trecho e recomeço (jev). Opcional: sem ele, não há esse aviso. */
+  review?: ReviewFn;
   /** Só para testes. */
   now?: () => number;
 };
@@ -148,13 +151,21 @@ export async function generateScriptWith(deps: ScriptDeps, projectId: string): P
   const checks: string[] = [];
   if (i.ctaId && !cta) checks.push("A chamada para ação que você escolheu foi removida do perfil; o script saiu sem ela.");
   const full = blocks.map((b) => b.text).join("\n\n");
-  try {
-    const r = await deps.check(full, { tone: profile?.tone ?? "", ...(ctaLine ? { cta: ctaLine } : {}) });
+  // Em paralelo: a revisão não pode somar tempo ao teto da função (ver RETRY_BUDGET_MS).
+  const reviewed = blocks.filter((b) => b.kind !== "closing");
+  const [checked, review] = await Promise.allSettled([
+    deps.check(full, { tone: profile?.tone ?? "", ...(ctaLine ? { cta: ctaLine } : {}) }),
+    deps.review ? deps.review(reviewed.map((b) => b.text), { restart: true }) : Promise.resolve(null),
+  ]);
+  if (checked.status === "fulfilled") {
+    const r = checked.value;
     if (r.toneOk < CHECK_MIN) checks.push("O tom do script pode não combinar com o seu perfil.");
     if (ctaLine && r.ctaPresent !== null && r.ctaPresent < CHECK_MIN) checks.push("O script não deixa clara a chamada para ação.");
-  } catch (e) {
-    console.error("[script] checkScript falhou", e instanceof Error ? e.message : e);
+  } else {
+    console.error("[script] checkScript falhou", checked.reason instanceof Error ? checked.reason.message : checked.reason);
   }
+  if (review.status === "fulfilled" && review.value) checks.push(...scriptReviewWarnings(reviewed, review.value));
+  else if (review.status === "rejected") console.error("[script] reviewExcerpts falhou", review.reason instanceof Error ? review.reason.message : review.reason);
 
   // Zera avisos antigos e grava só os desta geração.
   const { scriptWarning: _w, scriptChecks: _c, ...rest } = i;

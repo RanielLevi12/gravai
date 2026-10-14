@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { AiError, checkScript, withUserAi } from "@/lib/ai";
+import { AiError, checkScript, reviewExcerpts, withUserAi } from "@/lib/ai";
 import { createServerClient } from "@/lib/supabase/server";
 import type { Cut } from "./cuts";
-import { saveCutsWith, suggestCutsWith } from "./cuts-generate";
+import { cutsWarnings, saveCutsWith, suggestCutsWith } from "./cuts-generate";
 import { supabaseBlockDb, supabaseCutsDb, supabaseScriptDb } from "./db";
 import { generateScriptWith } from "./generate";
 import { MSG_BLOCK_NOT_FOUND, rewriteBlockWith, updateBlockTextWith, type RewriteMode } from "./rewrite";
@@ -22,7 +22,7 @@ export async function generateScript(projectId: string): Promise<void> {
   if (!data.user) throw new Error("Sua sessão expirou. Entre de novo.");
   const userId = data.user.id;
   await generateScriptWith(
-    { db: supabaseScriptDb({ supabase, userId }), ai: () => withUserAi(userId), check: checkScript },
+    { db: supabaseScriptDb({ supabase, userId }), ai: () => withUserAi(userId), check: checkScript, review: reviewExcerpts },
     projectId,
   );
 }
@@ -87,14 +87,16 @@ export async function regenerateScript(projectId: string): Promise<{ ok: true; t
 }
 
 /** A IA sugere os cortes do script (substitui os atuais). Devolve a lista nova. */
-export async function suggestCuts(projectId: string): Promise<{ cuts: Cut[] } | ActionError> {
+export async function suggestCuts(projectId: string): Promise<{ cuts: Cut[]; warnings: string[] } | ActionError> {
   if (typeof projectId !== "string" || !UUID.test(projectId)) return { error: "Projeto não encontrado." };
   const s = await sessionUser();
   if (!s) return { error: MSG_EXPIRED };
   try {
-    const cuts = await suggestCutsWith({ db: supabaseCutsDb({ supabase: s.supabase }), ai: () => withUserAi(s.userId) }, projectId);
+    const db = supabaseCutsDb({ supabase: s.supabase });
+    const cuts = await suggestCutsWith({ db, ai: () => withUserAi(s.userId) }, projectId);
+    const warnings = await cutsWarnings(db, projectId, cuts, reviewExcerpts);
     revalidatePath("/(app)/projetos/[id]/script", "page");
-    return { cuts };
+    return { cuts, warnings };
   } catch (e) {
     return failure(e);
   }

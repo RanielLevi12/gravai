@@ -3,7 +3,7 @@ import type { UserAi } from "@/lib/ai";
 import { AiError } from "@/lib/ai/schemas";
 import type { InterviewProject } from "@/lib/interview/service";
 import { buildCutsUser, cutSecondsOf, normalizeCuts, validateCuts, type Cut, type RawCuts } from "@/lib/script/cuts";
-import { saveCutsWith, suggestCutsWith, type CutsDb } from "@/lib/script/cuts-generate";
+import { cutsWarnings, saveCutsWith, suggestCutsWith, type CutsDb } from "@/lib/script/cuts-generate";
 
 const words = (n: number) => Array.from({ length: n }, (_, i) => `p${i}`).join(" ");
 /** 75 palavras = 30 s. */
@@ -120,5 +120,22 @@ describe("saveCutsWith", () => {
     expect(saved.cuts).toBeNull();
     expect(await saveCutsWith(db, "p1", [cut()])).toMatchObject({ ok: true });
     expect(saved.cuts).toHaveLength(1);
+  });
+});
+
+describe("cutsWarnings", () => {
+  const cut = (id: string, start: number, end: number): Cut => ({ id, start, end, title: id, coverPrompt: null, descriptions: {} });
+  it("avisa dos cortes com gancho fraco, lendo o texto de cada corte", async () => {
+    const { db } = fakeDb();
+    const seen: string[][] = [];
+    const review = async (t: string[]) => (seen.push(t), { hook: [0.2, 0.9, 0.1], restart: null });
+    const w = await cutsWarnings(db, "p1", [cut("a", 1, 2), cut("b", 3, 3), cut("c", 2, 2)], review);
+    expect(w).toEqual([expect.stringContaining("gancho do corte 1 e do corte 3 está fraco")]);
+    expect(seen[0][0]).toBe(`${texts[0]}\n\n${texts[1]}`);
+  });
+  it("tudo forte: sem avisos. Falha do jev: sem avisos, sem erro", async () => {
+    const { db } = fakeDb();
+    expect(await cutsWarnings(db, "p1", [cut("a", 1, 1)], async () => ({ hook: [0.9], restart: null }))).toEqual([]);
+    expect(await cutsWarnings(db, "p1", [cut("a", 1, 1)], async () => { throw new Error("x"); })).toEqual([]);
   });
 });
