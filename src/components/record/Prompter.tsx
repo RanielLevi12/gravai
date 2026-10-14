@@ -115,7 +115,11 @@ export function Prompter({
         if (!d.active) return;
         d.active = false;
         d.dirty = true;
-        if (!d.moved) onToggle();
+      }}
+      // Toque, leitor de tela e chave de acesso chegam como click; só o click logo após um arraste é ignorado.
+      onClick={() => {
+        if (drag.current.moved) return;
+        onToggle();
       }}
       onPointerCancel={() => {
         drag.current.active = false;
