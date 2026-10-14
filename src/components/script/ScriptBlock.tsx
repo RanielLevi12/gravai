@@ -25,6 +25,7 @@ const QUICK: { mode: RewriteInstruction; label: string }[] = [
 
 export function ScriptBlock({
   block,
+  cutNumber = null,
   label,
   text,
   busy,
@@ -34,6 +35,8 @@ export function ScriptBlock({
   onQuick,
 }: {
   block: ScriptBlockData;
+  /** Número do corte que inclui este bloco (null = fora de qualquer corte). */
+  cutNumber?: number | null;
   label: string;
   text: string;
   /** Um botão rápido deste bloco está reescrevendo. */
@@ -46,7 +49,8 @@ export function ScriptBlock({
 }) {
   const [editing, setEditing] = useState(false);
   const editor = useRef<HTMLTextAreaElement>(null);
-  const isCut = block.kind === "cut" && block.cutIndex !== null;
+  const cut = block.kind === "cut" ? block.cutIndex : cutNumber;
+  const isCut = cut !== null;
 
   useEffect(() => {
     if (editing) editor.current?.focus();
@@ -56,12 +60,13 @@ export function ScriptBlock({
     <section
       aria-label={label}
       className={isCut ? `${styles.block} ${styles.cut}` : styles.block}
-      style={isCut ? ({ "--c": cutVar(block.cutIndex!) } as CSSProperties) : undefined}
+      style={isCut ? ({ "--c": cutVar(cut!) } as CSSProperties) : undefined}
     >
       <div className={styles.blockHead}>
         <span className={styles.tag}>
           {isCut ? <Scissors size={14} strokeWidth={2} aria-hidden /> : null}
           {label}
+          {cutNumber !== null && block.kind !== "cut" ? ` · Corte ${cutNumber}` : ""}
         </span>
         <span className={styles.dur}>{clock(estimateSeconds(text))}</span>
       </div>

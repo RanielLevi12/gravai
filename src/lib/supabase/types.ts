@@ -81,14 +81,14 @@ export type Database = {
                   ]
                 },"projects": {
                   Row: {
-                    "cover_prompt": string | null,"created_at": string,"descriptions": NonNullable<Json>,"episode_index": number | null,"folder_id": string | null,"id": string,"interview": NonNullable<Json>,"script_stale": boolean,"series_id": string | null,"source_kind": string,"source_text": string,"source_truncated": boolean,"status": string,"title": string,"user_id": string
+                    "cover_prompt": string | null,"created_at": string,"cuts": NonNullable<Json>,"descriptions": NonNullable<Json>,"episode_index": number | null,"folder_id": string | null,"id": string,"interview": NonNullable<Json>,"script_stale": boolean,"series_id": string | null,"source_kind": string,"source_text": string,"source_truncated": boolean,"status": string,"title": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "cover_prompt"?: string | null,"created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"folder_id"?: string | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind": string,"source_text": string,"source_truncated"?: boolean,"status"?: string,"title": string,"user_id"?: string
+                    "cover_prompt"?: string | null,"created_at"?: string,"cuts"?: NonNullable<Json>,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"folder_id"?: string | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind": string,"source_text": string,"source_truncated"?: boolean,"status"?: string,"title": string,"user_id"?: string
                   }
                   Update: {
-                    "cover_prompt"?: string | null,"created_at"?: string,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"folder_id"?: string | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind"?: string,"source_text"?: string,"source_truncated"?: boolean,"status"?: string,"title"?: string,"user_id"?: string
+                    "cover_prompt"?: string | null,"created_at"?: string,"cuts"?: NonNullable<Json>,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"folder_id"?: string | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind"?: string,"source_text"?: string,"source_truncated"?: boolean,"status"?: string,"title"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
