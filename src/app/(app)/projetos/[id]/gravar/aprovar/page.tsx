@@ -70,8 +70,11 @@ export default async function AprovarPage({
     return (
       <main className={styles.page}>
         <h1 className={styles.title}>Seu vídeo está guardado.</h1>
-        <p className={styles.hint}>Cortes e entrega chegam na próxima versão.</p>
-        <Button href="/projetos">Ir para Projetos</Button>
+        <p className={styles.hint}>Agora dá para gerar o vídeo final e os cortes.</p>
+        <Button href={`/projetos/${id}/entrega`}>Gerar vídeos</Button>
+        <Button href="/projetos" variant="soft">
+          Ir para Projetos
+        </Button>
       </main>
     );
   }

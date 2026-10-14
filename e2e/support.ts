@@ -1,3 +1,5 @@
+import { createClient } from "@supabase/supabase-js";
+import { readFileSync } from "node:fs";
 import { expect, type Page } from "@playwright/test";
 
 // Mailpit do Supabase local (porta de [local_smtp] em supabase/config.toml).
@@ -77,4 +79,18 @@ export async function novoProjetoNoScript(page: Page, prefixo: string): Promise<
   await page.getByRole("link", { name: "Gerar script" }).click();
   await expect(page).toHaveURL(new RegExp(`/projetos/${id}/script$`));
   return id;
+}
+
+/** Cliente admin do Supabase local, só para preparar e conferir o banco nos testes. */
+export function adminDb() {
+  const env = Object.fromEntries(
+    readFileSync(".env.local", "utf8")
+      .split("\n")
+      .map((l) => /^([A-Z_]+)=(.*)$/.exec(l))
+      .filter((m): m is RegExpExecArray => !!m)
+      .map((m) => [m[1], m[2].replace(/^["']|["']$/g, "")]),
+  );
+  const url = env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!/127\.0\.0\.1|localhost/.test(url)) throw new Error("e2e só roda contra o Supabase local");
+  return createClient(url, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 }
