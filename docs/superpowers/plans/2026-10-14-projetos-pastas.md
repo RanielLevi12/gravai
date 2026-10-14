@@ -33,6 +33,9 @@ Decidido em entrevista (grill-me) em 2026-10-14. Esta é a próxima tarefa, ante
 4. **Mover vídeo** entre projetos/solto. "Sobre este projeto" entra no prompt do script e dos títulos.
 5. **e2e + revisão final.** Servidor de teste separado (porta 3100, AI_MOCK=1), nunca a porta 3000.
 
+## Tarefa pequena depois de Projetos
+- **Colar a chave do OpenRouter** (decidido em 2026-10-14): em "Sua IA" no perfil, o botão "Conectar" (OAuth) continua principal; acrescentar link discreto "Prefiro colar minha chave". Validar a chave na hora (`GET https://openrouter.ai/api/v1/key`), guardar criptografada em `ai_connections` pelo mesmo caminho do callback, e nunca devolver a chave ao navegador. Teste de integração e e2e (mock).
+
 ## Regras de trabalho (mantidas)
 - Produção (Supabase `dieciotgdpgmxccxjqsy`): `npx supabase db push --dry-run`, me mostrar, só então `db push` com o sim do usuário. Rodar sem `DBUS_SESSION_BUS_ADDRESS=disabled:` no Supabase CLI.
 - Push só com o sim do usuário. `git add` só por caminho. Não commitar `.impeccable/hook.cache.json`, `PRODUCT.md`, `AGENTS.md`, `design/marca/identidade.html`, nem a seção "Marca Gravaí" do `DESIGN.md`.
