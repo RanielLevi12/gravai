@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { beforeAll, describe, expect, it } from "vitest";
+import { supabaseRecordDb } from "@/lib/record/db";
+import { approveWith, finishRecordingWith, startRecordingWith } from "@/lib/record/service";
 
 const URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:58321";
 const ANON = process.env.SUPABASE_ANON_KEY!;
@@ -170,5 +172,43 @@ describe("finish_recording", () => {
     expect(f.error).not.toBeNull();
     const { data } = await A.client.from("recordings").select("status").eq("id", r.data!.id).single();
     expect(data?.status).toBe("uploading");
+  });
+});
+
+describe("supabaseRecordDb (serviço real)", () => {
+  it("regravar o mesmo bloco deixa 1 linha ready e apaga o arquivo antigo; apagar o script apaga as linhas", async () => {
+    const p = await newProject(A);
+    const blk = await admin.from("script_blocks").insert({ project_id: p, user_id: A.id, position: 0, kind: "opening", text: "t" }).select("id").single();
+    const db = supabaseRecordDb({ supabase: A.client as never, userId: A.id });
+    const body = new Blob(["x"], { type: "video/webm" });
+
+    const a = await startRecordingWith(db, { projectId: p, kind: "block", blockId: blk.data!.id, mime: "video/webm" });
+    expect(a.path.startsWith(`${A.id}/${p}/`)).toBe(true);
+    expect((await A.client.storage.from("recordings").upload(a.path, body, { contentType: "video/webm" })).error).toBeNull();
+    await finishRecordingWith(db, a.id, { sizeBytes: 1, durationSeconds: 2 });
+
+    const b = await startRecordingWith(db, { projectId: p, kind: "block", blockId: blk.data!.id, mime: "video/webm" });
+    expect((await A.client.storage.from("recordings").upload(b.path, body, { contentType: "video/webm" })).error).toBeNull();
+    await finishRecordingWith(db, b.id, { sizeBytes: 1, durationSeconds: 3 });
+
+    const ready = await A.client.from("recordings").select("id").eq("project_id", p).eq("status", "ready");
+    expect(ready.data).toEqual([{ id: b.id }]);
+    const old = await A.client.storage.from("recordings").download(a.path);
+    expect(old.error).not.toBeNull();
+    const cur = await A.client.storage.from("recordings").download(b.path);
+    expect(cur.error).toBeNull();
+
+    expect(await approveWith(db, p, "blocks")).toEqual({ ok: true });
+    const st = await admin.from("projects").select("status").eq("id", p).single();
+    expect(st.data?.status).toBe("gravado");
+
+    await admin.from("script_blocks").delete().eq("project_id", p);
+    const left = await admin.from("recordings").select("id").eq("project_id", p).eq("kind", "block");
+    expect(left.data).toEqual([]);
+  });
+
+  it("removeFiles ignora caminhos de outro usuário", async () => {
+    const db = supabaseRecordDb({ supabase: A.client as never, userId: A.id });
+    await expect(db.removeFiles([`${B.id}/x/y.webm`])).resolves.toBeUndefined();
   });
 });
