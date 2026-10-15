@@ -90,6 +90,16 @@ test("entrega pronta: lista vídeo final e cortes, baixa, copia a descrição e 
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("listitem").filter({ hasText: "Corte 1" }).getByRole("button", { name: "Baixar vídeo" }).click()]);
   expect(download.suggestedFilename()).toBe("corte-01.mp4");
 
+  const [zip] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Baixar tudo (.zip)" }).click()]);
+  expect(zip.suggestedFilename()).toBe("gravai-videos.zip");
+  const lido = await zip.createReadStream();
+  const partes: Buffer[] = [];
+  for await (const c of lido) partes.push(c as Buffer);
+  const JSZip = (await import("jszip")).default;
+  const conteudo = await JSZip.loadAsync(Buffer.concat(partes));
+  expect(Object.keys(conteudo.files).sort()).toEqual(["capa-01.jpg", "corte-01.mp4", "corte-02.mp4", "descricoes.txt", "final.mp4"]);
+  expect(await conteudo.file("descricoes.txt")!.async("string")).toContain("Texto do YouTube do corte 1");
+
   await page.getByRole("button", { name: "Copiar descrição" }).click();
   await expect(page.getByRole("button", { name: "Copiado" })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("Texto do YouTube do corte 1");

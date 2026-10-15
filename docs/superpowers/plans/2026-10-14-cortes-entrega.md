@@ -245,6 +245,8 @@ git add "src/app/(app)/projetos/[id]/entrega" src/lib/delivery/zip.ts tests/unit
 git commit -m "feat(delivery): zip download with descriptions"
 ```
 
+**Registro (feito):** `zip.ts` (`descriptionsText`, `buildZip`, `zipFor`), `DeliveryDb.download`, rota `entrega/zip/route.ts` (resposta em stream; 401 sem login, 404 projeto alheio, 413 acima de 200 MB), `ZipButton` na página. Testes: `delivery-zip.test.ts` (unit), integração com dois usuários (RLS real), e2e baixa o .zip e confere o conteúdo. Corrigido o flaky de `e2e/cortes.spec.ts` (espera "Marcar à mão" habilitado antes do título). `e2e/entrevista.spec.ts:29`: 13/13 passes em servidor de teste limpo; a causa provável era um `next start` velho na porta 3100 (sem `AI_MOCK`) — não reproduzido. **A confirmar na Vercel:** resposta em stream passa do teto de 4,5 MB; testar com arquivo real na Task 10.
+
 ---
 
 ### Task 8: Ajustar início e fim de um corte (`recut`)

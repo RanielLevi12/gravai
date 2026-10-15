@@ -71,5 +71,10 @@ export function supabaseDeliveryDb(deps: { supabase: SupabaseClient<Database> })
       if (error || !data) throw new Error("sign url failed");
       return data.signedUrl;
     },
+    async download(storagePath) {
+      const { data, error } = await supabase.storage.from("exports").download(storagePath);
+      if (error || !data) throw new Error("download failed");
+      return new Uint8Array(await data.arrayBuffer());
+    },
   };
 }

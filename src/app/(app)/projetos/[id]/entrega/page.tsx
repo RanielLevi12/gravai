@@ -13,6 +13,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { CutCard, type CardFile } from "./CutCard";
 import entrega from "./entrega.module.css";
 import { JobPanel } from "./JobProgress";
+import { ZipButton } from "./ZipButton";
 
 export const metadata: Metadata = { title: "Entrega · Gravaí" };
 
@@ -58,6 +59,7 @@ export default async function EntregaPage({ params }: { params: Promise<{ id: st
           {soonest === 0 ? "Estes arquivos somem hoje." : `Estes arquivos somem em ${soonest} ${soonest === 1 ? "dia" : "dias"}.`} Baixe antes.
         </p>
       ) : null}
+      {ready ? <ZipButton projectId={id} /> : null}
       {ready ? (
         <ul className={entrega.list}>
           {final ? (

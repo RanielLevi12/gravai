@@ -38,6 +38,8 @@ export interface DeliveryDb {
   cuts(projectId: string): Promise<CutInfo[]>;
   /** Link temporário; com `downloadName` o navegador baixa o arquivo com esse nome. */
   signUrl(storagePath: string, seconds: number, downloadName: string | null): Promise<string>;
+  /** Conteúdo do arquivo (para montar o .zip). */
+  download(storagePath: string): Promise<Uint8Array>;
 }
 
 export async function createRenderJobWith(db: DeliveryDb, projectId: string): Promise<{ jobId: string }> {

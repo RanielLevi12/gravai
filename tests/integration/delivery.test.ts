@@ -1,5 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { beforeAll, describe, expect, it } from "vitest";
+import JSZip from "jszip";
+import { supabaseDeliveryDb } from "@/lib/delivery/db";
+import { zipFor } from "@/lib/delivery/zip";
 
 const URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:58321";
 const ANON = process.env.SUPABASE_ANON_KEY!;
@@ -185,5 +188,24 @@ describe("bucket exports", () => {
     const direct = await A.client.storage.from("exports").upload(`${A.id}/proj/outro.mp4`, new Blob(["x"], { type: "video/mp4" }), { contentType: "video/mp4" });
     expect(direct.error).not.toBeNull();
     await admin.storage.from("exports").remove([path]);
+  });
+});
+
+describe("zip da entrega (RLS real)", () => {
+  it("dono baixa o zip; outro usuário recebe 404; sem cortes só vem o final", async () => {
+    const projectId = await newProject(A, "pronto");
+    const final = exportRow(A, projectId);
+    const up = await admin.storage.from("exports").upload(final.storage_path, new Blob(["video"], { type: "video/mp4" }), { contentType: "video/mp4" });
+    expect(up.error).toBeNull();
+    const ins = await admin.from("exports").insert(final);
+    expect(ins.error).toBeNull();
+
+    const zip = await JSZip.loadAsync(await zipFor(supabaseDeliveryDb({ supabase: A.client as never }), projectId));
+    expect(Object.keys(zip.files).sort()).toEqual(["descricoes.txt", "final.mp4"]);
+    expect(await zip.file("final.mp4")!.async("string")).toBe("video");
+    expect(await zip.file("descricoes.txt")!.async("string")).toContain("Sem cortes");
+
+    await expect(zipFor(supabaseDeliveryDb({ supabase: B.client as never }), projectId)).rejects.toMatchObject({ status: 404 });
+    await admin.storage.from("exports").remove([final.storage_path]);
   });
 });

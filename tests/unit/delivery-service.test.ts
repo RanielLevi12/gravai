@@ -30,6 +30,9 @@ function fakeDb(status: string | null): DeliveryDb & { jobs: JobView[] } {
     async signUrl() {
       return "";
     },
+    async download() {
+      return new Uint8Array();
+    },
   };
 }
 

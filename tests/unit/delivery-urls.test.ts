@@ -40,6 +40,9 @@ function fakeDb(mine: ExportRow[]): DeliveryDb & { signed: { path: string; secon
       signed.push({ path, seconds, name });
       return `https://exemplo.test/${path}?exp=${seconds}`;
     },
+    async download() {
+      return new Uint8Array();
+    },
   };
 }
 
