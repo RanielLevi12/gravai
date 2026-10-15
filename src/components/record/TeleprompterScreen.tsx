@@ -8,6 +8,8 @@ import { MAX_TAKE_SECONDS } from "@/lib/record/limits";
 import { DEFAULT_SPEED_WPM, stepSpeed } from "@/lib/record/scroll";
 import { clock } from "@/components/script/format";
 import { Prompter } from "./Prompter";
+import { DEFAULT_CAPTURE, type CaptureSettings } from "@/lib/record/capture";
+import { CaptureSettingsPanel, loadCapture, saveCapture } from "./CaptureSettings";
 import { DEFAULT_PREFS, loadPrefs, PrompterSettings, savePrefs, type PrompterPrefs } from "./PrompterSettings";
 import styles from "./record.module.css";
 import { useRecorder } from "./useRecorder";
@@ -33,8 +35,12 @@ export function TeleprompterScreen({
   const [speed, setSpeed] = useState(DEFAULT_SPEED_WPM);
   const [playing, setPlaying] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [capture, setCapture] = useState<CaptureSettings>(DEFAULT_CAPTURE);
 
-  useEffect(() => setPrefs(loadPrefs()), []);
+  useEffect(() => {
+    setPrefs(loadPrefs());
+    setCapture(loadCapture());
+  }, []);
   useEffect(() => {
     if (video.current) video.current.srcObject = rec.stream;
   }, [rec.stream]);
@@ -46,6 +52,8 @@ export function TeleprompterScreen({
   }, [rec.state, rec.result, router, projectId, modo, blockId]);
 
   const recording = rec.state === "recording";
+  // Câmera de trás não espelha; a da frente espelha como um espelho de verdade.
+  const mirrored = rec.stream?.getVideoTracks()[0]?.getSettings().facingMode !== "environment";
   const back = `/projetos/${projectId}/gravar`;
 
   if (rec.state === "denied" || rec.state === "unsupported") {
@@ -68,7 +76,7 @@ export function TeleprompterScreen({
 
   return (
     <main className={styles.studio}>
-      <video ref={video} className={styles.cam} autoPlay muted playsInline style={{ transform: "scaleX(-1)" }} />
+      <video ref={video} className={styles.cam} autoPlay muted playsInline style={mirrored ? { transform: "scaleX(-1)" } : undefined} />
       <header className={styles.studioTop}>
         <Link href={back} className={styles.round} aria-label="Fechar">
           <X size={22} strokeWidth={2} aria-hidden />
@@ -132,7 +140,17 @@ export function TeleprompterScreen({
             savePrefs(p);
           }}
           onClose={() => setShowSettings(false)}
-        />
+        >
+          <CaptureSettingsPanel
+            settings={capture}
+            locked={recording || rec.state === "counting"}
+            onChange={(c) => {
+              setCapture(c);
+              saveCapture(c);
+              void rec.configure(c);
+            }}
+          />
+        </PrompterSettings>
       ) : null}
     </main>
   );

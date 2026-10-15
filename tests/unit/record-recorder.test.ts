@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createRecorder, type RecorderEnv } from "@/components/record/recorder";
+import { createRecorder, type RecorderEnv, type RecorderOpts } from "@/components/record/recorder";
+import { captureConstraints, DEFAULT_CAPTURE, maxRecordSeconds, QUALITY } from "@/lib/record/capture";
 
 class FakeMR {
   static supported = new Set(["video/webm;codecs=vp9,opus", "video/webm"]);
@@ -39,7 +40,7 @@ function makeEnv(over: Partial<RecorderEnv> = {}): RecorderEnv {
   };
 }
 
-const opts = { projectId: "p", kind: "take" as "take" | "block", blockId: null as string | null, maxSeconds: 200 };
+const opts: RecorderOpts = { projectId: "p", kind: "take", blockId: null, maxSeconds: 200 };
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -79,7 +80,7 @@ describe("createRecorder", () => {
     });
     expect(FakeMR.last!.slice).toBe(1000);
     expect(env.getUserMedia).toHaveBeenCalledWith(
-      expect.objectContaining({ audio: true, video: expect.objectContaining({ facingMode: "user" }) }),
+      captureConstraints(DEFAULT_CAPTURE),
     );
   });
 
@@ -121,6 +122,48 @@ describe("createRecorder", () => {
     const block = await begin(makeEnv(), { ...opts, kind: "block", blockId: "b" });
     await vi.advanceTimersByTimeAsync(190_000);
     expect(block.getSnapshot().warn).toBe(false);
+  });
+
+  it("qualidade Alta: bitrate maior e limite menor", async () => {
+    const env = makeEnv();
+    const r = await begin(env, { ...opts, capture: { ...DEFAULT_CAPTURE, quality: "alta" } });
+    expect(FakeMR.last!.opts).toMatchObject({ videoBitsPerSecond: QUALITY.alta.videoBps });
+    const max = maxRecordSeconds("alta");
+    await vi.advanceTimersByTimeAsync((max - 20) * 1000);
+    expect(r.getSnapshot().warn).toBe(true);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(r.getSnapshot().state).toBe("stopped");
+  });
+
+  it("trocar a câmera abre de novo com as novas escolhas", async () => {
+    track.stop.mockClear();
+    const env = makeEnv();
+    const r = createRecorder(opts, env);
+    await r.open();
+    await r.configure({ ...DEFAULT_CAPTURE, facing: "environment" });
+    expect(track.stop).toHaveBeenCalled();
+    expect(env.getUserMedia).toHaveBeenLastCalledWith(expect.objectContaining({ video: expect.objectContaining({ facingMode: "environment" }) }));
+    expect(r.getSnapshot().state).toBe("ready");
+  });
+
+  it("aparelho que sumiu: tenta de novo com o padrão", async () => {
+    const gum = vi.fn(async (c: MediaStreamConstraints) => {
+      if (JSON.stringify(c).includes("exact")) throw new Error("OverconstrainedError");
+      return fakeStream;
+    });
+    const r = createRecorder({ ...opts, capture: { ...DEFAULT_CAPTURE, cameraId: "velha" } }, makeEnv({ getUserMedia: gum }));
+    expect(await r.open()).toBe(true);
+    expect(gum).toHaveBeenCalledTimes(2);
+    expect(r.getSnapshot().state).toBe("ready");
+  });
+
+  it("não troca a câmera no meio da gravação", async () => {
+    const env = makeEnv();
+    const r = await begin(env);
+    const calls = vi.mocked(env.getUserMedia).mock.calls.length;
+    await r.configure({ ...DEFAULT_CAPTURE, facing: "environment" });
+    expect(vi.mocked(env.getUserMedia).mock.calls.length).toBe(calls);
+    expect(r.getSnapshot().state).toBe("recording");
   });
 
   it("falha ao criar a gravação volta com erro", async () => {

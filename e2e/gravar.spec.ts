@@ -184,3 +184,31 @@ test("teleprompter: arrastar com o dedo move o texto e segura enquanto o dedo es
   await texto.click();
   await expect(texto).toHaveAccessibleName("Continuar texto");
 });
+
+test("ajustes de câmera: troca para trás e Alta, guarda no aparelho e grava", async ({ page }) => {
+  test.setTimeout(90_000);
+  const id = await projetoComScript(page, "gravar-camera");
+  await page.goto(`/projetos/${id}/gravar/teleprompter?modo=take`);
+  await expect(page.getByRole("button", { name: "Começar a gravar" })).toBeEnabled({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  await page.getByRole("button", { name: "Trás (melhor imagem)" }).click();
+  await page.getByRole("button", { name: "Alta" }).click();
+  await expect(page.getByText(/Mais nítida\. Cada gravação vai até \d+:\d\d\./)).toBeVisible();
+  const camera = () =>
+    page.locator("video").first().evaluate((v: HTMLVideoElement) => {
+      const t = (v.srcObject as MediaStream | null)?.getVideoTracks()[0];
+      return t ? JSON.stringify(t.getConstraints()) : "";
+    });
+  await expect.poll(camera, { timeout: 10_000 }).toContain("environment");
+  expect(await camera()).toContain("1920");
+  await page.getByRole("button", { name: "Pronto" }).click();
+
+  await page.reload();
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  await expect(page.getByRole("button", { name: "Alta" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Trás (melhor imagem)" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Pronto" }).click();
+
+  await gravar(page, 2);
+});
