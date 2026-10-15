@@ -294,6 +294,8 @@ git add src/lib/delivery "src/app/(app)/projetos/[id]/entrega" worker/src tests
 git commit -m "feat(delivery): regenerate and 30-day cleanup"
 ```
 
+**Registro (feito):** sem migração nova (`purge_expired_exports` já existia na 0011). `needsRegeneration` e `DeliveryDb.latestRecordingAt` no service; `RegenerateButton` (aviso "Suas gravações mudaram", confirmação que avisa da perda dos ajustes manuais, só então cria o pedido; os arquivos antigos só saem quando o novo termina); `worker/src/purge.ts` (`purgeExpired`) chamado ao ligar e no máximo 1x por hora; a tela mostra o erro de um pedido que falhou mesmo havendo vídeos. Testes: unit (`needsRegeneration`), `worker/test/purge.test.ts` (vencido some com o arquivo, válido fica), e2e. **Atenção:** `projects.script_stale` não é zerado ao gerar vídeos (só ao gerar o script de novo), então depois de "Gerar de novo" o aviso volta enquanto o script estiver desatualizado. Decidir na Task 10 se isso incomoda. Como a máquina do Fly desliga após 60 s ocioso, a limpeza só roda quando há trabalho: para limpar sem uso, a Task 10 precisa de um gatilho agendado.
+
 ---
 
 ### Task 10: Fly.io, produção e teste real

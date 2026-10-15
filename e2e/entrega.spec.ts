@@ -119,4 +119,19 @@ test("entrega pronta: lista vídeo final e cortes, baixa, copia a descrição e 
   await expect(page.getByRole("heading", { name: "Vídeo final" })).toBeVisible(); // os vídeos continuam na tela
   const { data: jobs } = await db.from("jobs").select("kind, status, payload").eq("project_id", id);
   expect(jobs).toEqual([{ kind: "recut", status: "queued", payload: { cutId: "c1", start: 1, end: 5.5 } }]);
+
+  // Script mudou depois de gerar: avisa, pede confirmação (perde ajustes) e cria um pedido novo.
+  await db.from("jobs").update({ status: "done", finished_at: new Date().toISOString() }).eq("project_id", id);
+  await db.from("projects").update({ script_stale: true }).eq("id", id);
+  await page.reload();
+  await expect(page.getByText("Suas gravações mudaram.")).toBeVisible();
+  await page.getByRole("button", { name: "Gerar de novo" }).click();
+  await expect(page.getByText("serão perdidos")).toBeVisible();
+  await page.getByRole("button", { name: "Cancelar" }).click();
+  await expect(page.getByText("serão perdidos")).toHaveCount(0);
+  await page.getByRole("button", { name: "Gerar de novo" }).click();
+  await page.getByRole("button", { name: "Sim, gerar de novo" }).click();
+  await expect(page.getByRole("progressbar", { name: "Andamento" })).toBeVisible();
+  const { data: again } = await db.from("jobs").select("kind, status").eq("project_id", id).eq("status", "queued");
+  expect(again).toEqual([{ kind: "render", status: "queued" }]);
 });

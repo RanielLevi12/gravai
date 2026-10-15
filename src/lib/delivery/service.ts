@@ -24,6 +24,8 @@ export type ExportRow = {
   sizeBytes: number;
   /** ISO 8601. */
   expiresAt: string;
+  /** Quando o arquivo foi gerado (ISO 8601). */
+  createdAt?: string;
   /** Só nos cortes: onde o corte começa e termina no vídeo final (segundos). */
   startSeconds?: number | null;
   endSeconds?: number | null;
@@ -46,6 +48,8 @@ export interface DeliveryDb {
   cuts(projectId: string): Promise<CutInfo[]>;
   /** Link temporário; com `downloadName` o navegador baixa o arquivo com esse nome. */
   signUrl(storagePath: string, seconds: number, downloadName: string | null): Promise<string>;
+  /** Quando a gravação pronta mais recente do projeto foi criada. */
+  latestRecordingAt(projectId: string): Promise<Date | null>;
   /** Conteúdo do arquivo (para montar o .zip). */
   download(storagePath: string): Promise<Uint8Array>;
 }
@@ -90,4 +94,10 @@ export async function recutWith(db: DeliveryDb, projectId: string, cutId: string
     end - start >= MIN_CUT_SECONDS - 1e-6 && end - start <= MAX_CUT_SECONDS + 1e-6;
   if (!ok) throw new Error(MSG_BAD_RANGE);
   return { jobId: await db.createJob(projectId, "recut", { cutId, start, end }) };
+}
+
+/** Os vídeos gerados ficaram para trás: gravação refeita depois deles ou script mudado. */
+export function needsRegeneration(lastExportAt: Date | null, recordingsMaxAt: Date | null, scriptStale: boolean): boolean {
+  if (lastExportAt === null) return false;
+  return scriptStale || (recordingsMaxAt !== null && recordingsMaxAt.getTime() > lastExportAt.getTime());
 }

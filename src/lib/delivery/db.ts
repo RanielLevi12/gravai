@@ -38,7 +38,7 @@ export function supabaseDeliveryDb(deps: { supabase: SupabaseClient<Database> })
     async exportsOf(projectId) {
       const { data, error } = await supabase
         .from("exports")
-        .select("id, kind, cut_id, storage_path, mime, duration_seconds, size_bytes, start_seconds, end_seconds, expires_at")
+        .select("id, kind, cut_id, storage_path, mime, duration_seconds, size_bytes, start_seconds, end_seconds, expires_at, created_at")
         .eq("project_id", projectId)
         .order("created_at");
       if (error) throw new Error("read exports failed");
@@ -53,6 +53,7 @@ export function supabaseDeliveryDb(deps: { supabase: SupabaseClient<Database> })
         startSeconds: r.start_seconds === null ? null : Number(r.start_seconds),
         endSeconds: r.end_seconds === null ? null : Number(r.end_seconds),
         expiresAt: r.expires_at,
+        createdAt: r.created_at,
       }));
     },
     async cuts(projectId) {
@@ -72,6 +73,18 @@ export function supabaseDeliveryDb(deps: { supabase: SupabaseClient<Database> })
       const { data, error } = await supabase.storage.from("exports").createSignedUrl(storagePath, seconds, downloadName ? { download: downloadName } : undefined);
       if (error || !data) throw new Error("sign url failed");
       return data.signedUrl;
+    },
+    async latestRecordingAt(projectId) {
+      const { data, error } = await supabase
+        .from("recordings")
+        .select("created_at")
+        .eq("project_id", projectId)
+        .eq("status", "ready")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw new Error("read recordings failed");
+      return data ? new Date(data.created_at) : null;
     },
     async download(storagePath) {
       const { data, error } = await supabase.storage.from("exports").download(storagePath);

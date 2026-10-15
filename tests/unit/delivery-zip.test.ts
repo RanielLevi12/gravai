@@ -79,6 +79,9 @@ function fakeDb(opts: { exports: ExportRow[]; mine?: boolean }): DeliveryDb {
     async download(path) {
       return bytes(`conteudo:${path}`);
     },
+    async latestRecordingAt() {
+      return null;
+    },
   };
 }
 

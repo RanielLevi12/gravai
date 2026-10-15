@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MSG_ALREADY_RUNNING, MSG_NOT_RECORDED, createRenderJobWith, type DeliveryDb, type JobView } from "@/lib/delivery/service";
+import { MSG_ALREADY_RUNNING, MSG_NOT_RECORDED, createRenderJobWith, needsRegeneration, type DeliveryDb, type JobView } from "@/lib/delivery/service";
 import { MSG_PROJECT_NOT_FOUND } from "@/lib/record/service";
 import { wakeWorker } from "@/lib/delivery/trigger";
 
@@ -32,6 +32,9 @@ function fakeDb(status: string | null): DeliveryDb & { jobs: JobView[] } {
     },
     async download() {
       return new Uint8Array();
+    },
+    async latestRecordingAt() {
+      return null;
     },
   };
 }
@@ -101,5 +104,22 @@ describe("wakeWorker", () => {
 
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("fora do ar")));
     await expect(wakeWorker()).resolves.toBeUndefined();
+  });
+});
+
+describe("needsRegeneration", () => {
+  const t = (iso: string) => new Date(iso);
+  it("gravação mais nova que o último export → true", () => {
+    expect(needsRegeneration(t("2026-10-14T10:00:00Z"), t("2026-10-14T11:00:00Z"), false)).toBe(true);
+  });
+  it("script desatualizado → true", () => {
+    expect(needsRegeneration(t("2026-10-14T10:00:00Z"), t("2026-10-14T09:00:00Z"), true)).toBe(true);
+  });
+  it("nada mudou → false", () => {
+    expect(needsRegeneration(t("2026-10-14T10:00:00Z"), t("2026-10-14T09:00:00Z"), false)).toBe(false);
+    expect(needsRegeneration(t("2026-10-14T10:00:00Z"), null, false)).toBe(false);
+  });
+  it("sem export ainda → false (o botão normal de gerar já aparece)", () => {
+    expect(needsRegeneration(null, t("2026-10-14T11:00:00Z"), true)).toBe(false);
   });
 });

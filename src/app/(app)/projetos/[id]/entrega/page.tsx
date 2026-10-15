@@ -7,13 +7,14 @@ import scriptStyles from "@/components/script/script.module.css";
 import { Button } from "@/components/ui/Button";
 import { supabaseDeliveryDb } from "@/lib/delivery/db";
 import { WARN_DAYS, daysLeft } from "@/lib/delivery/rules";
-import { SIGNED_URL_SECONDS, type ExportRow } from "@/lib/delivery/service";
+import { SIGNED_URL_SECONDS, needsRegeneration, type ExportRow } from "@/lib/delivery/service";
 import { PLATFORM_LABELS, PLATFORMS } from "@/lib/interview/steps";
 import { createServerClient } from "@/lib/supabase/server";
 import { AdjustCut } from "./AdjustCut";
 import { CutCard, type CardFile } from "./CutCard";
 import entrega from "./entrega.module.css";
 import { JobPanel } from "./JobProgress";
+import { RegenerateButton } from "./RegenerateButton";
 import { ZipButton } from "./ZipButton";
 
 export const metadata: Metadata = { title: "Entrega · Gravaí" };
@@ -44,6 +45,10 @@ export default async function EntregaPage({ params }: { params: Promise<{ id: st
   }
   const find = (kind: ExportRow["kind"], cutId: string | null) => exports.find((e) => e.kind === kind && e.cutId === cutId);
   const final = find("final", null);
+  const stale =
+    ready && !generating && final?.createdAt
+      ? needsRegeneration(new Date(final.createdAt), await db.latestRecordingAt(id), project.scriptStale)
+      : false;
   const soonest = ready ? Math.min(...exports.map((e) => daysLeft(new Date(e.expiresAt), new Date()))) : null;
 
   return (
@@ -63,11 +68,12 @@ export default async function EntregaPage({ params }: { params: Promise<{ id: st
         </p>
       ) : null}
       {recutting ? <JobPanel projectId={id} initial={job} /> : null}
-      {ready && job?.kind === "recut" && job.status === "failed" ? (
+      {ready && job?.status === "failed" ? (
         <p className={styles.alert} role="alert">
-          {job.error ?? "Não foi possível refazer o corte."}
+          {job.error ?? "Não foi possível gerar os vídeos."}
         </p>
       ) : null}
+      {stale ? <RegenerateButton projectId={id} /> : null}
       {ready ? <ZipButton projectId={id} /> : null}
       {ready ? (
         <ul className={entrega.list}>

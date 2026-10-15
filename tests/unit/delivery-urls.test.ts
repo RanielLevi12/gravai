@@ -43,6 +43,9 @@ function fakeDb(mine: ExportRow[]): DeliveryDb & { signed: { path: string; secon
     async download() {
       return new Uint8Array();
     },
+    async latestRecordingAt() {
+      return null;
+    },
   };
 }
 

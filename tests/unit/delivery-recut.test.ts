@@ -49,6 +49,9 @@ function fakeDb(opts: { exports?: ExportRow[]; active?: boolean } = {}): Deliver
     async download() {
       return new Uint8Array();
     },
+    async latestRecordingAt() {
+      return null;
+    },
   };
 }
 
