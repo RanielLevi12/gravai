@@ -5,4 +5,6 @@ services:
     restart: unless-stopped
     env_file: .env
     # Sem portas: o worker só faz chamadas de saída (Supabase e o app).
+    # VPS dividida com outros projetos: o ffmpeg não pode tomar a máquina inteira.
+    cpus: "0.6"
     mem_limit: 1536m
