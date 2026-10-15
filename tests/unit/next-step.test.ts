@@ -30,7 +30,7 @@ describe("nextStepHref", () => {
 });
 
 describe("nextStepHref gravado", () => {
-  it("gravado → tela de gravar", () => {
-    expect(nextStepHref({ id, status: "gravado", interview: {} })).toBe(`/projetos/${id}/gravar`);
+  it("gravado → tela das gravações", () => {
+    expect(nextStepHref({ id, status: "gravado", interview: {} })).toBe(`/projetos/${id}/gravar/aprovar`);
   });
 });

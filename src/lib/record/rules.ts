@@ -40,6 +40,22 @@ export function canApprove(input: {
   };
 }
 
+type ReadyRecording = { id: string; kind: "take" | "block" | "external"; blockId: string | null; createdAt: string };
+
+/** Gravações para assistir: take/enviado só o mais novo; blocos na ordem do script, o mais novo de cada. */
+export function recordingsInOrder<T extends ReadyRecording>(
+  ready: T[],
+  blocks: { id: string; label: string }[],
+): (T & { label: string })[] {
+  const newest = [...ready].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const whole = newest.find((r) => r.kind !== "block");
+  if (whole) return [{ ...whole, label: whole.kind === "take" ? "Vídeo inteiro" : "Vídeo enviado" }];
+  return blocks.flatMap((b) => {
+    const rec = newest.find((r) => r.blockId === b.id);
+    return rec ? [{ ...rec, label: b.label }] : [];
+  });
+}
+
 const EXTERNAL_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 
 export function validateExternalFile(file: {
