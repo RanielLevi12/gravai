@@ -44,7 +44,7 @@ export function JobPanel({ projectId, initial }: { projectId: string; initial: J
       setBusy(false);
       return;
     }
-    setJob({ id: res.jobId, status: "queued", step: null, progress: 0, error: null });
+    setJob({ id: res.jobId, kind: "render", status: "queued", step: null, progress: 0, error: null });
     setBusy(false);
   }
 

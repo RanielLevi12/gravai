@@ -10,6 +10,7 @@ import { WARN_DAYS, daysLeft } from "@/lib/delivery/rules";
 import { SIGNED_URL_SECONDS, type ExportRow } from "@/lib/delivery/service";
 import { PLATFORM_LABELS, PLATFORMS } from "@/lib/interview/steps";
 import { createServerClient } from "@/lib/supabase/server";
+import { AdjustCut } from "./AdjustCut";
 import { CutCard, type CardFile } from "./CutCard";
 import entrega from "./entrega.module.css";
 import { JobPanel } from "./JobProgress";
@@ -31,7 +32,9 @@ export default async function EntregaPage({ params }: { params: Promise<{ id: st
 
   const [job, exports, cuts] = await Promise.all([db.latestJob(id), db.exportsOf(id), db.cuts(id)]);
   const generating = job?.status === "queued" || job?.status === "running";
-  const ready = exports.length > 0 && !generating;
+  // Refazer um corte não esconde os vídeos que já existem; só gerar tudo de novo esconde.
+  const recutting = generating && job?.kind === "recut" && exports.length > 0;
+  const ready = exports.length > 0 && (!generating || recutting);
 
   const files = new Map<string, CardFile>();
   if (ready) {
@@ -59,6 +62,12 @@ export default async function EntregaPage({ params }: { params: Promise<{ id: st
           {soonest === 0 ? "Estes arquivos somem hoje." : `Estes arquivos somem em ${soonest} ${soonest === 1 ? "dia" : "dias"}.`} Baixe antes.
         </p>
       ) : null}
+      {recutting ? <JobPanel projectId={id} initial={job} /> : null}
+      {ready && job?.kind === "recut" && job.status === "failed" ? (
+        <p className={styles.alert} role="alert">
+          {job.error ?? "Não foi possível refazer o corte."}
+        </p>
+      ) : null}
       {ready ? <ZipButton projectId={id} /> : null}
       {ready ? (
         <ul className={entrega.list}>
@@ -84,6 +93,20 @@ export default async function EntregaPage({ params }: { params: Promise<{ id: st
                 meta={video.durationSeconds ? clock(video.durationSeconds) : ""}
                 video={files.get(video.id)!}
                 cover={cover ? files.get(cover.id)! : null}
+                adjust={
+                  final?.durationSeconds && !generating ? (
+                    <AdjustCut
+                      key={`${video.id}`}
+                      projectId={id}
+                      cutId={cut.id}
+                      title={`corte ${i + 1}`}
+                      finalUrl={files.get(final.id)!.url}
+                      duration={final.durationSeconds}
+                      start={video.startSeconds ?? 0}
+                      end={video.endSeconds ?? video.durationSeconds ?? 0}
+                    />
+                  ) : null
+                }
                 descriptions={PLATFORMS.filter((p) => cut.descriptions[p]).map((p) => ({ platform: PLATFORM_LABELS[p], text: cut.descriptions[p]! }))}
               />,
             ];

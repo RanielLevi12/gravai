@@ -5,9 +5,14 @@ import { exportFileName, type ExportKind, type JobStatus } from "./rules";
 export { MSG_PROJECT_NOT_FOUND };
 export const MSG_ALREADY_RUNNING = "Já estamos gerando seus vídeos.";
 export const MSG_FILE_NOT_FOUND = "Arquivo não encontrado.";
+export const MSG_BAD_RANGE = "Início e fim do corte não são válidos.";
+export const MSG_CUT_NOT_FOUND = "Corte não encontrado.";
+export const MSG_NOT_GENERATED = "Gere os vídeos antes de ajustar um corte.";
+export const MIN_CUT_SECONDS = 1;
+export const MAX_CUT_SECONDS = 180;
 export const MSG_NOT_RECORDED = "Aprove a gravação antes de gerar os vídeos.";
 
-export type JobView = { id: string; status: JobStatus; step: string | null; progress: number; error: string | null };
+export type JobView = { id: string; kind: "render" | "recut"; status: JobStatus; step: string | null; progress: number; error: string | null };
 
 export type ExportRow = {
   id: string;
@@ -19,6 +24,9 @@ export type ExportRow = {
   sizeBytes: number;
   /** ISO 8601. */
   expiresAt: string;
+  /** Só nos cortes: onde o corte começa e termina no vídeo final (segundos). */
+  startSeconds?: number | null;
+  endSeconds?: number | null;
 };
 
 export type CutInfo = { id: string; title: string; start: number; end: number; descriptions: Descriptions };
@@ -63,4 +71,23 @@ export async function signedUrlWith(
   const index = row.cutId === null ? null : cuts.findIndex((c) => c.id === row.cutId) + 1;
   const name = (opts.download ?? true) ? exportFileName(row.kind, index, ext) : null;
   return { url: await db.signUrl(row.storagePath, SIGNED_URL_SECONDS, name) };
+}
+
+const onTenths = (n: number) => Math.abs(n * 10 - Math.round(n * 10)) < 1e-6;
+
+/** Refaz um corte com início e fim (em segundos do vídeo final) escolhidos à mão. */
+export async function recutWith(db: DeliveryDb, projectId: string, cutId: string, start: number, end: number): Promise<{ jobId: string }> {
+  const project = await db.project(projectId);
+  if (!project) throw new Error(MSG_PROJECT_NOT_FOUND);
+  if (project.status !== "gravado" && project.status !== "pronto") throw new Error(MSG_NOT_RECORDED);
+  const [rows, cuts] = await Promise.all([db.exportsOf(projectId), db.cuts(projectId)]);
+  if (!cuts.some((c) => c.id === cutId)) throw new Error(MSG_CUT_NOT_FOUND);
+  const duration = rows.find((r) => r.kind === "final")?.durationSeconds;
+  if (!duration) throw new Error(MSG_NOT_GENERATED);
+  const ok =
+    Number.isFinite(start) && Number.isFinite(end) && onTenths(start) && onTenths(end) &&
+    start >= 0 && start < end && end <= duration + 1e-6 &&
+    end - start >= MIN_CUT_SECONDS - 1e-6 && end - start <= MAX_CUT_SECONDS + 1e-6;
+  if (!ok) throw new Error(MSG_BAD_RANGE);
+  return { jobId: await db.createJob(projectId, "recut", { cutId, start, end }) };
 }

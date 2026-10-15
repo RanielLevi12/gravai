@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Copy, Download } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { signedUrl } from "@/lib/delivery/actions";
 import styles from "./entrega.module.css";
@@ -16,6 +16,7 @@ export function CutCard({
   video,
   cover,
   descriptions,
+  adjust,
 }: {
   projectId: string;
   title: string;
@@ -23,6 +24,8 @@ export function CutCard({
   video: CardFile;
   cover: CardFile | null;
   descriptions: { platform: string; text: string }[];
+  /** Ajuste manual do corte; só nos cortes (o vídeo final não tem). */
+  adjust?: ReactNode;
 }) {
   const player = useRef<HTMLVideoElement>(null);
   const retried = useRef(false);
@@ -79,6 +82,7 @@ export function CutCard({
           </Button>
         ) : null}
       </div>
+      {adjust}
       {descriptions.length > 0 ? (
         <div className={styles.descriptions}>
           {descriptions.map((d) => (

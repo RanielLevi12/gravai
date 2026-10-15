@@ -17,13 +17,13 @@ export function supabaseDeliveryDb(deps: { supabase: SupabaseClient<Database> })
     async latestJob(projectId) {
       const { data, error } = await supabase
         .from("jobs")
-        .select("id, status, step, progress, error")
+        .select("id, kind, status, step, progress, error")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (error) throw new Error("read job failed");
-      return data ? { ...data, status: data.status as JobStatus } : null;
+      return data ? { ...data, kind: data.kind as "render" | "recut", status: data.status as JobStatus } : null;
     },
     async createJob(projectId, kind, payload) {
       const { data, error } = await supabase.rpc("create_render_job", { p_project: projectId, p_kind: kind, p_payload: payload as never });
@@ -38,7 +38,7 @@ export function supabaseDeliveryDb(deps: { supabase: SupabaseClient<Database> })
     async exportsOf(projectId) {
       const { data, error } = await supabase
         .from("exports")
-        .select("id, kind, cut_id, storage_path, mime, duration_seconds, size_bytes, expires_at")
+        .select("id, kind, cut_id, storage_path, mime, duration_seconds, size_bytes, start_seconds, end_seconds, expires_at")
         .eq("project_id", projectId)
         .order("created_at");
       if (error) throw new Error("read exports failed");
@@ -50,6 +50,8 @@ export function supabaseDeliveryDb(deps: { supabase: SupabaseClient<Database> })
         mime: r.mime,
         durationSeconds: r.duration_seconds === null ? null : Number(r.duration_seconds),
         sizeBytes: Number(r.size_bytes),
+        startSeconds: r.start_seconds === null ? null : Number(r.start_seconds),
+        endSeconds: r.end_seconds === null ? null : Number(r.end_seconds),
         expiresAt: r.expires_at,
       }));
     },

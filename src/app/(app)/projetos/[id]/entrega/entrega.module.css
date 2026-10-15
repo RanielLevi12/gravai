@@ -62,3 +62,36 @@
   flex-direction: column;
   gap: var(--space-md);
 }
+
+.adjust {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.adjust summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: flex-end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.field input {
+  width: 7rem;
+  padding: 8px 10px;
+  font-size: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}

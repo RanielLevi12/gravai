@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { finish, heartbeat, type Db, type Job } from "./claim";
 import { UserError } from "./errors";
+import { recutCut } from "./recut";
 import { renderProject } from "./render";
 import type { TranscribeFn } from "./transcribe";
 
@@ -15,8 +16,8 @@ export type JobContext = { db: Db; job: Job; workdir: string; deps?: JobDeps };
 export type JobResult = { warning?: string } | void;
 type Handler = (ctx: JobContext) => Promise<JobResult>;
 
-/** Um tratador por tipo de pedido; `recut` entra na Tarefa 8. */
-const handlers: Partial<Record<Job["kind"], Handler>> = { render: renderProject };
+/** Um tratador por tipo de pedido. */
+const handlers: Record<Job["kind"], Handler> = { render: renderProject, recut: recutCut };
 
 /** Processa um pedido já pego: roda o tratador, mantém o sinal de vida e grava o resultado. */
 export async function handle(db: Db, job: Job, deps?: JobDeps): Promise<void> {

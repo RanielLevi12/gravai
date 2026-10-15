@@ -17,7 +17,7 @@ function fakeDb(status: string | null): DeliveryDb & { jobs: JobView[] } {
     async createJob() {
       await Promise.resolve();
       if (jobs.some((j) => j.status === "queued" || j.status === "running")) throw new Error(MSG_ALREADY_RUNNING);
-      const job: JobView = { id: `job-${jobs.length + 1}`, status: "queued", step: null, progress: 0, error: null };
+      const job: JobView = { kind: "render", id: `job-${jobs.length + 1}`, status: "queued", step: null, progress: 0, error: null };
       jobs.push(job);
       return job.id;
     },

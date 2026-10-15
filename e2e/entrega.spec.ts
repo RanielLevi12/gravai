@@ -103,4 +103,20 @@ test("entrega pronta: lista vídeo final e cortes, baixa, copia a descrição e 
   await page.getByRole("button", { name: "Copiar descrição" }).click();
   await expect(page.getByRole("button", { name: "Copiado" })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("Texto do YouTube do corte 1");
+
+  // Ajustar o corte 1: tempo fora do vídeo é recusado; tempos certos criam um pedido "recut" na fila.
+  const card = page.getByRole("listitem").filter({ hasText: "Corte 1" });
+  await card.getByText("Ajustar início e fim").click();
+  await card.getByLabel("Início (segundos)").fill("1");
+  await card.getByLabel("Fim (segundos)").fill("500");
+  await card.getByRole("button", { name: "Usar estes tempos" }).click();
+  await expect(card.getByRole("alert")).toHaveText("Início e fim do corte não são válidos.");
+  expect((await db.from("jobs").select("id").eq("project_id", id)).data ?? []).toHaveLength(0);
+
+  await card.getByLabel("Fim (segundos)").fill("5.5");
+  await card.getByRole("button", { name: "Usar estes tempos" }).click();
+  await expect(page.getByRole("progressbar", { name: "Andamento" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vídeo final" })).toBeVisible(); // os vídeos continuam na tela
+  const { data: jobs } = await db.from("jobs").select("kind, status, payload").eq("project_id", id);
+  expect(jobs).toEqual([{ kind: "recut", status: "queued", payload: { cutId: "c1", start: 1, end: 5.5 } }]);
 });

@@ -10,11 +10,11 @@ import { MAX_FILE_BYTES, blockRanges, cutRange, expiresAt, missingBlocks, target
 import { download, upload } from "./storage";
 import { transcribeViaApp } from "./transcribe";
 
-const SAFE_BYTES = MAX_FILE_BYTES * 0.93;
+export const SAFE_BYTES = MAX_FILE_BYTES * 0.93;
 const SCALE = "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1";
 const MIN_ALIGN_CONFIDENCE = 0.7;
 const MSG_CHECK_CUTS = "Confira o início e o fim dos cortes.";
-const MSG_TOO_BIG = "O vídeo ficou grande demais (mais de 50 MB). Grave por blocos mais curtos.";
+export const MSG_TOO_BIG = "O vídeo ficou grande demais (mais de 50 MB). Grave por blocos mais curtos.";
 
 type Cut = { id: string; start: number; end: number; title: string };
 type NewExport = {
@@ -28,7 +28,7 @@ type NewExport = {
   end_seconds: number | null;
 };
 
-function must<T>(res: { data: T; error: { message: string } | null }, what: string): NonNullable<T> {
+export function must<T>(res: { data: T; error: { message: string } | null }, what: string): NonNullable<T> {
   if (res.error || res.data === null || res.data === undefined) throw new Error(`${what}: ${res.error?.message ?? "vazio"}`);
   return res.data as NonNullable<T>;
 }
@@ -49,7 +49,7 @@ async function normalize(input: string, output: string, videoKbps: number): Prom
   await run(args);
 }
 
-function encodeArgs(videoKbps: number): string[] {
+export function encodeArgs(videoKbps: number): string[] {
   return [
     "-c:v", "libx264", "-preset", "veryfast", "-r", "30", "-pix_fmt", "yuv420p",
     "-b:v", `${videoKbps}k`, "-maxrate", `${videoKbps}k`, "-bufsize", `${videoKbps * 2}k`,
@@ -58,7 +58,7 @@ function encodeArgs(videoKbps: number): string[] {
   ];
 }
 
-async function sizeOk(file: string): Promise<number> {
+export async function sizeOk(file: string): Promise<number> {
   const { size } = await stat(file);
   if (size > MAX_FILE_BYTES) throw new UserError(MSG_TOO_BIG);
   return size;

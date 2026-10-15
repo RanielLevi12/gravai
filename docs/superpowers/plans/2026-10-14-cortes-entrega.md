@@ -270,6 +270,8 @@ git add "src/app/(app)/projetos/[id]/entrega" src/lib/delivery worker/src worker
 git commit -m "feat(delivery): manual cut adjustment"
 ```
 
+**Registro (feito):** `recutWith` (service), ação `recutCut`, `worker/src/recut.ts` (refaz `cut` e `cover` a partir do `final.mp4`, grava `start_seconds`/`end_seconds`, troca só os arquivos daquele corte), `AdjustCut` dentro do `CutCard`. `JobView` ganhou `kind`; `ExportRow` ganhou `startSeconds`/`endSeconds` (opcionais). Durante um `recut` a tela mantém os vídeos e mostra o andamento; recut que falha mostra o erro. Testes: `delivery-recut.test.ts`, `worker/test/recut.test.ts` (final sintético de 10 s, 2–6 s → corte de 4 s), e2e (tempo inválido recusado; tempos certos criam o pedido `recut`). **Para a Task 9:** "Gerar de novo" refaz tudo e **perde os ajustes manuais** dos cortes (os tempos só ficam em `exports`, não em `projects.cuts`) — avisar o usuário na tela antes de confirmar.
+
 ---
 
 ### Task 9: Gerar de novo e limpeza de 30 dias
