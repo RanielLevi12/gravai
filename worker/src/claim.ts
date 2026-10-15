@@ -43,9 +43,10 @@ export async function progress(db: Db, jobId: string, step: string, percent: num
   check(error, "progress");
 }
 
-export async function finish(db: Db, jobId: string, result: true | { error: string }): Promise<void> {
+/** `warning` (só em sucesso) fica em `error`: o pedido acabou, mas a tela mostra o aviso. */
+export async function finish(db: Db, jobId: string, result: true | { error: string }, warning?: string): Promise<void> {
   const base = { finished_at: new Date().toISOString() };
-  const patch = result === true ? { ...base, status: "done", progress: 100, step: null, error: null } : { ...base, status: "failed", error: result.error };
+  const patch = result === true ? { ...base, status: "done", progress: 100, step: null, error: warning ?? null } : { ...base, status: "failed", error: result.error };
   const { error } = await db.from("jobs").update(patch).eq("id", jobId);
   check(error, "finish");
 }

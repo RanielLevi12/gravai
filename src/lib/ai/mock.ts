@@ -1,12 +1,13 @@
 // Provedor falso. Sem "server-only" para poder ser usado direto em testes.
 import fs from "node:fs";
 import path from "node:path";
-import { AiError, type OcrImage, type ExcerptReview, type ScriptCheck, type Transcription } from "./schemas";
+import { AiError, type OcrImage, type ExcerptReview, type ScriptCheck, type Transcription, type WordTranscription } from "./schemas";
 
 export type MockFn =
   | "ocrImages"
   | "ocrPdf"
   | "transcribeAudio"
+  | "transcribeWords"
   | "generateJson"
   | "scoreViral"
   | "checkScript"
@@ -77,6 +78,10 @@ export async function ocrPdf(_pdf: Buffer): Promise<string> {
 
 export async function transcribeAudio(_file: Buffer, _filename: string): Promise<Transcription> {
   return next("transcribeAudio") as Transcription;
+}
+
+export async function transcribeWords(_file: Buffer, _filename: string): Promise<WordTranscription> {
+  return next("transcribeWords") as WordTranscription;
 }
 
 /** Texto JSON bruto, como o provedor real devolveria. */

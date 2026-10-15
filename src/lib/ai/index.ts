@@ -1,9 +1,9 @@
 import "server-only";
 import { z } from "zod";
-import { AiError, toStrictJsonSchema, stripOptionalNulls, type ExcerptReview, type OcrImage, type ScriptCheck, type Transcription } from "./schemas";
+import { AiError, toStrictJsonSchema, stripOptionalNulls, type ExcerptReview, type OcrImage, type ScriptCheck, type Transcription, type WordTranscription } from "./schemas";
 
 export { AiError } from "./schemas";
-export type { AiErrorCode, OcrImage, ScriptCheck, Transcription } from "./schemas";
+export type { AiErrorCode, OcrImage, ScriptCheck, Transcription, WordTranscription } from "./schemas";
 
 const useMock = () => {
   const mock = process.env.AI_MOCK === "1";
@@ -41,6 +41,7 @@ export type UserAi = {
   ocrImages(images: OcrImage[]): Promise<string>;
   ocrPdf(pdf: Buffer): Promise<string>;
   transcribeAudio(file: Buffer, filename: string): Promise<Transcription>;
+  transcribeWords(file: Buffer, filename: string): Promise<WordTranscription>;
   generateJson<T>(schema: z.ZodType<T>, system: string, user: string): Promise<T>;
 };
 
@@ -81,6 +82,7 @@ export function userAiFrom(provider: Provider): UserAi {
     ocrImages: (images) => provider.ocrImages(images),
     ocrPdf: (pdf) => provider.ocrPdf(pdf),
     transcribeAudio: (file, filename) => provider.transcribeAudio(file, filename),
+    transcribeWords: (file, filename) => provider.transcribeWords(file, filename),
     generateJson: (schema, system, user) => generateJsonWith(provider.rawJson, schema, system, user),
   };
 }

@@ -1,15 +1,19 @@
 import { stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { progress } from "./claim";
+import { alignBlocks } from "./align";
 import { makeCover } from "./covers";
 import { UserError } from "./errors";
 import { probe, run } from "./ffmpeg";
 import type { JobContext } from "./jobs";
-import { MAX_FILE_BYTES, blockRanges, cutRange, expiresAt, missingBlocks, targetBitrates } from "./plan";
+import { MAX_FILE_BYTES, blockRanges, cutRange, expiresAt, missingBlocks, targetBitrates, type Range } from "./plan";
 import { download, upload } from "./storage";
+import { transcribeViaApp } from "./transcribe";
 
 const SAFE_BYTES = MAX_FILE_BYTES * 0.93;
 const SCALE = "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1";
+const MIN_ALIGN_CONFIDENCE = 0.7;
+const MSG_CHECK_CUTS = "Confira o início e o fim dos cortes.";
 const MSG_TOO_BIG = "O vídeo ficou grande demais (mais de 50 MB). Grave por blocos mais curtos.";
 
 type Cut = { id: string; start: number; end: number; title: string };
@@ -60,49 +64,33 @@ async function sizeOk(file: string): Promise<number> {
   return size;
 }
 
-/** Gravações por blocos → vídeo final, um vídeo e uma capa por corte, tudo no bucket `exports`. */
-export async function renderProject({ db, job, workdir }: JobContext): Promise<void> {
+/** Gravações (por blocos ou take único) → vídeo final, um vídeo e uma capa por corte, tudo no bucket `exports`. */
+export async function renderProject(ctx: JobContext): Promise<{ warning?: string }> {
+  const { db, job, workdir } = ctx;
   const projectId = job.project_id;
   await progress(db, job.id, "preparando", 5);
 
   const project = must(await db.from("projects").select("cuts").eq("id", projectId).single(), "ler projeto");
-  const blocks = must(await db.from("script_blocks").select("id, position").eq("project_id", projectId).order("position"), "ler blocos");
+  const blocks = must(await db.from("script_blocks").select("id, position, text").eq("project_id", projectId).order("position"), "ler blocos");
   const recs = must(
-    await db.from("recordings").select("kind, block_id, storage_path, duration_seconds").eq("project_id", projectId).eq("status", "ready"),
+    await db.from("recordings").select("id, kind, block_id, storage_path, duration_seconds").eq("project_id", projectId).eq("status", "ready"),
     "ler gravações",
   );
 
   if (blocks.length === 0) throw new UserError("O script não tem blocos para gerar.");
-  if (recs.some((r) => r.kind !== "block")) {
-    throw new UserError("Por enquanto só dá para gerar vídeos de gravações feitas por blocos.");
+  if (recs.some((r) => r.kind === "external")) {
+    throw new UserError("Por enquanto só dá para gerar vídeos de gravações feitas no app (por blocos ou take único).");
   }
-  const byBlock = new Map(recs.map((r) => [r.block_id as string, r]));
-  const missing = missingBlocks(blocks.map((b) => b.id), new Set(byBlock.keys()));
-  if (missing.length > 0) throw new UserError(`Faltam gravações nos blocos: ${missing.join(", ")}.`);
+  const takes = recs.filter((r) => r.kind === "take");
+  if (takes.length > 0 && takes.length < recs.length) {
+    throw new UserError("Há gravação por blocos e take único ao mesmo tempo. Grave de novo usando só um dos modos.");
+  }
 
   const cuts = (Array.isArray(project.cuts) ? project.cuts : []).filter(isCut).sort((a, b) => a.start - b.start);
   const total = recs.reduce((sum, r) => sum + Number(r.duration_seconds ?? 0), 0);
   const { videoKbps } = targetBitrates(total > 0 ? total : 60, SAFE_BYTES);
 
-  // 1. Cada bloco: baixar e padronizar.
-  const normalized: string[] = [];
-  for (const [i, block] of blocks.entries()) {
-    await progress(db, job.id, "juntando", 10 + (35 * i) / blocks.length);
-    const rec = byBlock.get(block.id)!;
-    const raw = path.join(workdir, `raw-${i}${path.extname(rec.storage_path)}`);
-    const norm = path.join(workdir, `bloco-${i}.mp4`);
-    await download(db, "recordings", rec.storage_path, raw);
-    await normalize(raw, norm, videoKbps);
-    normalized.push(norm);
-  }
-
-  // 2. Juntar na ordem do script. O tempo de cada bloco é o da gravação já padronizada.
-  const durations = await Promise.all(normalized.map(async (f) => (await probe(f)).duration));
-  const ranges = blockRanges(durations);
-  const list = path.join(workdir, "lista.txt");
-  await writeFile(list, normalized.map((f) => `file '${f}'`).join("\n"));
-  const finalFile = path.join(workdir, "final.mp4");
-  await run(["-y", "-f", "concat", "-safe", "0", "-i", list, "-c", "copy", "-movflags", "+faststart", finalFile]);
+  const { finalFile, ranges, warning } = takes.length > 0 ? await prepareTake(ctx, blocks, takes[0], videoKbps) : await prepareBlocks(ctx, blocks, recs, videoKbps);
   const finalSize = await sizeOk(finalFile);
 
   // 3. Um vídeo e uma capa por corte.
@@ -165,4 +153,53 @@ export async function renderProject({ db, job, workdir }: JobContext): Promise<v
 
   const done = await db.from("projects").update({ status: "pronto" }).eq("id", projectId);
   if (done.error) throw new Error(`marcar projeto pronto: ${done.error.message}`);
+  return warning ? { warning } : {};
+}
+
+type Block = { id: string; position: number; text: string };
+type Rec = { id: string; kind: string; block_id: string | null; storage_path: string; duration_seconds: unknown };
+type Prepared = { finalFile: string; ranges: Range[]; warning?: string };
+
+/** Por blocos: padroniza cada gravação e junta na ordem do script; o tempo de cada bloco é o da sua gravação. */
+async function prepareBlocks({ db, job, workdir }: JobContext, blocks: Block[], recs: Rec[], videoKbps: number): Promise<Prepared> {
+  const byBlock = new Map(recs.map((r) => [r.block_id as string, r]));
+  const missing = missingBlocks(blocks.map((b) => b.id), new Set(byBlock.keys()));
+  if (missing.length > 0) throw new UserError(`Faltam gravações nos blocos: ${missing.join(", ")}.`);
+
+  const normalized: string[] = [];
+  for (const [i, block] of blocks.entries()) {
+    await progress(db, job.id, "juntando", 10 + (35 * i) / blocks.length);
+    const rec = byBlock.get(block.id)!;
+    const raw = path.join(workdir, `raw-${i}${path.extname(rec.storage_path)}`);
+    const norm = path.join(workdir, `bloco-${i}.mp4`);
+    await download(db, "recordings", rec.storage_path, raw);
+    await normalize(raw, norm, videoKbps);
+    normalized.push(norm);
+  }
+
+  const durations = await Promise.all(normalized.map(async (f) => (await probe(f)).duration));
+  const list = path.join(workdir, "lista.txt");
+  await writeFile(list, normalized.map((f) => `file '${f}'`).join("\n"));
+  const finalFile = path.join(workdir, "final.mp4");
+  await run(["-y", "-f", "concat", "-safe", "0", "-i", list, "-c", "copy", "-movflags", "+faststart", finalFile]);
+  return { finalFile, ranges: blockRanges(durations) };
+}
+
+/** Take único: padroniza o vídeo e descobre onde cada bloco foi falado, pela transcrição com tempos. */
+async function prepareTake({ db, job, workdir, deps }: JobContext, blocks: Block[], rec: Rec, videoKbps: number): Promise<Prepared> {
+  await progress(db, job.id, "juntando", 15);
+  const raw = path.join(workdir, `take${path.extname(rec.storage_path)}`);
+  const finalFile = path.join(workdir, "final.mp4");
+  await download(db, "recordings", rec.storage_path, raw);
+  await normalize(raw, finalFile, videoKbps);
+  const duration = (await probe(finalFile)).duration;
+
+  await progress(db, job.id, "transcrevendo", 35);
+  const audio = path.join(workdir, "audio.mp3");
+  await run(["-y", "-i", finalFile, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "32k", audio]);
+  const words = await (deps?.transcribe ?? transcribeViaApp)({ audioFile: audio, jobId: job.id, recordingId: rec.id });
+
+  const { ranges, confidence } = alignBlocks(blocks.map((b) => b.text), words);
+  const clamped = ranges.map((r) => ({ startSeconds: Math.min(duration, Math.max(0, r.startSeconds)), endSeconds: Math.min(duration, Math.max(0, r.endSeconds)) }));
+  return { finalFile, ranges: clamped, warning: confidence < MIN_ALIGN_CONFIDENCE ? MSG_CHECK_CUTS : undefined };
 }

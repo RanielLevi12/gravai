@@ -24,6 +24,8 @@ export class AiError extends Error {
 
 export type OcrImage = { data: Buffer; mediaType: string };
 export type Transcription = { text: string; seconds: number };
+/** Fala com tempo por palavra (segundos), para achar onde cada trecho do script foi dito. */
+export type WordTranscription = { words: { w: string; s: number; e: number }[]; seconds: number };
 export type ScriptCheck = { toneOk: number; ctaPresent: number | null };
 /** Por trecho, em 0..1: força do gancho e chance de recomeçar o vídeo (null = não perguntado). */
 export type ExcerptReview = { hook: number[]; restart: number[] | null };

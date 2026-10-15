@@ -157,4 +157,27 @@ describe.skipIf(!URL || !SERVICE)("render por blocos", () => {
     expect(after![0].id).not.toBe(before![0].id);
     expect((await db.storage.from("exports").download(before![0].storage_path)).error).not.toBeNull();
   });
+
+  describe("take único", () => {
+    const w = (text: string, s: number) => ({ w: text, s, e: s + 0.4 });
+    const said = [w("Bloco", 0), w("1", 0.4), w("Bloco", 1), w("2", 1.4), w("Bloco", 2), w("3", 2.4)];
+
+    it("acha os blocos pela transcrição e corta nos tempos falados", async () => {
+      const { job, projectId } = await setup({ recorded: [1], kind: "take", cuts: [cut("c1", 2, 3, "Do segundo ao terceiro")] });
+      await handle(db, job, { transcribe: async () => said });
+      const { data: j } = await db.from("jobs").select("status, error").eq("id", job.id).single();
+      expect(j).toEqual({ status: "done", error: null });
+      const { data: row } = await db.from("exports").select("storage_path").eq("project_id", projectId).eq("kind", "cut").single();
+      const c1 = await probe(await fetchExport(row!.storage_path, "mp4"));
+      expect(c1.duration).toBeGreaterThan(1.9);
+      expect(c1.duration).toBeLessThan(2.4);
+    });
+
+    it("fala que não bate com o script termina com aviso", async () => {
+      const { job } = await setup({ recorded: [1], kind: "take" });
+      await handle(db, job, { transcribe: async () => [w("outra", 0), w("coisa", 1), w("totalmente", 2)] });
+      const { data: j } = await db.from("jobs").select("status, error").eq("id", job.id).single();
+      expect(j).toEqual({ status: "done", error: "Confira o início e o fim dos cortes." });
+    });
+  });
 });

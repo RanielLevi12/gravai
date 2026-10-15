@@ -1,7 +1,7 @@
 import "server-only";
 import OpenAI from "openai";
 import type { ChatCompletionContentPart, ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
-import { AiError, type OcrImage, type Transcription } from "./schemas";
+import { AiError, type OcrImage, type Transcription, type WordTranscription } from "./schemas";
 import type { AiUsage } from "./usage-types";
 import { probeAudio } from "./audio";
 
@@ -9,6 +9,8 @@ import { probeAudio } from "./audio";
 export const TEXT_MODEL = "openai/gpt-6-luna";
 export const OCR_MODEL = "anthropic/claude-haiku-5.5";
 export const AUDIO_MODEL = "google/gemini-3.8-flash";
+// Transcrição com tempo por palavra (endpoint /audio/transcriptions, formato verbose_json).
+export const WORDS_MODEL = "openai/whisper-large-v3";
 
 const BASE_URL = "https://openrouter.ai/api/v1";
 const MAX_OCR_CHARS = 60_000;
@@ -169,6 +171,39 @@ export function createOpenRouterAi(apiKey: string, opts: { fetch?: typeof fetch;
         "audio",
       );
       return { text, seconds };
+    },
+
+    /** Áudio → palavras com início e fim, pelo endpoint de transcrição (multipart, até 25 MB). */
+    async transcribeWords(file: Buffer, filename: string): Promise<WordTranscription> {
+      const form = new FormData();
+      form.append("file", new Blob([new Uint8Array(file)]), filename);
+      form.append("model", WORDS_MODEL);
+      form.append("response_format", "verbose_json");
+      form.append("timestamp_granularities[]", "word");
+      try {
+        const res = await (opts.fetch ?? fetch)(`${BASE_URL}/audio/transcriptions`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "X-Title": "Gravai" },
+          body: form,
+          signal: AbortSignal.timeout(opts.timeoutMs ?? FILE_TIMEOUT_MS),
+        });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const json = (await res.json()) as {
+          duration?: unknown;
+          words?: { word?: unknown; start?: unknown; end?: unknown }[];
+          usage?: { cost?: unknown };
+        };
+        if (typeof json.usage?.cost === "number") opts.onUsage?.({ kind: "audio", model: WORDS_MODEL, costUsd: json.usage.cost });
+        const words = (json.words ?? []).flatMap((x) =>
+          typeof x.word === "string" && typeof x.start === "number" && typeof x.end === "number" ? [{ w: x.word.trim(), s: x.start, e: x.end }] : [],
+        );
+        if (words.length === 0 || typeof json.duration !== "number") throw new AiError(AUDIO_FAIL, { code: "invalid_output" });
+        return { words, seconds: json.duration };
+      } catch (e) {
+        if (e instanceof AiError) throw e;
+        // Só o status vai para o cause; a chave nunca entra na mensagem.
+        throw new AiError(AUDIO_FAIL, { code: "provider", cause: e });
+      }
     },
   };
 }

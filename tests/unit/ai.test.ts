@@ -65,6 +65,7 @@ describe("camada de IA com mock", () => {
         ocrImages: async () => "",
         ocrPdf: async () => "",
         transcribeAudio: async () => ({ text: "", seconds: 0 }),
+        transcribeWords: async () => ({ words: [], seconds: 0 }),
         rawJson: async () => {
           calls++;
           vi.advanceTimersByTime(110_000);
@@ -181,11 +182,11 @@ describe("withUserAi", () => {
     expect(await ai.generateJson(z.object({ a: z.number() }), "s", "u")).toEqual({ a: 1 });
   });
 
-  it("com conexão e sem mock devolve as quatro funções", async () => {
+  it("com conexão e sem mock devolve as cinco funções", async () => {
     vi.stubEnv("AI_MOCK", "");
     keys.value = "sk-or-v1-x";
     const ai = await withUserAi(UID);
-    expect(Object.keys(ai).sort()).toEqual(["generateJson", "ocrImages", "ocrPdf", "transcribeAudio"]);
+    expect(Object.keys(ai).sort()).toEqual(["generateJson", "ocrImages", "ocrPdf", "transcribeAudio", "transcribeWords"]);
   });
 
   it("JSON inválido duas vezes → code 'invalid_output'", async () => {
