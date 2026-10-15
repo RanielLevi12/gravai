@@ -325,6 +325,8 @@ git commit -m "chore(worker): fly.toml and deploy notes"
 
 **2026-10-15:** migração `0011` aplicada em produção (Supabase `dieciotgdpgmxccxjqsy`) com o sim do usuário; `db push --dry-run` depois confirma "up to date". Falta o resto da lista pendente acima.
 
+**2026-10-15 — mudança de rumo (decisão do usuário):** o worker roda na **VPS Hostinger** com Docker, não no Fly. Removidos `fly.toml`, o cron diário (`vercel.json`) e a rota `/api/internal/wake`; `WORKER_IDLE_EXIT_MS` (padrão 0 = não sai); adicionado `worker/docker-compose.yml`. `wakeWorker`/`trigger.ts` ficam inofensivos (sem `FLY_*` não fazem nada). Pendente: deploy na VPS, `WORKER_SECRET` na Vercel, push, teste real, conferir .zip em stream na Vercel.
+
 ## Self-review
 
 - **Cobertura do spec:** fluxo (T2), dados e limpeza (T1, T9), worker por blocos (T3–T4), take com transcrição (T6), entrega e downloads (T5), zip (T7), ajuste manual (T8), Fly/custos/segredos (T10), erros de borda (Review Focus + T4, T9).

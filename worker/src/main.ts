@@ -4,7 +4,8 @@ import { handle } from "./jobs";
 import { purgeExpired } from "./purge";
 
 const POLL_MS = 5_000;
-const IDLE_EXIT_MS = 60_000;
+// 0 (padrão) = fica ligado esperando pedidos (VPS); >0 = sai após esse tempo ocioso (máquinas que ligam sob demanda).
+const IDLE_EXIT_MS = Number(process.env.WORKER_IDLE_EXIT_MS ?? 0);
 const PURGE_EVERY_MS = 3_600_000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -18,7 +19,7 @@ function env(name: string): string {
 async function main() {
   const db = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false, autoRefreshToken: false } });
   let idleSince = Date.now();
-  let lastPurge = 0; // a máquina liga sob demanda: limpa logo ao ligar e depois no máximo 1 vez por hora
+  let lastPurge = 0; // limpa logo ao ligar e depois no máximo 1 vez por hora
   for (;;) {
     if (Date.now() - lastPurge > PURGE_EVERY_MS) {
       lastPurge = Date.now();
@@ -31,7 +32,7 @@ async function main() {
       idleSince = Date.now();
       continue;
     }
-    if (Date.now() - idleSince > IDLE_EXIT_MS) break; // sem trabalho: a máquina do Fly desliga
+    if (IDLE_EXIT_MS > 0 && Date.now() - idleSince > IDLE_EXIT_MS) break; // sem trabalho: sai e a máquina desliga
     await sleep(POLL_MS);
   }
 }
