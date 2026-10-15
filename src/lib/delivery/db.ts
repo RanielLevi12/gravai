@@ -33,6 +33,8 @@ export function supabaseDeliveryDb(deps: { supabase: SupabaseClient<Database> })
         if (error.code === "P0002") throw new Error(MSG_PROJECT_NOT_FOUND);
         throw new Error("create job failed");
       }
+      // Gerar vídeos "vê" o script atual: o aviso de script desatualizado só volta se algo mudar depois.
+      if (kind === "render") await supabase.from("projects").update({ script_stale: false }).eq("id", projectId);
       return data as string;
     },
     async exportsOf(projectId) {

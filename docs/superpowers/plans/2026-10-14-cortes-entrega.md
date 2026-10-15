@@ -321,6 +321,8 @@ git commit -m "chore(worker): fly.toml and deploy notes"
 
 ---
 
+**Registro (parcial, só o que é local):** `worker/fly.toml` (sem `[http_service]` → não há auto_stop do Fly; o worker sai sozinho após 60 s ocioso e a máquina para), README do worker com variáveis e passos do deploy, `vercel.json` com cron diário (05:00 UTC) → `GET /api/internal/wake` (exige `CRON_SECRET`; liga o worker, que limpa os vencidos ao ligar), `script_stale` zerado ao criar pedido `render` (decisão do usuário). Testes: `wake-route.test.ts`, integração do `script_stale`. **Pendente, com sim do usuário (nada disto foi feito):** conta/`flyctl` no Fly (usuário ainda não tem), migração 0011 em produção (`db push --dry-run` primeiro), `fly secrets`/`fly deploy`, variáveis na Vercel (`FLY_API_TOKEN`, `FLY_APP`, `WORKER_SECRET`, `CRON_SECRET`), push, conferir o .zip em stream acima de 4,5 MB, teste real no celular. A decisão de usar pg_cron foi trocada pelo cron da Vercel (apaga também os arquivos do bucket).
+
 ## Self-review
 
 - **Cobertura do spec:** fluxo (T2), dados e limpeza (T1, T9), worker por blocos (T3–T4), take com transcrição (T6), entrega e downloads (T5), zip (T7), ajuste manual (T8), Fly/custos/segredos (T10), erros de borda (Review Focus + T4, T9).

@@ -209,3 +209,16 @@ describe("zip da entrega (RLS real)", () => {
     await admin.storage.from("exports").remove([final.storage_path]);
   });
 });
+
+describe("gerar vídeos zera o aviso de script desatualizado", () => {
+  it("render zera script_stale; recut não mexe", async () => {
+    const projectId = await newProject(A);
+    await admin.from("projects").update({ script_stale: true }).eq("id", projectId);
+    const db = supabaseDeliveryDb({ supabase: A.client as never });
+    await db.createJob(projectId, "recut", {});
+    expect((await admin.from("projects").select("script_stale").eq("id", projectId).single()).data?.script_stale).toBe(true);
+    await admin.from("jobs").update({ status: "done" }).eq("project_id", projectId);
+    await db.createJob(projectId, "render", {});
+    expect((await admin.from("projects").select("script_stale").eq("id", projectId).single()).data?.script_stale).toBe(false);
+  });
+});
