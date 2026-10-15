@@ -65,6 +65,26 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"exports": {
+                  Row: {
+                    "created_at": string,"cut_id": string | null,"duration_seconds": number | null,"end_seconds": number | null,"expires_at": string,"id": string,"kind": string,"mime": string,"project_id": string,"size_bytes": number,"start_seconds": number | null,"storage_path": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"cut_id"?: string | null,"duration_seconds"?: number | null,"end_seconds"?: number | null,"expires_at": string,"id"?: string,"kind": string,"mime": string,"project_id": string,"size_bytes": number,"start_seconds"?: number | null,"storage_path": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"cut_id"?: string | null,"duration_seconds"?: number | null,"end_seconds"?: number | null,"expires_at"?: string,"id"?: string,"kind"?: string,"mime"?: string,"project_id"?: string,"size_bytes"?: number,"start_seconds"?: number | null,"storage_path"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "exports_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"folders": {
                   Row: {
                     "about": string | null,"color": string,"created_at": string,"id": string,"name": string,"settings": NonNullable<Json>,"user_id": string
@@ -78,6 +98,26 @@ export type Database = {
                   }
                   Relationships: [
                     
+                  ]
+                },"jobs": {
+                  Row: {
+                    "attempts": number,"created_at": string,"error": string | null,"finished_at": string | null,"heartbeat_at": string | null,"id": string,"kind": string,"payload": NonNullable<Json>,"progress": number,"project_id": string,"started_at": string | null,"status": string,"step": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"created_at"?: string,"error"?: string | null,"finished_at"?: string | null,"heartbeat_at"?: string | null,"id"?: string,"kind": string,"payload"?: NonNullable<Json>,"progress"?: number,"project_id": string,"started_at"?: string | null,"status"?: string,"step"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "attempts"?: number,"created_at"?: string,"error"?: string | null,"finished_at"?: string | null,"heartbeat_at"?: string | null,"id"?: string,"kind"?: string,"payload"?: NonNullable<Json>,"progress"?: number,"project_id"?: string,"started_at"?: string | null,"status"?: string,"step"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "jobs_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"profiles": {
                   Row: {
@@ -179,6 +219,32 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"transcripts": {
+                  Row: {
+                    "created_at": string,"project_id": string,"recording_id": string,"user_id": string,"words": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"project_id": string,"recording_id": string,"user_id": string,"words": NonNullable<Json>
+                  }
+                  Update: {
+                    "created_at"?: string,"project_id"?: string,"recording_id"?: string,"user_id"?: string,"words"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "transcripts_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "transcripts_recording_id_fkey"
+      columns: ["recording_id"]
+isOneToOne: true
+      referencedRelation: "recordings"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"usage_months": {
                   Row: {
                     "month": string,"projects": number,"transcription_seconds": number,"user_id": string
@@ -199,7 +265,30 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "consume_usage":
+            "claim_job":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "attempts": number,
+"created_at": string,
+"error": string | null,
+"finished_at": string | null,
+"heartbeat_at": string | null,
+"id": string,
+"kind": string,
+"payload": NonNullable<Json>,
+"progress": number,
+"project_id": string,
+"started_at": string | null,
+"status": string,
+"step": string | null,
+"user_id": string
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "jobs"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
+"consume_usage":
 { Args: { "p_projects": number,"p_seconds": number }; Returns: boolean
                            },
 "create_episode_projects":
@@ -210,11 +299,20 @@ isOneToOne: false
 "create_project":
 { Args: { "p_folder_id"?: string,"p_seconds"?: number,"p_source_kind": string,"p_source_text": string,"p_source_truncated"?: boolean,"p_title": string }; Returns: string
                            },
+"create_render_job":
+{ Args: { "p_kind": string,"p_payload"?: Json,"p_project": string }; Returns: string
+                           },
 "finish_recording":
 { Args: { "p_duration": number,"p_id": string,"p_size_bytes": number }; Returns: (string)[]
                            },
+"purge_expired_exports":
+{ Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
 "refund_usage":
 { Args: { "p_projects": number,"p_seconds": number,"p_user": string }; Returns: undefined
+                           },
+"requeue_stale_jobs":
+{ Args: Record<PropertyKey, never>; Returns: number
                            }
           }
           Enums: {

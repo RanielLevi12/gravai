@@ -55,6 +55,7 @@ test("sugerir cortes, ajustar começo e fim, marcar à mão, remover e manter ao
   // Marcar à mão usa o primeiro trecho livre (a abertura) e aceita um título.
   await page.getByRole("button", { name: "Marcar à mão" }).click();
   await expect(page.getByText("Corte 1", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Marcar à mão" })).toBeEnabled();
   await page.getByLabel("Título do corte 1").fill("Minha abertura");
   const salvou = page.waitForResponse((r) => r.request().method() === "POST");
   await page.getByLabel("Título do corte 1").blur();

@@ -1,0 +1,10 @@
+# Na VPS: `docker compose up -d --build` dentro de worker/. Lê as variáveis de worker/.env (não vai para o git).
+services:
+  worker:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    # Sem portas: o worker só faz chamadas de saída (Supabase e o app).
+    # VPS dividida com outros projetos: o ffmpeg não pode tomar a máquina inteira.
+    cpus: "0.6"
+    mem_limit: 1g
