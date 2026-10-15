@@ -327,6 +327,8 @@ git commit -m "chore(worker): fly.toml and deploy notes"
 
 **2026-10-15 — mudança de rumo (decisão do usuário):** o worker roda na **VPS Hostinger** com Docker, não no Fly. Removidos `fly.toml`, o cron diário (`vercel.json`) e a rota `/api/internal/wake`; `WORKER_IDLE_EXIT_MS` (padrão 0 = não sai); adicionado `worker/docker-compose.yml`. `wakeWorker`/`trigger.ts` ficam inofensivos (sem `FLY_*` não fazem nada). Pendente: deploy na VPS, `WORKER_SECRET` na Vercel, push, teste real, conferir .zip em stream na Vercel.
 
+**2026-10-15 (VPS):** branch `feat/cortes-entrega` enviada ao GitHub; na VPS Hostinger `srv2031318` (1 CPU, 3,8 GB, dividida com PastorAI e sites; Docker 29) o worker roda de `/opt/gravai/worker` via `docker compose` (limite 0,6 CPU e 1 GB), `.env` com `SUPABASE_URL`, `WORKER_SECRET` e `SUPABASE_SERVICE_ROLE_KEY` (o usuário digitou as chaves; `APP_URL` ainda falta). Subiu e ficou estável (sem erro nos logs). **Descoberta:** o app **não tem deploy de produção na Vercel** (nenhum deployment). Pendente: decidir merge/deploy do app, `APP_URL` e `WORKER_SECRET` na Vercel (o mesmo valor do `.env` da VPS; só o take único precisa), teste real no celular, conferir .zip em stream na Vercel, rotacionar a `service_role` (apareceu no chat).
+
 ## Self-review
 
 - **Cobertura do spec:** fluxo (T2), dados e limpeza (T1, T9), worker por blocos (T3–T4), take com transcrição (T6), entrega e downloads (T5), zip (T7), ajuste manual (T8), Fly/custos/segredos (T10), erros de borda (Review Focus + T4, T9).
