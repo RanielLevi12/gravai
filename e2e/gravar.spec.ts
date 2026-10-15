@@ -54,10 +54,15 @@ test("take único: grava, vê a prévia, usa e aprova", async ({ page }) => {
   await page.getByRole("button", { name: "Usar este" }).click();
   await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar$`));
   await page.getByRole("button", { name: "Aprovar e guardar" }).click();
-  await expect(page.getByText("Seu vídeo está guardado")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Suas gravações" })).toBeVisible();
 
   await page.goto("/projetos");
   await expect(page.getByText("Gravado", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Ver" }).first().click();
+  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar$`));
+  const video = page.getByLabel("Gravação: Vídeo inteiro");
+  await expect(video).toBeVisible();
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState), { timeout: 15_000 }).toBeGreaterThan(0);
 
   const { data } = await admin().from("recordings").select("kind, status").eq("project_id", id);
   expect(data).toEqual([{ kind: "take", status: "ready" }]);
@@ -89,7 +94,7 @@ test("por blocos: refaz o 1º, grava todos e fica uma gravação pronta por bloc
   }
 
   await page.getByRole("button", { name: "Aprovar e guardar" }).click();
-  await expect(page.getByText("Seu vídeo está guardado")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Suas gravações" })).toBeVisible();
 
   const { data } = await admin().from("recordings").select("block_id, status").eq("project_id", id);
   expect(data).toHaveLength(BLOCOS);
@@ -97,7 +102,7 @@ test("por blocos: refaz o 1º, grava todos e fica uma gravação pronta por bloc
   expect(new Set(data!.map((r) => r.block_id)).size).toBe(BLOCOS);
 });
 
-test("vídeo de fora: aceita um pequeno e recusa um de 51 MB", async ({ page }, testInfo) => {
+test("vídeo de fora: aceita um pequeno e recusa um de 501 MB", async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   const id = await projetoComScript(page, "gravar-fora");
   await page.goto(`/projetos/${id}/gravar`);
@@ -107,14 +112,14 @@ test("vídeo de fora: aceita um pequeno e recusa um de 51 MB", async ({ page }, 
   // O Playwright não aceita buffer acima de 50 MB: o arquivo grande vai por caminho (esparso, quase sem disco).
   const grande = testInfo.outputPath("grande.webm");
   writeFileSync(grande, "");
-  truncateSync(grande, 51 * 1024 * 1024);
+  truncateSync(grande, 501 * 1024 * 1024);
   await arquivo.setInputFiles(grande);
-  await expect(page.getByText("Este vídeo passa de 50 MB. Grave por blocos no app ou reduza o tamanho antes de enviar.")).toBeVisible();
+  await expect(page.getByText("Este vídeo passa de 500 MB. Grave por blocos no app ou reduza o tamanho antes de enviar.")).toBeVisible();
 
   await arquivo.setInputFiles({ name: "pequeno.webm", mimeType: "video/webm", buffer: Buffer.alloc(200 * 1024, 1) });
   await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar$`));
   await page.getByRole("button", { name: "Aprovar e guardar" }).click();
-  await expect(page.getByText("Seu vídeo está guardado")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Suas gravações" })).toBeVisible();
 
   const { data } = await admin().from("recordings").select("kind, status").eq("project_id", id);
   expect(data).toEqual([{ kind: "external", status: "ready" }]);
@@ -178,4 +183,32 @@ test("teleprompter: arrastar com o dedo move o texto e segura enquanto o dedo es
   await expect(texto).toHaveAccessibleName("Pausar texto");
   await texto.click();
   await expect(texto).toHaveAccessibleName("Continuar texto");
+});
+
+test("ajustes de câmera: troca para trás e Alta, guarda no aparelho e grava", async ({ page }) => {
+  test.setTimeout(90_000);
+  const id = await projetoComScript(page, "gravar-camera");
+  await page.goto(`/projetos/${id}/gravar/teleprompter?modo=take`);
+  await expect(page.getByRole("button", { name: "Começar a gravar" })).toBeEnabled({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  await page.getByRole("button", { name: "Trás (melhor imagem)" }).click();
+  await page.getByRole("button", { name: "Alta" }).click();
+  await expect(page.getByText(/Mais nítida\. Cada gravação vai até \d+:\d\d\./)).toBeVisible();
+  const camera = () =>
+    page.locator("video").first().evaluate((v: HTMLVideoElement) => {
+      const t = (v.srcObject as MediaStream | null)?.getVideoTracks()[0];
+      return t ? JSON.stringify(t.getConstraints()) : "";
+    });
+  await expect.poll(camera, { timeout: 10_000 }).toContain("environment");
+  expect(await camera()).toContain("1920");
+  await page.getByRole("button", { name: "Pronto" }).click();
+
+  await page.reload();
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  await expect(page.getByRole("button", { name: "Alta" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Trás (melhor imagem)" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Pronto" }).click();
+
+  await gravar(page, 2);
 });

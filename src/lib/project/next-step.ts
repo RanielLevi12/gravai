@@ -24,8 +24,9 @@ export function nextStepHref(project: ProjectStep): string {
     case "script":
       return `${base}/script`;
     case "gravacao":
-    case "gravado":
       return `${base}/gravar`;
+    case "gravado":
+      return `${base}/gravar/aprovar`;
     default:
       return base;
   }

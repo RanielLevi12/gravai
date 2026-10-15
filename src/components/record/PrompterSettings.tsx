@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import styles from "./record.module.css";
 
@@ -50,15 +51,20 @@ export function PrompterSettings({
   prefs,
   onChange,
   onClose,
+  children,
 }: {
   prefs: PrompterPrefs;
   onChange: (p: PrompterPrefs) => void;
   onClose: () => void;
+  /** Ajustes de câmera e som, acima dos do texto. */
+  children?: ReactNode;
 }) {
   const set = (patch: Partial<PrompterPrefs>) => onChange({ ...prefs, ...patch });
   const chip = (on: boolean) => `${styles.chip} ${on ? styles.chipOn : ""}`;
   return (
-    <div className={styles.sheet} role="dialog" aria-label="Ajustes do teleprompter">
+    <div className={styles.sheet} role="dialog" aria-label="Ajustes">
+      {children}
+      <p className={styles.groupTitle}>Texto</p>
       <label className={styles.setting}>
         Tamanho da letra
         <input type="range" min={20} max={40} step={1} value={prefs.fontPx} onChange={(e) => set({ fontPx: Number(e.target.value) })} />

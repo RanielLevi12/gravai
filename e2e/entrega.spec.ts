@@ -17,7 +17,7 @@ test("gerar vídeos: cria um pedido só, mesmo com duplo clique, e mostra a fila
   const db = adminDb();
 
   await page.goto(`/projetos/${id}/gravar/aprovar`);
-  await expect(page.getByText("Seu vídeo está guardado")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Suas gravações" })).toBeVisible();
   await page.getByRole("link", { name: "Gerar vídeos" }).click();
   await expect(page).toHaveURL(new RegExp(`/projetos/${id}/entrega$`));
 

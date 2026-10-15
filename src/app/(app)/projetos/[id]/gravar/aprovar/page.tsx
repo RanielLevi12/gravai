@@ -7,7 +7,7 @@ import styles from "@/components/record/record.module.css";
 import { blockLabel, clock } from "@/components/script/format";
 import scriptStyles from "@/components/script/script.module.css";
 import { Button } from "@/components/ui/Button";
-import { canApprove, type RecordMode } from "@/lib/record/rules";
+import { canApprove, recordingsInOrder, type RecordMode } from "@/lib/record/rules";
 import type { BlockKind } from "@/lib/script/generate";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -66,23 +66,10 @@ export default async function AprovarPage({
     }
   }
 
-  if (project.status === "gravado" || project.status === "pronto") {
-    return (
-      <main className={styles.page}>
-        <h1 className={styles.title}>Seu vídeo está guardado.</h1>
-        <p className={styles.hint}>Agora dá para gerar o vídeo final e os cortes.</p>
-        <Button href={`/projetos/${id}/entrega`}>Gerar vídeos</Button>
-        <Button href="/projetos" variant="soft">
-          Ir para Projetos
-        </Button>
-      </main>
-    );
-  }
-
   const [{ data: readyRows }, { data: blockRows }] = await Promise.all([
     supabase
       .from("recordings")
-      .select("kind, block_id, duration_seconds, created_at")
+      .select("id, kind, block_id, storage_path, duration_seconds, created_at")
       .eq("project_id", id)
       .eq("status", "ready")
       .order("created_at", { ascending: false }),
@@ -90,6 +77,55 @@ export default async function AprovarPage({
   ]);
   const ready = readyRows ?? [];
   const blocks = blockRows ?? [];
+
+  let bodyIndex = 0;
+  const labels = blocks.map((b) => {
+    if (b.kind === "body") bodyIndex += 1;
+    return { id: b.id, label: b.kind === "body" ? `Trecho ${bodyIndex}` : blockLabel(b.kind as BlockKind, b.cut_index) };
+  });
+
+  if (project.status === "gravado" || project.status === "pronto") {
+    const clips = recordingsInOrder(
+      ready.map((r) => ({ ...r, kind: r.kind as "take" | "block" | "external", blockId: r.block_id, createdAt: r.created_at })),
+      labels,
+    );
+    const clipsTotal = clips.reduce((sum, c) => sum + Number(c.duration_seconds ?? 0), 0);
+    const { data: signed } = clips.length
+      ? await supabase.storage.from("recordings").createSignedUrls(clips.map((c) => c.storage_path), 300)
+      : { data: [] };
+    const urlOf = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+    return (
+      <main className={styles.page}>
+        {back}
+        <h1 className={styles.title}>Suas gravações</h1>
+        <p className={styles.hint}>
+          {clips.length === 1 ? "1 gravação" : `${clips.length} gravações`}
+          {clipsTotal > 0 ? ` · ${clock(clipsTotal)} no total` : ""}
+        </p>
+        {clips.length === 0 ? <p className={styles.hint}>Não achei as gravações deste projeto.</p> : null}
+        <ul className={styles.blocks}>
+          {clips.map((c) => {
+            const url = urlOf.get(c.storage_path);
+            return (
+              <li key={c.id} className={styles.clip}>
+                <span className={styles.clipLabel}>{c.label}</span>
+                {url ? (
+                  <video className={styles.preview} src={url} controls playsInline preload="metadata" aria-label={`Gravação: ${c.label}`} />
+                ) : (
+                  <p className={styles.hint}>Não consegui abrir este vídeo agora. Recarregue a página.</p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <Button href={`/projetos/${id}/entrega`}>Gerar vídeos</Button>
+        <Button href={`/projetos/${id}/gravar`} variant="soft">
+          Gravar de novo
+        </Button>
+      </main>
+    );
+  }
+
   if (ready.length === 0) redirect(`/projetos/${id}/gravar`);
 
   const mode: RecordMode = MODE_OF[ready[0].kind as keyof typeof MODE_OF] ?? "take";
@@ -100,11 +136,6 @@ export default async function AprovarPage({
   });
   const total = ready.reduce((sum, r) => sum + Number(r.duration_seconds ?? 0), 0);
 
-  let bodyIndex = 0;
-  const labels = blocks.map((b) => {
-    if (b.kind === "body") bodyIndex += 1;
-    return { id: b.id, label: b.kind === "body" ? `Trecho ${bodyIndex}` : blockLabel(b.kind as BlockKind, b.cut_index) };
-  });
   const recorded = Object.fromEntries(ready.filter((r) => r.block_id).map((r) => [r.block_id as string, true]));
 
   return (

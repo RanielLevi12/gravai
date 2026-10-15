@@ -1,4 +1,5 @@
-import { AUDIO_BPS, VIDEO_BPS, WARN_TAKE_SECONDS } from "@/lib/record/limits";
+import { captureConstraints, DEFAULT_CAPTURE, maxRecordSeconds, QUALITY, type CaptureSettings } from "@/lib/record/capture";
+import { AUDIO_BPS, MAX_TAKE_SECONDS, WARN_TAKE_SECONDS } from "@/lib/record/limits";
 import { pickMimeType } from "@/lib/record/mime";
 
 export type RecState = "idle" | "denied" | "unsupported" | "ready" | "counting" | "recording" | "stopped";
@@ -40,7 +41,14 @@ export type RecorderEnv = {
   markMeta: (id: string, m: { mime: string; projectId: string; kind: string; blockId: string | null }) => Promise<void>;
 };
 
-export type RecorderOpts = { projectId: string; kind: "take" | "block"; blockId: string | null; maxSeconds: number };
+export type RecorderOpts = {
+  projectId: string;
+  kind: "take" | "block";
+  blockId: string | null;
+  maxSeconds: number;
+  /** Câmera, microfone e qualidade; sem isso, o padrão. */
+  capture?: CaptureSettings;
+};
 
 const INITIAL: RecSnapshot = { state: "idle", stream: null, elapsed: 0, count: 0, warn: false, error: null, result: null };
 
@@ -52,6 +60,7 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
   let recorder: MediaRecorderLike | null = null;
   let chunks: Blob[] = [];
   let dead = false;
+  let settings = opts.capture ?? DEFAULT_CAPTURE;
 
   const set = (p: Partial<RecSnapshot>) => {
     snap = { ...snap, ...p };
@@ -63,18 +72,31 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
   async function open(): Promise<boolean> {
     if (snap.stream) return true;
     if (!env.MediaRecorder) return set({ state: "unsupported" }), false;
+    let stream: MediaStream;
     try {
-      const stream = await env.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 } },
-        audio: true,
-      });
-      if (dead) return stream.getTracks().forEach((t) => t.stop()), false;
-      set({ stream, state: "ready", error: null });
-      return true;
+      stream = await env.getUserMedia(captureConstraints(settings));
     } catch {
-      set({ state: "denied" });
-      return false;
+      // Câmera ou microfone escolhido sumiu (fone desligado, outro aparelho): tenta o padrão.
+      if (!settings.cameraId && !settings.micId) return set({ state: "denied" }), false;
+      try {
+        stream = await env.getUserMedia(captureConstraints({ ...settings, cameraId: null, micId: null }));
+      } catch {
+        return set({ state: "denied" }), false;
+      }
     }
+    if (dead) return stream.getTracks().forEach((t) => t.stop()), false;
+    set({ stream, state: "ready", error: null });
+    return true;
+  }
+
+  /** Troca câmera, microfone ou qualidade; fora da gravação, abre a câmera de novo. */
+  async function configure(next: CaptureSettings): Promise<void> {
+    if (snap.state === "counting" || snap.state === "recording") return;
+    settings = next;
+    if (!snap.stream) return;
+    releaseTracks();
+    set({ stream: null, state: "idle" });
+    await open();
   }
 
   async function start() {
@@ -94,7 +116,9 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
     await env.markMeta(created.id, { mime, projectId: opts.projectId, kind: opts.kind, blockId: opts.blockId });
 
     chunks = [];
-    const rec = new MR(snap.stream, { mimeType: mime, videoBitsPerSecond: VIDEO_BPS, audioBitsPerSecond: AUDIO_BPS });
+    const limit = Math.min(opts.maxSeconds, maxRecordSeconds(settings.quality));
+    const warnAt = limit - (MAX_TAKE_SECONDS - WARN_TAKE_SECONDS);
+    const rec = new MR(snap.stream, { mimeType: mime, videoBitsPerSecond: QUALITY[settings.quality].videoBps, audioBitsPerSecond: AUDIO_BPS });
     recorder = rec;
     rec.ondataavailable = (e) => {
       if (e.data.size === 0) return;
@@ -115,8 +139,8 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
     set({ state: "recording", count: 0, elapsed: 0, warn: false });
     timer = setInterval(() => {
       const elapsed = snap.elapsed + 1;
-      set({ elapsed, warn: opts.kind === "take" && elapsed >= WARN_TAKE_SECONDS });
-      if (elapsed >= opts.maxSeconds) stop();
+      set({ elapsed, warn: opts.kind === "take" && elapsed >= warnAt });
+      if (elapsed >= limit) stop();
     }, 1000);
   }
 
@@ -149,6 +173,7 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
     getSnapshot: () => snap,
     subscribe: (l: () => void) => (listeners.add(l), () => void listeners.delete(l)),
     open,
+    configure,
     revive,
     start,
     stop,

@@ -5,8 +5,11 @@ import { validateExternalFile } from "@/lib/record/rules";
 const MB = 1024 * 1024;
 
 describe("validateExternalFile", () => {
-  it("recusa mais de 50 MB", () => {
-    expect(validateExternalFile({ size: 52 * MB, type: "video/mp4" })).toEqual({ ok: false, error: MSG_FILE_TOO_BIG });
+  it("recusa mais de 500 MB", () => {
+    expect(validateExternalFile({ size: 501 * MB, type: "video/mp4" })).toEqual({ ok: false, error: MSG_FILE_TOO_BIG });
+  });
+  it("aceita vídeo de celular de 300 MB", () => {
+    expect(validateExternalFile({ size: 300 * MB, type: "video/mp4" })).toEqual({ ok: true });
   });
   it("aceita mp4 de 10 MB", () => {
     expect(validateExternalFile({ size: 10 * MB, type: "video/mp4" })).toEqual({ ok: true });

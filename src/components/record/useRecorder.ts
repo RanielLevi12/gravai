@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { startRecording } from "@/lib/record/actions";
 import { appendChunk, markMeta } from "@/lib/record/store";
+import { loadCapture } from "./CaptureSettings";
 import { createRecorder, type RecorderEnv, type RecorderOpts } from "./recorder";
 
 export type { RecResult, RecSnapshot, RecState } from "./recorder";
@@ -28,9 +29,10 @@ export function useRecorder(opts: RecorderOpts) {
 
   useEffect(() => {
     rec.revive();
-    void rec.open();
+    // Configuração salva no aparelho (só existe no navegador) antes de abrir a câmera.
+    void rec.configure(loadCapture()).then(() => rec.open());
     return rec.release;
   }, [rec]);
 
-  return { ...snap, start: rec.start, stop: rec.stop, reset: rec.reset };
+  return { ...snap, start: rec.start, stop: rec.stop, reset: rec.reset, configure: rec.configure };
 }
