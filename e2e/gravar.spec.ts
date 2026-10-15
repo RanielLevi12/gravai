@@ -102,7 +102,7 @@ test("por blocos: refaz o 1º, grava todos e fica uma gravação pronta por bloc
   expect(new Set(data!.map((r) => r.block_id)).size).toBe(BLOCOS);
 });
 
-test("vídeo de fora: aceita um pequeno e recusa um de 51 MB", async ({ page }, testInfo) => {
+test("vídeo de fora: aceita um pequeno e recusa um de 501 MB", async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   const id = await projetoComScript(page, "gravar-fora");
   await page.goto(`/projetos/${id}/gravar`);
@@ -112,9 +112,9 @@ test("vídeo de fora: aceita um pequeno e recusa um de 51 MB", async ({ page }, 
   // O Playwright não aceita buffer acima de 50 MB: o arquivo grande vai por caminho (esparso, quase sem disco).
   const grande = testInfo.outputPath("grande.webm");
   writeFileSync(grande, "");
-  truncateSync(grande, 51 * 1024 * 1024);
+  truncateSync(grande, 501 * 1024 * 1024);
   await arquivo.setInputFiles(grande);
-  await expect(page.getByText("Este vídeo passa de 50 MB. Grave por blocos no app ou reduza o tamanho antes de enviar.")).toBeVisible();
+  await expect(page.getByText("Este vídeo passa de 500 MB. Grave por blocos no app ou reduza o tamanho antes de enviar.")).toBeVisible();
 
   await arquivo.setInputFiles({ name: "pequeno.webm", mimeType: "video/webm", buffer: Buffer.alloc(200 * 1024, 1) });
   await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar$`));

@@ -1,12 +1,18 @@
-import { readFile, writeFile } from "node:fs/promises";
-import { stat } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import type { ReadableStream } from "node:stream/web";
 import type { Db } from "./claim";
 
-/** Baixa um arquivo do Storage para `dest`. */
+/** Baixa um arquivo do Storage direto para o disco, aos poucos (gravações de até 500 MB não cabem na memória). */
 export async function download(db: Db, bucket: string, storagePath: string, dest: string): Promise<void> {
-  const { data, error } = await db.storage.from(bucket).download(storagePath);
-  if (error || !data) throw new Error(`download ${bucket}/${storagePath}: ${error?.message ?? "vazio"}`);
-  await writeFile(dest, Buffer.from(await data.arrayBuffer()));
+  const fail = (why: string) => new Error(`download ${bucket}/${storagePath}: ${why}`);
+  const { data, error } = await db.storage.from(bucket).createSignedUrl(storagePath, 600);
+  if (error || !data) throw fail(error?.message ?? "sem link");
+  const res = await fetch(data.signedUrl);
+  if (!res.ok || !res.body) throw fail(`HTTP ${res.status}`);
+  await pipeline(Readable.fromWeb(res.body as ReadableStream), createWriteStream(dest));
 }
 
 /** Sobe `file` para o bucket `exports` (substitui se já existir). */

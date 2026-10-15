@@ -134,6 +134,15 @@ describe("bucket recordings", () => {
     expect((await B.client.storage.from("recordings").download(path)).error).not.toBeNull();
   });
 
+  it("aceita gravação acima de 50 MB (limite de 500 MB)", async () => {
+    const { data: bucket } = await admin.storage.getBucket("recordings");
+    expect(bucket?.file_size_limit).toBe(524_288_000);
+    const path = `${A.id}/${projectId}/grande.webm`;
+    const up = await A.client.storage.from("recordings").upload(path, new Blob([new Uint8Array(60 * 1024 * 1024)], { type: "video/webm" }), { contentType: "video/webm" });
+    expect(up.error).toBeNull();
+    await admin.storage.from("recordings").remove([path]);
+  });
+
   it("recusa image/png", async () => {
     const up = await A.client.storage.from("recordings").upload(`${A.id}/${projectId}/x.png`, new Blob(["abc"], { type: "image/png" }), { contentType: "image/png" });
     expect(up.error).not.toBeNull();

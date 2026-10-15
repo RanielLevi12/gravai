@@ -26,10 +26,9 @@ describe("maxRecordSeconds", () => {
   it("Normal mantém o limite de sempre", () => {
     expect(maxRecordSeconds("normal")).toBe(MAX_TAKE_SECONDS);
   });
-  it("Alta cabe em 50 MB", () => {
+  it("Alta também vai até o limite de sempre e cabe no arquivo", () => {
     const s = maxRecordSeconds("alta");
-    expect(s).toBeGreaterThan(60);
-    expect(s).toBeLessThan(MAX_TAKE_SECONDS);
+    expect(s).toBe(MAX_TAKE_SECONDS);
     expect((s * (QUALITY.alta.videoBps + AUDIO_BPS)) / 8).toBeLessThanOrEqual(MAX_FILE_BYTES);
   });
 });
