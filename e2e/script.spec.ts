@@ -38,6 +38,16 @@ test("mostra o script contínuo, ajusta com botão rápido, salva a edição e r
   await page.getByRole("button", { name: "Desfazer" }).click();
   await expect(abertura).toContainText("Fala, pessoal");
 
+  // Botões coloridos ao lado do texto e "Voltar à versão anterior" guardado por trecho
+  const voltar = abertura.getByRole("button", { name: "Voltar à versão anterior" });
+  await expect(voltar).toBeDisabled();
+  await abertura.getByRole("button", { name: "Encurtar" }).click();
+  await expect(abertura).toContainText(TEXTO_REESCRITO);
+  await expect(voltar).toBeEnabled();
+  await voltar.click();
+  await expect(abertura).toContainText("Fala, pessoal");
+  await expect(voltar).toBeDisabled();
+
   // Edição: autosave e persistência depois de recarregar; o total muda
   const totalAntes = await total(page).innerText();
   const trecho1 = bloco(page, "Trecho 1");

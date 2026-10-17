@@ -11,6 +11,8 @@ import { Toast } from "@/components/ui/Toast";
 import { estimateSeconds } from "@/lib/rules/duration";
 import type { Cut } from "@/lib/script/cuts";
 import { regenerateScript, rewriteBlock, updateBlockText, type ActionError } from "@/lib/script/actions";
+import { clearVersions, discardLatestVersion, saveVersion } from "@/lib/script/version-actions";
+import { pushLocal } from "@/lib/script/versions";
 import type { RewriteInstruction } from "@/lib/script/prompts";
 import { blockLabel, clock } from "./format";
 import { RewriteSheet } from "./RewriteSheet";
@@ -38,6 +40,7 @@ export function ScriptEditor({
   stale,
   cutSeconds,
   initialCuts,
+  initialVersions = {},
   info,
 }: {
   projectId: string;
@@ -49,9 +52,12 @@ export function ScriptEditor({
   /** Tamanho do corte escolhido na entrevista; null = sem cortes. */
   cutSeconds: number | null;
   initialCuts: Cut[];
+  /** Textos anteriores de cada trecho (mais novo primeiro). */
+  initialVersions?: Record<string, string[]>;
   info: MainInfo;
 }) {
   const [cuts, setCuts] = useState(initialCuts);
+  const [versions, setVersions] = useState(initialVersions);
   const [texts, setTexts] = useState(() => textsOf(blocks));
   const [rewriting, setRewriting] = useState<EditorBlock | null>(null);
   const [quickBusy, setQuickBusy] = useState<string | null>(null);
@@ -64,14 +70,39 @@ export function ScriptEditor({
   const autosave = useAutosave(saveText);
   const closeToast = useCallback(() => setToast(null), []);
   const undoAction = useMemo(
-    () => (undo ? { label: "Desfazer", onClick: () => edit(undo.id, undo.text) } : undefined),
-    // `edit` só usa setState e o autosave, que são estáveis
-    [undo],
+    () =>
+      undo
+        ? {
+            label: "Desfazer",
+            // A reescrita já guardou este texto no histórico: desfazer o tira de lá em vez de duplicar.
+            onClick: () => (versions[undo.id]?.[0] === undo.text ? restore(undo.id) : edit(undo.id, undo.text)),
+          }
+        : undefined,
+    // `edit` e `restore` só usam setState, o autosave e ações, que são estáveis
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [undo, versions],
   );
 
   function edit(id: string, text: string) {
     setTexts((t) => ({ ...t, [id]: text }));
     autosave.schedule(id, text);
+  }
+
+  /** Guarda o texto de antes de uma reescrita: na tela na hora e no banco em segundo plano. */
+  function remember(id: string, before: string) {
+    setVersions((v) => ({ ...v, [id]: pushLocal(v[id] ?? [], before) }));
+    void saveVersion(id, before);
+  }
+
+  /** "Voltar à versão anterior": aplica o texto guardado mais novo e o tira do histórico. */
+  function restore(id: string) {
+    const [previous, ...rest] = versions[id] ?? [];
+    if (previous === undefined) return;
+    setVersions((v) => ({ ...v, [id]: rest }));
+    setUndo(null);
+    edit(id, previous);
+    setToast("Voltou à versão anterior");
+    void discardLatestVersion(id);
   }
 
   async function rewrite(mode: RewriteInstruction): Promise<ActionError | null> {
@@ -82,6 +113,7 @@ export function ScriptEditor({
     notifyCost();
     if ("error" in r) return r;
     setUndo({ id: block.id, text: texts[block.id] });
+    remember(block.id, texts[block.id]);
     edit(block.id, r.text);
     setRewriting(null);
     setToast("Texto reescrito");
@@ -104,6 +136,7 @@ export function ScriptEditor({
         return;
       }
       setUndo({ id: block.id, text: texts[block.id] });
+      remember(block.id, texts[block.id]);
       edit(block.id, r.text);
       setToast("Texto ajustado");
     } catch {
@@ -130,6 +163,8 @@ export function ScriptEditor({
         await autosave.reset(); // o script antigo saiu: nada dele pode ser gravado por cima do novo
         setCuts([]); // os cortes apontavam para o texto antigo
         setTexts(r.texts);
+        setVersions({});
+        void clearVersions(projectId);
         setUndo(null); // "Desfazer" é do texto antigo
         setToast(null);
         setConfirming(false);
@@ -213,7 +248,9 @@ export function ScriptEditor({
             disabled={quickBusy !== null}
             onChange={(t) => edit(b.id, t)}
             onRewrite={() => setRewriting(b)}
+            versions={versions[b.id]?.length ?? 0}
             onQuick={(mode) => quick(b, mode)}
+            onRestore={() => restore(b.id)}
           />
         ))}
       </div>

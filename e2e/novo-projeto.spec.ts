@@ -9,13 +9,14 @@ const PALAVRAS_300 = Array.from({ length: 300 }, (_, i) => `palavra${i + 1}`).jo
 test("texto colado: projetos vazio → fonte → entrevista, e a linha mostra Continuar", async ({ page }) => {
   await entrarComOnboardingFeito(page, "novo-texto");
 
-  // Projetos vazio: painel de novo vídeo com os atalhos de origem
+  // Tela vazia: um botão grande "Criar vídeo"; sem projetos, ele já pergunta a origem
   await expect(page.getByRole("heading", { name: "Seus vídeos" })).toBeVisible();
-  const painel = page.getByRole("region", { name: "Novo vídeo" });
-  await expect(painel).toBeVisible();
   await expect(page.getByRole("heading", { name: "Continue de onde parou" })).toHaveCount(0);
-
-  await painel.getByRole("link", { name: "Texto" }).click();
+  await expect(page.getByRole("heading", { name: "Sem projeto" })).toBeVisible();
+  await page.getByRole("button", { name: "Criar vídeo" }).click();
+  const folha = page.getByRole("dialog", { name: "Criar vídeo" });
+  await expect(folha.getByText("De onde vem o conteúdo?")).toBeVisible();
+  await folha.getByRole("link", { name: "Texto" }).click();
   await expect(page).toHaveURL(/\/novo\?origem=texto$/);
   await page.getByLabel("Cole seu texto").fill(PALAVRAS_300);
   await page.getByRole("button", { name: "Continuar" }).click();
@@ -34,8 +35,35 @@ test("texto colado: projetos vazio → fonte → entrevista, e a linha mostra Co
 
   await page.goto("/projetos");
   await expect(page.getByRole("heading", { name: "Continue de onde parou" })).toBeVisible();
-  const linha = page.getByRole("article").filter({ hasText: "palavra1" });
-  await expect(linha.getByRole("link", { name: "Continuar" })).toHaveAttribute("href", `/projetos/${id}/entrevista/plataformas`);
+  // "Continue de onde parou": o vídeo com o status legível e o link da etapa em que parou
+  const cartao = page.getByRole("link", { name: /palavra1/ }).first();
+  await expect(cartao).toContainText("Editar");
+  await expect(cartao).toHaveAttribute("href", `/projetos/${id}/entrevista/plataformas`);
+  // O vídeo solto também aparece em "Sem projeto"
+  await expect(page.getByRole("heading", { name: /Sem projeto/ })).toContainText("1 vídeo");
+});
+
+test("Criar vídeo pergunta o projeto e leva a origem escolhida com o projeto", async ({ page }) => {
+  await entrarComOnboardingFeito(page, "criar-video");
+  await page.getByRole("link", { name: "Novo projeto" }).click();
+  await page.getByLabel("Nome do projeto").fill("Devocional");
+  await page.getByRole("button", { name: "Criar projeto" }).click();
+  await expect(page).toHaveURL(/\/pastas\/([0-9a-f-]{36})$/);
+  const pastaId = /\/pastas\/([0-9a-f-]{36})$/.exec(page.url())![1];
+  await page.goto("/projetos");
+
+  await page.getByRole("button", { name: "Criar vídeo" }).click();
+  const folha = page.getByRole("dialog", { name: "Criar vídeo" });
+  await expect(folha.getByText("Em qual projeto vai este vídeo?")).toBeVisible();
+  await expect(folha.getByRole("button", { name: "Sem projeto" })).toBeVisible();
+  await folha.getByRole("button", { name: "Devocional" }).click();
+  await expect(folha.getByText("Projeto: Devocional")).toBeVisible();
+  await folha.getByRole("link", { name: "Texto" }).click();
+  await expect(page).toHaveURL(new RegExp(`/novo\\?origem=texto&projeto=${pastaId}$`));
+
+  // O "+ novo" do projeto também leva o projeto
+  await page.goto("/projetos");
+  await expect(page.getByRole("link", { name: "Novo vídeo em Devocional" })).toHaveAttribute("href", `/novo?projeto=${pastaId}`);
 });
 
 test("upload de docx cria o projeto com o texto do arquivo", async ({ page }) => {

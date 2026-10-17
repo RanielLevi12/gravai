@@ -7,6 +7,7 @@ import { validateCuts } from "@/lib/script/cuts";
 import { isPlatform, type Platform } from "@/lib/interview/steps";
 import type { BlockKind } from "@/lib/script/generate";
 import { generateScript } from "@/lib/script/actions";
+import { loadVersions } from "@/lib/script/versions-db";
 import { createServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Script · Gravaí" };
@@ -92,6 +93,8 @@ export default async function ScriptPage({ params }: { params: Promise<{ id: str
     text: b.text,
   }));
 
+  const initialVersions = await loadVersions(supabase, blocks.map((b) => b.id));
+
   return (
     <ScriptEditor
       projectId={project.id}
@@ -101,6 +104,7 @@ export default async function ScriptPage({ params }: { params: Promise<{ id: str
       stale={project.script_stale}
       cutSeconds={cutSeconds}
       initialCuts={cutsRaw.ok ? cutsRaw.cuts : []}
+      initialVersions={initialVersions}
       info={{ coverPrompt: project.cover_prompt, descriptions }}
     />
   );

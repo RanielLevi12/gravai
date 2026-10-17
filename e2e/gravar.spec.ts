@@ -55,6 +55,9 @@ test("take único: grava, vê a prévia, usa e aprova", async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar$`));
   await page.getByRole("button", { name: "Aprovar e guardar" }).click();
   await expect(page.getByRole("heading", { name: "Suas gravações" })).toBeVisible();
+  // Conferência em duas fases: o vídeo e o projeto (aqui, vídeo solto)
+  await expect(page.getByRole("heading", { name: "Este vídeo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sem projeto" })).toBeVisible();
 
   await page.goto("/projetos");
   await expect(page.getByText("Gravado", { exact: true })).toBeVisible();
