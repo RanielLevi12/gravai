@@ -8,6 +8,9 @@ export const WARN_TAKE_SECONDS = 180;
 export const MSG_FILE_TOO_BIG =
   "Este vídeo passa de 500 MB. Grave por blocos no app ou reduza o tamanho antes de enviar.";
 
+export const STORAGE_LIMIT_BYTES = 5 * 1024 ** 3;
+export const MSG_STORAGE_FULL = "Você usou os 5 GB de espaço. Apague vídeos que não precisa mais para enviar novos.";
+
 export function fitsBucket(sizeBytes: number): boolean {
   return sizeBytes <= MAX_FILE_BYTES;
 }

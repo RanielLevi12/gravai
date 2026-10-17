@@ -1,6 +1,6 @@
 import type { Crop } from "./capture";
 import type { RecordDb } from "./db";
-import { MAX_FILE_BYTES, MSG_FILE_TOO_BIG, fitsBucket } from "./limits";
+import { MAX_FILE_BYTES, MSG_FILE_TOO_BIG, MSG_STORAGE_FULL, fitsBucket } from "./limits";
 import { allowedModes, canApprove, type RecordMode } from "./rules";
 
 export const MSG_PROJECT_NOT_FOUND = "Projeto não encontrado.";
@@ -41,6 +41,7 @@ export async function finishRecordingWith(
   if (!Number.isFinite(v.sizeBytes) || v.sizeBytes < 0) throw new Error(MSG_RECORDING_NOT_FOUND);
   if (v.sizeBytes <= 0) throw new Error(MSG_EMPTY_VIDEO);
   if (!fitsBucket(v.sizeBytes) || v.sizeBytes > MAX_FILE_BYTES) throw new Error(MSG_FILE_TOO_BIG);
+  if (!(await db.storageFits(v.sizeBytes))) throw new Error(MSG_STORAGE_FULL);
   const res = await db.markReady(id, v);
   if (!res) throw new Error(MSG_RECORDING_NOT_FOUND);
   if (res.replacedPaths.length > 0) {

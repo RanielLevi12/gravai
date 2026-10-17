@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { projectCard, videoCard } from "@/lib/project/review-cards";
 import { canApprove, recordingsInOrder, type RecordMode } from "@/lib/record/rules";
 import type { BlockKind } from "@/lib/script/generate";
+import { getR2, r2Key } from "@/lib/storage/r2";
 import { createServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Aprovar · Gravaí" };
@@ -96,10 +97,10 @@ export default async function AprovarPage({
       ready.map((r) => ({ ...r, kind: r.kind as "take" | "block" | "external", blockId: r.block_id, createdAt: r.created_at })),
       labels,
     );
-    const { data: signed } = clips.length
-      ? await supabase.storage.from("recordings").createSignedUrls(clips.map((c) => c.storage_path), 300)
-      : { data: [] };
-    const urlOf = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+    const r2 = clips.length ? getR2() : null;
+    const urlOf = new Map(
+      await Promise.all(clips.map(async (c) => [c.storage_path, await r2!.presignGet(r2Key("recordings", c.storage_path), 300)] as const)),
+    );
     return (
       <main className={styles.page}>
         {back}

@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+import { getR2, r2Key } from "@/lib/storage/r2";
 import type { Descriptions } from "@/lib/script/generate";
 import { MSG_ALREADY_RUNNING, MSG_NOT_RECORDED, MSG_PROJECT_NOT_FOUND, type CutInfo, type DeliveryDb } from "./service";
 import type { ExportKind, JobStatus } from "./rules";
@@ -72,9 +73,7 @@ export function supabaseDeliveryDb(deps: { supabase: SupabaseClient<Database> })
       return cuts.sort((a, b) => a.start - b.start);
     },
     async signUrl(storagePath, seconds, downloadName) {
-      const { data, error } = await supabase.storage.from("exports").createSignedUrl(storagePath, seconds, downloadName ? { download: downloadName } : undefined);
-      if (error || !data) throw new Error("sign url failed");
-      return data.signedUrl;
+      return getR2().presignGet(r2Key("exports", storagePath), seconds, downloadName);
     },
     async latestRecordingAt(projectId) {
       const { data, error } = await supabase
@@ -89,9 +88,7 @@ export function supabaseDeliveryDb(deps: { supabase: SupabaseClient<Database> })
       return data ? new Date(data.created_at) : null;
     },
     async download(storagePath) {
-      const { data, error } = await supabase.storage.from("exports").download(storagePath);
-      if (error || !data) throw new Error("download failed");
-      return new Uint8Array(await data.arrayBuffer());
+      return getR2().getBytes(r2Key("exports", storagePath));
     },
   };
 }

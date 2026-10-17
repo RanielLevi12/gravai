@@ -245,6 +245,20 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"storage_quota": {
+                  Row: {
+                    "limit_bytes": number,"used_bytes": number,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "limit_bytes"?: number,"used_bytes"?: number,"user_id": string
+                  }
+                  Update: {
+                    "limit_bytes"?: number,"used_bytes"?: number,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"usage_months": {
                   Row: {
                     "month": string,"projects": number,"transcription_seconds": number,"user_id": string
@@ -304,6 +318,9 @@ isOneToOne: true
                            },
 "finish_recording":
 { Args: { "p_duration": number,"p_id": string,"p_size_bytes": number }; Returns: (string)[]
+                           },
+"storage_fits":
+{ Args: { "p_bytes": number }; Returns: boolean
                            },
 "purge_expired_exports":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
