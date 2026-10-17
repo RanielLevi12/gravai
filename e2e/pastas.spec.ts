@@ -37,11 +37,11 @@ test("criar, ver, editar e apagar um projeto (pasta)", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Devocional diário" })).toBeVisible();
   await expect(page.getByText(/^YouTube · vídeo único · 30 s · cortes de 10 s/)).toBeVisible();
 
-  // Apagar pede confirmação e volta para a tela inicial sem o projeto.
+  // Apagar vira "mover para a lixeira": pede confirmação e volta para a tela inicial sem o projeto.
   await page.getByRole("link", { name: "Editar projeto" }).click();
-  await page.getByRole("button", { name: "Apagar projeto" }).click();
-  await expect(page.getByRole("heading", { name: "Apagar este projeto?" })).toBeVisible();
-  await page.getByRole("dialog").getByRole("button", { name: "Apagar projeto" }).click();
+  await page.getByRole("button", { name: "Mover para a lixeira" }).click();
+  await expect(page.getByRole("heading", { name: "Mover este projeto para a lixeira?" })).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Mover para a lixeira" }).click();
   await expect(page).toHaveURL(/\/projetos$/);
   await expect(page.getByRole("link", { name: /Devocional diário/ })).toHaveCount(0);
 });

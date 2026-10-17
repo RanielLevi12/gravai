@@ -1,8 +1,11 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ProjectRow } from "@/components/project/ProjectRow";
 import { hasScript } from "@/lib/interview/steps";
+
+// O menu ⋮ da lixeira usa o roteador do Next, que não existe fora do app.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: () => {}, refresh: () => {} }) }));
 
 describe("status gravado", () => {
   it("conta como já tendo script", () => {

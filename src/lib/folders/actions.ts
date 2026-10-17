@@ -51,15 +51,6 @@ export async function updateFolder(id: string, input: unknown): Promise<Result> 
   return { ok: true };
 }
 
-/** Apaga o projeto. Os vídeos dele viram soltos (o banco faz `on delete set null`). */
-export async function deleteFolder(id: string): Promise<Result> {
-  const { supabase } = await requireUser();
-  const { data, error } = await supabase.from("folders").delete().eq("id", id).select("id");
-  if (error || (data?.length ?? 0) !== 1) return { ok: false, error: "Não foi possível apagar o projeto." };
-  refresh(id);
-  return { ok: true };
-}
-
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Move um vídeo para um projeto (ou solta com `null`). Muda só a pasta: as configurações do vídeo ficam como estão. */

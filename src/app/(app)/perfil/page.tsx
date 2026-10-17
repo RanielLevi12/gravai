@@ -122,6 +122,12 @@ export default async function PerfilPage({ searchParams }: { searchParams: Promi
           <span className={`${styles.rowText} tnum`}>Espaço dos vídeos: {quotaText(espaco?.used_bytes ?? 0, espaco?.limit_bytes ?? STORAGE_LIMIT_BYTES)}</span>
         </li>
         <li>
+          <Link href="/lixeira" className={styles.row}>
+            <span className={styles.rowText}>Lixeira</span>
+            <ChevronRight size={20} strokeWidth={2} aria-hidden />
+          </Link>
+        </li>
+        <li>
           <InstalarApp />
         </li>
       </ul>

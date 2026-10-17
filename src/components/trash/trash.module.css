@@ -1,0 +1,112 @@
+.dots {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.dots:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.dots:focus-visible {
+  outline: 3px solid transparent;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 5px var(--sky),
+    0 0 0 6px var(--ink);
+}
+
+.text {
+  margin: 0 0 var(--space-md);
+  color: var(--ink-2);
+  font-size: 15px;
+}
+
+.error {
+  margin: 0 0 var(--space-sm);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.actions {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+/* Tela /lixeira */
+.page {
+  display: grid;
+  gap: var(--space-md);
+  padding: var(--space-md);
+}
+
+.back {
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.lead {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 15px;
+}
+
+.list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.itemTitle {
+  font-size: 16px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.itemMeta {
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+
+.itemActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.empty {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+/* Links da lixeira em outras telas */
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 44px;
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 700;
+}

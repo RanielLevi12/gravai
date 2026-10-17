@@ -250,3 +250,26 @@
   color: var(--ink-2);
   font-size: 14px;
 }
+
+.recentItem {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.recentItem > .recentCard {
+  flex: 1;
+  min-width: 0;
+}
+
+.trashLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 44px;
+  margin: var(--space-md) var(--space-md) 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 700;
+}
