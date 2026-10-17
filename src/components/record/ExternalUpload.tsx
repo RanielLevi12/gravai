@@ -6,8 +6,7 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { discardRecording, finishRecording, startRecording } from "@/lib/record/actions";
 import { validateExternalFile } from "@/lib/record/rules";
-import { MSG_UPLOAD_FAILED, uploadRecording } from "@/lib/record/upload";
-import { createBrowserClient } from "@/lib/supabase/client";
+import { MSG_UPLOAD_FAILED, UploadRejected, uploadRecording } from "@/lib/record/upload";
 import styles from "./record.module.css";
 
 function readDuration(file: File): Promise<number | null> {
@@ -46,26 +45,20 @@ export function ExternalUpload({ projectId }: { projectId: string }) {
       const started = await startRecording({ projectId, kind: "external", blockId: null, mime });
       if ("error" in started) return void setError(started.error);
       recordingId = started.id;
-      const supabase = createBrowserClient();
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) return void setError("Sua sessão expirou. Entre de novo.");
       const duration = await readDuration(file);
-      await uploadRecording({
+      const sent = await uploadRecording({
         blob: file,
-        path: started.path,
-        mime,
-        accessToken: data.session.access_token,
-        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        recordingId: started.id,
         onProgress: (sent, total) => setProgress(`Enviando… ${Math.round((sent / total) * 100)}%`),
       });
-      const done = await finishRecording(started.id, { sizeBytes: file.size, durationSeconds: duration });
+      const done = await finishRecording(started.id, { sizeBytes: sent.sizeBytes, durationSeconds: duration });
       if ("error" in done) return void setError(done.error);
       recordingId = null;
       navigated = true;
       setProgress("Abrindo…");
       router.push(`/projetos/${projectId}/gravar/aprovar`);
     } catch (e) {
-      setError(e instanceof Error && e.message === MSG_UPLOAD_FAILED ? e.message : MSG_UPLOAD_FAILED);
+      setError(e instanceof UploadRejected || (e instanceof Error && e.message === MSG_UPLOAD_FAILED) ? e.message : MSG_UPLOAD_FAILED);
     } finally {
       if (recordingId) await discardRecording(recordingId).catch(() => {});
       if (!navigated) {

@@ -16,7 +16,7 @@ import {
   finishRecordingWith,
   startRecordingWith,
 } from "./service";
-import { MSG_FILE_TOO_BIG } from "./limits";
+import { MSG_FILE_TOO_BIG, MSG_STORAGE_FULL } from "./limits";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MSG_EXPIRED = "Sua sessão expirou. Entre de novo.";
@@ -28,6 +28,7 @@ const SAFE = new Set([
   MSG_PROJECT_NOT_FOUND,
   MSG_RECORDING_NOT_FOUND,
   MSG_FILE_TOO_BIG,
+  MSG_STORAGE_FULL,
   "Para um vídeo de 5 min, grave por blocos.",
   "Formato de vídeo não aceito.",
 ]);

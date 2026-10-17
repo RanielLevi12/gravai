@@ -7,7 +7,6 @@ import { discardRecording, finishRecording } from "@/lib/record/actions";
 import { fitsBucket, MSG_FILE_TOO_BIG } from "@/lib/record/limits";
 import { clearRecording, readRecording } from "@/lib/record/store";
 import { MSG_UPLOAD_FAILED, uploadRecording } from "@/lib/record/upload";
-import { createBrowserClient } from "@/lib/supabase/client";
 import styles from "./record.module.css";
 import { UploadStatus } from "./UploadStatus";
 
@@ -65,17 +64,8 @@ export function Preview({ projectId, recordingId, path, mime, blockId, durationS
     setError(null);
     setProgress({ sent: 0, total: blob.size });
     try {
-      const { data } = await createBrowserClient().auth.getSession();
-      if (!data.session) throw new Error("Sua sessão expirou. Entre de novo.");
-      await uploadRecording({
-        blob,
-        path,
-        mime,
-        accessToken: data.session.access_token,
-        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        onProgress: (sent, total) => setProgress({ sent, total }),
-      });
-      const done = await finishRecording(recordingId, { sizeBytes: blob.size, durationSeconds });
+      const sent = await uploadRecording({ blob, recordingId, onProgress: (sent, total) => setProgress({ sent, total }) });
+      const done = await finishRecording(recordingId, { sizeBytes: sent.sizeBytes, durationSeconds });
       if ("error" in done) throw new Error(done.error);
       await clearRecording(recordingId).catch(() => {});
       router.push(`${base}/aprovar`);

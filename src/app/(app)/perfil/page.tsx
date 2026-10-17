@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/Button";
 import buttonStyles from "@/components/ui/Button.module.css";
 import { signOut } from "@/lib/auth/actions";
 import { isTone, TONE_LABELS } from "@/lib/profile/schema";
+import { STORAGE_LIMIT_BYTES } from "@/lib/record/limits";
+import { quotaText } from "@/lib/storage/format";
 import { createServerClient } from "@/lib/supabase/server";
 import { InstalarApp } from "./InstalarApp";
 import { ColarChave } from "./ColarChave";
@@ -39,12 +41,13 @@ export default async function PerfilPage({ searchParams }: { searchParams: Promi
   if (!auth.user) redirect("/entrar");
   const userId = auth.user.id;
 
-  const [{ data: perfil }, { count }, { data: uso }, { data: conexao }] = await Promise.all([
+  const [{ data: perfil }, { count }, { data: uso }, { data: conexao }, { data: espaco }] = await Promise.all([
     supabase.from("profiles").select("niche, audience, tone").eq("user_id", userId).maybeSingle(),
     supabase.from("ctas").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("usage_months").select("projects, transcription_seconds").eq("user_id", userId).eq("month", mesAtual()).maybeSingle(),
     // key_ciphertext nunca é lido aqui (a coluna nem é visível para o usuário)
     supabase.from("ai_connections").select("key_hint").eq("user_id", userId).maybeSingle(),
+    supabase.from("storage_quota").select("used_bytes, limit_bytes").eq("user_id", userId).maybeSingle(),
   ]);
 
   const tom = isTone(perfil?.tone) ? TONE_LABELS[perfil.tone] : "não escolhido";
@@ -114,6 +117,9 @@ export default async function PerfilPage({ searchParams }: { searchParams: Promi
           <span className={`${styles.rowText} tnum`}>
             Uso do mês: {uso?.projects ?? 0}/5 projetos · {minutos}/60 min
           </span>
+        </li>
+        <li className={styles.row}>
+          <span className={`${styles.rowText} tnum`}>Espaço dos vídeos: {quotaText(espaco?.used_bytes ?? 0, espaco?.limit_bytes ?? STORAGE_LIMIT_BYTES)}</span>
         </li>
         <li>
           <InstalarApp />

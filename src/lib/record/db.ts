@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import type { Interview } from "@/lib/interview/steps";
 import type { Crop } from "./capture";
+import { getR2, r2Key } from "@/lib/storage/r2";
 import { extensionFor } from "./mime";
 
 type Kind = "take" | "block" | "external";
@@ -17,9 +18,11 @@ export interface RecordDb {
   readyRows(projectId: string): Promise<{ id: string; kind: Kind; blockId: string | null; path: string; durationSeconds: number | null }[]>;
   setProjectStatus(projectId: string, status: "gravado"): Promise<boolean>;
   removeFiles(paths: string[]): Promise<void>;
+  /** Cabem mais `bytes` na cota de espaço do usuário? */
+  storageFits(bytes: number): Promise<boolean>;
+  /** Gravação do usuário ainda em envio (o caminho do arquivo vem do banco, nunca do navegador). */
+  uploadingRow(id: string): Promise<{ id: string; path: string; mime: string } | null>;
 }
-
-const BUCKET = "recordings";
 
 /** RecordDb sobre o Supabase da sessão do usuário (RLS limita tudo ao dono). */
 export function supabaseRecordDb(deps: { supabase: SupabaseClient<Database>; userId: string }): RecordDb {
@@ -96,8 +99,17 @@ export function supabaseRecordDb(deps: { supabase: SupabaseClient<Database>; use
     async removeFiles(paths) {
       const own = paths.filter((p) => p.startsWith(`${userId}/`));
       if (own.length === 0) return;
-      const { error } = await supabase.storage.from(BUCKET).remove(own);
-      if (error) throw new Error("remove files failed");
+      await getR2().deleteMany(own.map((p) => r2Key("recordings", p)));
+    },
+    async storageFits(bytes) {
+      const { data, error } = await supabase.rpc("storage_fits", { p_bytes: Math.round(bytes) });
+      if (error) throw new Error("storage quota read failed");
+      return data === true;
+    },
+    async uploadingRow(id) {
+      const { data, error } = await supabase.from("recordings").select("id, storage_path, mime").eq("id", id).eq("status", "uploading").maybeSingle();
+      if (error) throw new Error("read recording failed");
+      return data ? { id: data.id, path: data.storage_path, mime: data.mime } : null;
     },
   };
 }
