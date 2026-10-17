@@ -9,7 +9,7 @@ import { origemDoProjeto } from "./origens";
 import { ProjectRow, type ProjectRowData } from "./ProjectRow";
 
 export type HomeFolder = { id: string; name: string; color: string; count: number };
-export type RecentVideo = ProjectRowData & { folders: { name: string } | null };
+export type RecentVideo = ProjectRowData & { folders: { name: string } | null; missingParts?: number | null };
 
 const plural = (n: number) => (n === 1 ? "1 vídeo" : `${n} vídeos`);
 
@@ -51,7 +51,7 @@ export function HomeView({
           </h2>
           <ul className={styles.recent}>
             {lista.map((p) => {
-              const st = statusLabel(p.status);
+              const st = statusLabel(p.status, p.missingParts ?? null);
               const Origem = origemDoProjeto(p.source_kind).icon;
               const pasta = p.folders?.name;
               return (

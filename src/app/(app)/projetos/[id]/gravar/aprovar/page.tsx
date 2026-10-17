@@ -4,13 +4,13 @@ import { notFound, redirect } from "next/navigation";
 import { ApproveButton, BlockList } from "@/components/record/BlockList";
 import { Preview } from "@/components/record/Preview";
 import styles from "@/components/record/record.module.css";
-import { blockLabel } from "@/components/script/format";
 import scriptStyles from "@/components/script/script.module.css";
 import { PhaseCards } from "@/components/review/PhaseCards";
 import { Button } from "@/components/ui/Button";
 import { projectCard, videoCard } from "@/lib/project/review-cards";
+import { MissingAlert, NextBlockCard } from "@/components/record/MissingParts";
+import { labelBlocks, missingBlocks, nextMissing } from "@/lib/record/missing";
 import { canApprove, recordingsInOrder, type RecordMode } from "@/lib/record/rules";
-import type { BlockKind } from "@/lib/script/generate";
 import { getR2, r2Key } from "@/lib/storage/r2";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -24,10 +24,10 @@ export default async function AprovarPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ gravacao?: string; dur?: string }>;
+  searchParams: Promise<{ gravacao?: string; dur?: string; feito?: string }>;
 }) {
   const { id } = await params;
-  const { gravacao, dur } = await searchParams;
+  const { gravacao, dur, feito } = await searchParams;
   if (!UUID.test(id)) notFound();
 
   const supabase = await createServerClient();
@@ -62,6 +62,7 @@ export default async function AprovarPage({
             path={rec.storage_path}
             mime={rec.mime}
             blockId={rec.block_id}
+            kind={rec.kind as "take" | "block" | "external"}
             durationSeconds={Number.isFinite(seconds) && seconds >= 0 && seconds <= 600 ? Math.round(seconds) : null}
           />
         </main>
@@ -86,11 +87,7 @@ export default async function AprovarPage({
   const cards = <PhaseCards video={videoCard(ready, project.status)} project={projectCard(folder, folderVideos ?? 0)} />;
   const blocks = blockRows ?? [];
 
-  let bodyIndex = 0;
-  const labels = blocks.map((b) => {
-    if (b.kind === "body") bodyIndex += 1;
-    return { id: b.id, label: b.kind === "body" ? `Trecho ${bodyIndex}` : blockLabel(b.kind as BlockKind, b.cut_index) };
-  });
+  const labels = labelBlocks(blocks);
 
   if (project.status === "gravado" || project.status === "pronto") {
     const clips = recordingsInOrder(
@@ -137,16 +134,26 @@ export default async function AprovarPage({
     mode,
     ready: ready.map((r) => ({ kind: r.kind as "take" | "block" | "external", blockId: r.block_id })),
     blockIds: blocks.map((b) => b.id),
+    blockLabels: labels.map((l) => l.label),
   });
 
   const recorded = Object.fromEntries(ready.filter((r) => r.block_id).map((r) => [r.block_id as string, true]));
+  const missing = mode === "blocks" ? missingBlocks(labels, recorded) : [];
+  const justDone = feito && UUID.test(feito) ? feito : null;
+  const next = justDone && missing.length > 0 ? nextMissing(labels, recorded, justDone) : null;
 
   return (
     <main className={styles.page}>
       {back}
       <h1 className={styles.title}>Aprovar</h1>
+      {next ? <NextBlockCard projectId={id} next={next} /> : null}
+      <MissingAlert projectId={id} missing={missing} />
       {cards}
-      {mode === "blocks" ? <BlockList projectId={id} blocks={labels} recorded={recorded} /> : null}
+      {mode === "blocks" ? (
+        <div id="partes">
+          <BlockList projectId={id} blocks={labels} recorded={recorded} />
+        </div>
+      ) : null}
       {mode === "blocks" && !check.ok ? (
         <p className={styles.hint}>Se o script mudou, grave de novo os blocos que ficaram sem vídeo.</p>
       ) : null}

@@ -1,3 +1,4 @@
+import { joinNames } from "./missing";
 import { MAX_FILE_BYTES, MSG_FILE_TOO_BIG } from "./limits";
 
 export type RecordMode = "take" | "blocks" | "external";
@@ -12,15 +13,22 @@ export function canApprove(input: {
   mode: RecordMode;
   ready: { kind: "take" | "block" | "external"; blockId: string | null }[];
   blockIds: string[];
+  /** Nome de cada bloco (mesma ordem de `blockIds`); com ele a mensagem diz quais faltam. */
+  blockLabels?: string[];
 }): { ok: true } | { ok: false; error: string } {
-  const { mode, ready, blockIds } = input;
+  const { mode, ready, blockIds, blockLabels } = input;
 
   if (mode === "blocks") {
     const done = new Set(
       ready.filter((r) => r.kind === "block").map((r) => r.blockId),
     );
-    const missing = blockIds.filter((id) => !done.has(id)).length;
+    const missingIds = blockIds.filter((id) => !done.has(id));
+    const missing = missingIds.length;
     if (missing === 0) return { ok: true };
+    if (blockLabels && blockLabels.length === blockIds.length) {
+      const names = missingIds.map((id) => blockLabels[blockIds.indexOf(id)]);
+      return { ok: false, error: missing === 1 ? `Falta gravar: ${names[0]}.` : `Faltam gravar: ${joinNames(names)}.` };
+    }
     return {
       ok: false,
       error:

@@ -484,3 +484,39 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Lembrete de partes que faltam: cor de alerta da marca (sol) com tinta por cima. */
+.missing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  padding: var(--space-xs);
+  border-radius: var(--radius-md, 16px);
+  border: 2px solid var(--sun);
+  background: color-mix(in srgb, var(--sun) 18%, var(--bg, #fff));
+  color: var(--ink);
+}
+
+.missingTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.missingList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3xs, 4px);
+}
+
+.missingItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  min-height: 44px;
+  font-weight: 600;
+}

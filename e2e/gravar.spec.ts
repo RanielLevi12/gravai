@@ -85,15 +85,25 @@ test("por blocos: refaz o 1º, grava todos e fica uma gravação pronta por bloc
   await expect(page).toHaveURL(/teleprompter\?modo=blocos&bloco=/);
   await gravar(page, 2);
   await page.getByRole("button", { name: "Usar este" }).click();
-  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar$`));
+  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar\\?feito=`));
+  // Lembrete: segue para a próxima parte e avisa quais faltam
+  await expect(page.getByRole("heading", { name: "Gravar a próxima: Trecho 1" })).toBeVisible();
+  await expect(page.getByRole("alert", { name: "Partes que faltam" })).toContainText("Trecho 1");
+  await expect(page.getByRole("button", { name: "Aprovar e guardar" })).toBeDisabled();
+  await page.getByRole("link", { name: "Gravar Trecho 1" }).click();
+  await expect(page).toHaveURL(/teleprompter\?modo=blocos&bloco=/);
+  await expect(page.getByText(`bloco 2 de ${BLOCOS}`)).toBeVisible();
+  await gravar(page, 2);
+  await page.getByRole("button", { name: "Usar este" }).click();
+  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar\\?feito=`));
 
   // Demais blocos, um por um, pela lista
-  for (let n = 2; n <= BLOCOS; n++) {
+  for (let n = 3; n <= BLOCOS; n++) {
     await page.getByRole("link", { name: "Gravar", exact: true }).first().click();
     await expect(page.getByText(`bloco ${n} de ${BLOCOS}`)).toBeVisible();
     await gravar(page, 2);
     await page.getByRole("button", { name: "Usar este" }).click();
-    await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar$`));
+    await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar\\?feito=`));
   }
 
   await page.getByRole("button", { name: "Aprovar e guardar" }).click();
@@ -103,6 +113,36 @@ test("por blocos: refaz o 1º, grava todos e fica uma gravação pronta por bloc
   expect(data).toHaveLength(BLOCOS);
   expect(data!.every((r) => r.status === "ready")).toBe(true);
   expect(new Set(data!.map((r) => r.block_id)).size).toBe(BLOCOS);
+});
+
+test("tela inicial mostra 'Faltam N partes' quando o vídeo está sendo gravado por blocos", async ({ page }) => {
+  test.setTimeout(120_000);
+  const id = await projetoComScript(page, "gravar-faltam");
+  await page.goto(`/projetos/${id}/gravar`);
+  await page.getByRole("link", { name: "Gravar por blocos" }).click();
+  await gravar(page, 2);
+  await page.getByRole("button", { name: "Usar este" }).click();
+  await expect(page).toHaveURL(/\/aprovar\?feito=/);
+  await page.goto("/projetos");
+  await expect(page.getByText(`Faltam ${BLOCOS - 1} partes para gravar`)).toBeVisible();
+});
+
+test("take único: aviso de trecho pulado, com 'Seguir mesmo assim' (precisa AI_MOCK=1)", async ({ page }) => {
+  test.setTimeout(120_000);
+  const id = await projetoComScript(page, "gravar-pulou");
+  await page.route("**/api/record/skipped*", async (route) => {
+    // A detecção em si é testada em tests/unit/record-skipped.test.ts; aqui só a tela do aviso.
+    await route.fulfill({ json: { skipped: [{ id: "x", label: "Trecho 2", coverage: 0 }] } });
+  });
+  await page.goto(`/projetos/${id}/gravar`);
+  await page.getByText("Tudo de uma vez").click();
+  await page.getByRole("link", { name: "Gravar tudo de uma vez" }).click();
+  await gravar(page, 3);
+  await page.getByRole("button", { name: "Usar este" }).click();
+  await expect(page.getByText("Parece que você pulou o Trecho 2.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Gravar de novo" })).toBeVisible();
+  await page.getByRole("button", { name: "Seguir mesmo assim" }).click();
+  await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar/aprovar$`));
 });
 
 test("vídeo de fora: aceita um pequeno e recusa um de 501 MB", async ({ page }, testInfo) => {
