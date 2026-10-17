@@ -22,6 +22,14 @@ const HOOK_LEVELS = [
   "Gancho excelente: prende de imediato, específico e fácil de entender",
 ] as const;
 
+const CLOSING_LEVELS = [
+  "Fecho ruim: recap vazio, despedida genérica ou pedido genérico (curta, compartilhe, se inscreva)",
+  "Fecho fraco: encerra sem pagar o que o começo prometeu, ou o pedido não tem relação com o vídeo",
+  "Fecho razoável: fecha o assunto e faz um pedido, mas soa comum",
+  "Fecho forte: paga o que o começo prometeu e faz um único pedido claro e ligado ao vídeo",
+  "Fecho excelente: frase final memorável, paga a promessa e o pedido é específico e fácil de cumprir",
+] as const;
+
 let client: TypeSafeClient | null = null;
 function getClient(): TypeSafeClient {
   if (!process.env.TYPESAFE_API_KEY) throw new AiError("A análise não está configurada. Tente mais tarde.");
@@ -112,6 +120,32 @@ export async function reviewExcerpts(texts: string[], opts: { restart: boolean }
       hook: texts.map((_, i) => clamp((a[`h${i}`].score ?? 0) / max)),
       restart: opts.restart ? texts.map((_, i) => (i > 0 ? clamp(a[`r${i}`].noul ?? 0) : 0)) : null,
     };
+  } catch (e) {
+    if (e instanceof AiError) throw e;
+    throw new AiError(undefined, { code: "provider", cause: e });
+  }
+}
+
+/** Nota (0..1) do fecho (conclusão + chamada para ação) de cada opção. */
+export async function scoreClosing(texts: string[], context: string): Promise<number[]> {
+  if (texts.length === 0) return [];
+  try {
+    const questions = Object.fromEntries(
+      texts.map((t, i) => [
+        `c${i}`,
+        score(
+          {
+            pergunta: "Quão bom é este fecho de vídeo curto: paga a promessa do começo e faz UMA chamada para ação natural?",
+            fecho: t,
+            contexto: context,
+          },
+          CLOSING_LEVELS,
+        ),
+      ]),
+    );
+    const res = await getClient().systemOne({ state: { contexto: context }, questions, model: JUDGE_MODEL });
+    const max = CLOSING_LEVELS.length - 1;
+    return texts.map((_, i) => Math.min(1, Math.max(0, (res.answers as Record<string, { score: number }>)[`c${i}`].score / max)));
   } catch (e) {
     if (e instanceof AiError) throw e;
     throw new AiError(undefined, { code: "provider", cause: e });

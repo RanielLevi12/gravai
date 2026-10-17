@@ -311,21 +311,52 @@ describe("sugestões", () => {
     expect(db.projects.get(p.id)!.interview.suggestion).toEqual(s);
   });
 
-  it("suggestTitles devolve 6 títulos ranqueados do maior para o menor", async () => {
+  it("suggestTitles devolve 3 títulos de tipos diferentes, o melhor primeiro e marcado", async () => {
     const db = new FakeDb();
     const p = db.add({ interview: { mainSeconds: 60, platforms: ["reels"] } });
-    setMockResponse("generateJson", { titles: ["A", "B", "C", "D", "E", "F"] });
-    const score = async (titles: string[]) => titles.map((_, i) => [0.2, 0.9, 0.5, 0.1, 0.7, 0.3][i]);
+    setMockResponse("generateJson", {
+      options: [
+        { type: "beneficio", text: "Como estudar 20 minutos por dia" },
+        { type: "erro_comum", text: "O erro que faz você desistir no terceiro dia" },
+        { type: "pergunta", text: "Por que o terceiro dia é o mais difícil?" },
+      ],
+    });
+    const score = async (titles: string[]) => titles.map((_, i) => [0.6, 0.9, 0.7][i]);
     const r = await suggestTitlesWith({ db, ai: async () => ai, score }, p.id);
     expect(r).toEqual([
-      { text: "B", score: 0.9 },
-      { text: "E", score: 0.7 },
-      { text: "C", score: 0.5 },
-      { text: "F", score: 0.3 },
-      { text: "A", score: 0.2 },
-      { text: "D", score: 0.1 },
+      { text: "O erro que faz você desistir no terceiro dia", score: 0.9, type: "erro_comum", best: true },
+      { text: "Por que o terceiro dia é o mais difícil?", score: 0.7, type: "pergunta", best: false },
+      { text: "Como estudar 20 minutos por dia", score: 0.6, type: "beneficio", best: false },
     ]);
     expect(db.projects.get(p.id)!.interview.titleSuggestions).toEqual(r);
+  });
+
+  it("suggestTitles refaz o título fraco uma vez e fica com o melhor", async () => {
+    const db = new FakeDb();
+    const p = db.add({ interview: { mainSeconds: 60, platforms: ["reels"] } });
+    setMockResponse("generateJson", [
+      { options: [
+        { type: "beneficio", text: "Como estudar 20 minutos por dia" },
+        { type: "erro_comum", text: "O erro que faz você desistir" },
+        { type: "pergunta", text: "Dicas incríveis de estudo" },
+      ] },
+      { options: [{ type: "pergunta", text: "Por que você esquece tudo uma semana depois da prova?" }] },
+    ]);
+    const scores = new Map([
+      ["Como estudar 20 minutos por dia", 0.8],
+      ["O erro que faz você desistir", 0.7],
+      ["Dicas incríveis de estudo", 0.2],
+      ["Por que você esquece tudo uma semana depois da prova?", 0.75],
+    ]);
+    const score = async (titles: string[]) => titles.map((t) => scores.get(t) ?? 0);
+    const r = await suggestTitlesWith({ db, ai: async () => ai, score }, p.id);
+    expect(getMockCalls("generateJson")).toBe(2);
+    expect(r.map((o) => o.text)).toEqual([
+      "Como estudar 20 minutos por dia",
+      "Por que você esquece tudo uma semana depois da prova?",
+      "O erro que faz você desistir",
+    ]);
+    expect(r[0].best).toBe(true);
   });
 
   it("falha da IA na sugestão é marcada e não é repetida", async () => {

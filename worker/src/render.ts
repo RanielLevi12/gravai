@@ -11,7 +11,28 @@ import { download, upload } from "./storage";
 import { transcribeViaApp } from "./transcribe";
 
 export const SAFE_BYTES = MAX_FILE_BYTES * 0.93;
-const SCALE = "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1";
+/** Corte 9:16 central quando a gravação não traz o retângulo: o mesmo que o preview (object-fit: cover) mostra. */
+const CENTER_CROP = "crop=trunc(min(iw\\,ih*9/16)/2)*2:trunc(min(ih\\,iw*16/9)/2)*2";
+const TO_FULL_HD = "scale=1080:1920,setsar=1";
+
+export type Crop = { x: number; y: number; w: number; h: number };
+
+/** Lê o corte salvo na gravação; qualquer coisa fora do formato vira nulo (corte central). */
+export function parseCrop(raw: unknown): Crop | null {
+  const o = raw as Record<string, unknown> | null;
+  if (!o || typeof o !== "object") return null;
+  const { x, y, w, h } = o;
+  if (![x, y, w, h].every((n) => Number.isInteger(n))) return null;
+  const c = { x, y, w, h } as Crop;
+  return c.x >= 0 && c.y >= 0 && c.w > 0 && c.h > 0 ? c : null;
+}
+
+/** Recorta (nunca enche de barras) e só então ajusta para 1080×1920, para o vídeo final sair igual ao preview. */
+export function framingFilter(crop: Crop | null, width: number, height: number): string {
+  const fits = crop && width > 0 && height > 0 && crop.x + crop.w <= width && crop.y + crop.h <= height;
+  const cut = fits ? `crop=${crop.w}:${crop.h}:${crop.x}:${crop.y}` : CENTER_CROP;
+  return `${cut},${TO_FULL_HD}`;
+}
 const MIN_ALIGN_CONFIDENCE = 0.7;
 const MSG_CHECK_CUTS = "Confira o início e o fim dos cortes.";
 export const MSG_TOO_BIG = "O vídeo ficou grande demais (mais de 50 MB). Grave por blocos mais curtos.";
@@ -39,11 +60,11 @@ const isCut = (c: unknown): c is Cut => {
 };
 
 /** Vídeo do bloco → 1080×1920, 30 fps, H.264 + AAC, volume uniforme (sem áudio ganha silêncio). */
-async function normalize(input: string, output: string, videoKbps: number): Promise<void> {
-  const { hasAudio } = await probe(input);
+async function normalize(input: string, output: string, videoKbps: number, crop: Crop | null): Promise<void> {
+  const { hasAudio, width, height } = await probe(input);
   const args = ["-y", "-i", input];
   if (!hasAudio) args.push("-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo");
-  args.push("-vf", SCALE, "-map", "0:v:0", "-map", hasAudio ? "0:a:0" : "1:a:0");
+  args.push("-vf", framingFilter(crop, width, height), "-map", "0:v:0", "-map", hasAudio ? "0:a:0" : "1:a:0");
   if (hasAudio) args.push("-af", "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000");
   args.push("-shortest", ...encodeArgs(videoKbps), output);
   await run(args);
@@ -73,7 +94,7 @@ export async function renderProject(ctx: JobContext): Promise<{ warning?: string
   const project = must(await db.from("projects").select("cuts").eq("id", projectId).single(), "ler projeto");
   const blocks = must(await db.from("script_blocks").select("id, position, text").eq("project_id", projectId).order("position"), "ler blocos");
   const recs = must(
-    await db.from("recordings").select("id, kind, block_id, storage_path, duration_seconds").eq("project_id", projectId).eq("status", "ready"),
+    await db.from("recordings").select("id, kind, block_id, storage_path, duration_seconds, crop").eq("project_id", projectId).eq("status", "ready"),
     "ler gravações",
   );
 
@@ -157,7 +178,7 @@ export async function renderProject(ctx: JobContext): Promise<{ warning?: string
 }
 
 type Block = { id: string; position: number; text: string };
-type Rec = { id: string; kind: string; block_id: string | null; storage_path: string; duration_seconds: unknown };
+type Rec = { id: string; kind: string; block_id: string | null; storage_path: string; duration_seconds: unknown; crop?: unknown };
 type Prepared = { finalFile: string; ranges: Range[]; warning?: string };
 
 /** Por blocos: padroniza cada gravação e junta na ordem do script; o tempo de cada bloco é o da sua gravação. */
@@ -173,7 +194,7 @@ async function prepareBlocks({ db, job, workdir }: JobContext, blocks: Block[], 
     const raw = path.join(workdir, `raw-${i}${path.extname(rec.storage_path)}`);
     const norm = path.join(workdir, `bloco-${i}.mp4`);
     await download(db, "recordings", rec.storage_path, raw);
-    await normalize(raw, norm, videoKbps);
+    await normalize(raw, norm, videoKbps, parseCrop(rec.crop));
     normalized.push(norm);
   }
 
@@ -191,7 +212,7 @@ async function prepareTake({ db, job, workdir, deps }: JobContext, blocks: Block
   const raw = path.join(workdir, `take${path.extname(rec.storage_path)}`);
   const finalFile = path.join(workdir, "final.mp4");
   await download(db, "recordings", rec.storage_path, raw);
-  await normalize(raw, finalFile, videoKbps);
+  await normalize(raw, finalFile, videoKbps, parseCrop(rec.crop));
   const duration = (await probe(finalFile)).duration;
 
   await progress(db, job.id, "transcrevendo", 35);

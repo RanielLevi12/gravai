@@ -11,3 +11,4 @@ supabase/.temp/
 next-env.d.ts
 *.tsbuildinfo
 .next-e2e/
+tests/evals/results/

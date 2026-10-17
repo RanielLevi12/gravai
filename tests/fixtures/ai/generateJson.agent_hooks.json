@@ -1,0 +1,7 @@
+{
+  "options": [
+    { "type": "historia", "spoken": "No terceiro dia, eu sempre desistia.", "onScreen": "Dia 3: desisti", "visual": "Eu parado diante do espelho, de tênis, sem sair de casa." },
+    { "type": "erro_comum", "spoken": "Você começa a rotina grande demais.", "onScreen": "Grande demais", "visual": "Uma lista de dez tarefas riscada ao meio." },
+    { "type": "prova", "spoken": "Dois minutos por dia mudaram minha manhã.", "onScreen": "2 minutos", "visual": "Cronômetro marcando 2:00." }
+  ]
+}

@@ -14,6 +14,7 @@ export async function recordAiUsage(userId: string, u: AiUsage): Promise<void> {
       cost_usd: u.costUsd,
       prompt_tokens: u.promptTokens ?? null,
       completion_tokens: u.completionTokens ?? null,
+      ...(u.billedTo === "app" ? { billed_to: "app" } : {}),
     });
     if (error) console.warn("[ai] não consegui guardar o custo da chamada");
   } catch {

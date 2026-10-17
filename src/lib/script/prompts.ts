@@ -1,5 +1,8 @@
 /** Prompts da geração do script. Puro: só monta texto. */
 import { PLATFORM_LABELS, type Interview, type Platform } from "@/lib/interview/steps";
+import { GUIA_ROTEIRO } from "@/lib/ai/agents/guia";
+import { styleLines } from "@/lib/ai/agents/contexto";
+import type { FolderStyle } from "@/lib/folders/schema";
 import { targetWords } from "@/lib/rules/duration";
 import type { BlockKind } from "./generate";
 
@@ -13,13 +16,17 @@ export const SCRIPT_SYSTEM = `Você escreve o roteiro falado de UM vídeo de cri
 Regras:
 - Escreva no mesmo idioma do texto-fonte, em linguagem falada e simples, como a pessoa falaria olhando para a câmera.
 - É um único vídeo: um bloco "opening" (abertura com gancho), vários blocos "body" (os parágrafos do desenvolvimento, cada um continuando o anterior) e um bloco "closing" (fechamento).
-- Cumprimente a plateia no máximo UMA vez, na abertura ("Fala, pessoal", "Meu povo" etc.). Nenhum outro bloco começa com cumprimento, nem recomeça o assunto como se fosse outro vídeo, nem se despede antes do fechamento.
-- Cada "body" liga com o anterior (use a continuação natural da fala) e avança a ideia.
+- A abertura começa direto no gancho: sem saudação longa, sem apresentação, sem "neste vídeo". Se vier um gancho escolhido no pedido, a abertura COMEÇA com essa frase, palavra por palavra.
+- Cumprimente a plateia no máximo UMA vez, de forma curta, e só depois do gancho, se combinar com o tom. Nenhum outro bloco começa com cumprimento, nem recomeça o assunto como se fosse outro vídeo, nem se despede antes do fechamento.
+- Cada "body" liga com o anterior (use a continuação natural da fala) e avança a ideia com uma virada, nunca com "e então".
+- O "closing" paga o gancho e fecha com UMA ação ligada ao objetivo pedido. Sem resumo do vídeo inteiro.
 - Não faça cortes nem marque trechos para publicar separado: isso é feito depois, em outra etapa.
 - Não invente fatos que não estejam no texto-fonte.
-- Não escreva chamada para ação (link, WhatsApp, telefone) nas descrições nem no roteiro: ela é adicionada depois.
+- Não escreva link, telefone nem número de WhatsApp no roteiro nem nas descrições: o contato é adicionado depois pelo sistema. Pode dizer "o link está na descrição".
 - "mainDescriptions": uma legenda por plataforma pedida, no estilo da plataforma, sem a chamada para ação. "mainCoverPrompt": descrição da capa do vídeo.
-- Responda só com o JSON pedido.`;
+- Responda só com o JSON pedido.
+
+${GUIA_ROTEIRO}`;
 
 export function buildScriptUser(input: {
   sourceText: string;
@@ -30,15 +37,18 @@ export function buildScriptUser(input: {
   mainSeconds: number;
   /** "Sobre este projeto" (vídeo dentro de um projeto). */
   about?: string | null;
+  /** Estilo do projeto (tom, público, exemplos): vale mais que o perfil. */
+  style?: FolderStyle | null;
+  /** Gancho escolhido pelo agente de ganchos: a abertura começa com ele. */
+  hook?: { text: string; onScreen?: string } | null;
+  /** O que o fecho precisa conseguir (ver `ctaObjective`). */
+  ctaObjective?: string | null;
   problem?: string;
 }): string {
-  const { interview: i, profile, episode, platforms, mainSeconds, about, problem } = input;
-  const lines: string[] = [];
-  if (profile?.niche) lines.push(`Nicho: ${profile.niche}`);
-  if (profile?.audience) lines.push(`Público: ${profile.audience}`);
-  if (profile?.tone) lines.push(`Tom de voz: ${profile.tone}`);
-  if (profile?.phrases) lines.push(`Frases e expressões da pessoa: ${profile.phrases}`);
-  if (about?.trim()) lines.push(`Sobre o projeto deste vídeo (tema e público do canal): ${about.trim()}`);
+  const { interview: i, profile, episode, platforms, mainSeconds, about, style, hook, problem } = input;
+  const lines: string[] = styleLines(profile, style, about);
+  if (hook?.text) lines.push(`Gancho escolhido (a abertura começa com esta frase, sem mudar): ${hook.text}`);
+  if (input.ctaObjective) lines.push(`Objetivo do fecho: ${input.ctaObjective}`);
   if (episode) lines.push(`Este vídeo é o episódio ${episode.index} de uma série: ${episode.title}. ${episode.summary}`);
   if (i.titles?.chosen) lines.push(`Título do vídeo: ${i.titles.chosen}`);
   if (i.scenery) lines.push(`Cenário: ${i.scenery.mode === "ai" ? i.scenery.aiPrompt : i.scenery.natural}`);

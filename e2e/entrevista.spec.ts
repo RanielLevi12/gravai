@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { entrarComOnboardingFeito } from "./support";
 
 // Rodar com AI_MOCK=1: a sugestão vem de tests/fixtures/ai/generateJson.interview_suggestion.json
-// (Reels + TikTok, vídeo único, 60 s) e os títulos de generateJson.interview_titles.json.
+// (Reels + TikTok, vídeo único, 60 s) e os títulos de generateJson.agent_titles.json.
 
 const PALAVRAS_300 = Array.from({ length: 300 }, (_, i) => `palavra${i + 1}`).join(" ");
 

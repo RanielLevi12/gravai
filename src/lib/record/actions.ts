@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerClient } from "@/lib/supabase/server";
+import { parseCrop } from "./capture";
 import { supabaseRecordDb } from "./db";
 import type { RecordMode } from "./rules";
 import {
@@ -52,6 +53,7 @@ export async function startRecording(input: {
   kind: "take" | "block" | "external";
   blockId: string | null;
   mime: string;
+  crop?: unknown;
 }): Promise<{ id: string; path: string } | ActionError> {
   if (!input || typeof input.projectId !== "string" || !UUID.test(input.projectId)) return { error: MSG_PROJECT_NOT_FOUND };
   if (!KINDS.includes(input.kind) || typeof input.mime !== "string") return { error: MSG_UNAVAILABLE };
@@ -64,6 +66,7 @@ export async function startRecording(input: {
       kind: input.kind,
       blockId: input.blockId ?? null,
       mime: input.mime,
+      crop: parseCrop(input.crop),
     });
   } catch (e) {
     return failure(e);

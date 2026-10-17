@@ -2,15 +2,14 @@
 import { z } from "zod";
 import type { UserAi } from "@/lib/ai";
 import { AiError } from "@/lib/ai/schemas";
+import { titulosAgent } from "@/lib/ai/agents/titulos";
 import { countWords, mainDurationOptions } from "@/lib/rules/duration";
 import { MSG_NOT_FOUND, type InterviewDb } from "./service";
 import {
   MAX_EPISODES,
   MAX_TITLE,
   MIN_EPISODES,
-  PLATFORM_LABELS,
   PLATFORMS,
-  formatSeconds,
   isPlatform,
   type Interview,
   type InterviewSuggestion,
@@ -19,7 +18,6 @@ import {
 
 /** Trecho do texto-fonte enviado à IA (o suficiente para entender o tema e o tamanho). */
 const SOURCE_EXCERPT = 12_000;
-const TITLE_COUNT = 6;
 
 export type ProfileContext = { niche?: string | null; audience?: string | null; tone?: string | null };
 
@@ -52,8 +50,6 @@ export const SuggestionSchema = z
   .meta({ title: "interview_suggestion" });
 
 export type RawSuggestion = z.infer<typeof SuggestionSchema>;
-
-const TitlesSchema = z.object({ titles: z.array(z.string()) }).meta({ title: "interview_titles" });
 
 const clip = (s: unknown, max: number) => (typeof s === "string" ? s.trim().slice(0, max) : "");
 
@@ -170,11 +166,7 @@ ${project.source_text.slice(0, SOURCE_EXCERPT)}
   return suggestion;
 }
 
-const TITLES_SYSTEM = `Você escreve títulos de vídeos curtos para redes sociais.
-Crie ${TITLE_COUNT} títulos diferentes para o vídeo descrito: curtos (até 70 caracteres), específicos, com gancho de curiosidade ou benefício claro, sem caça-clique enganoso e sem hashtags.
-Escreva no mesmo idioma do texto.`;
-
-/** 6 títulos da IA do usuário, ranqueados por potencial de viralizar (maior primeiro); salvos em `interview.titleSuggestions`. */
+/** 3 títulos de tipos diferentes (agente de títulos), com nota do jev; o melhor vem primeiro e marcado. Salvos em `interview.titleSuggestions`. */
 export async function suggestTitlesWith(deps: TitleDeps, projectId: string): Promise<TitleOption[]> {
   const project = await deps.db.getProject(projectId);
   if (!project) throw new AiError(MSG_NOT_FOUND, { code: "invalid_input" });
@@ -182,33 +174,21 @@ export async function suggestTitlesWith(deps: TitleDeps, projectId: string): Pro
   const profile = deps.profile ? await deps.profile().catch(() => null) : null;
   const i = project.interview ?? {};
 
-  const episode =
-    project.episode_index && i.episodes?.[project.episode_index - 1]
-      ? `Este vídeo é o episódio ${project.episode_index} de uma série: ${i.episodes[project.episode_index - 1].title}. ${i.episodes[project.episode_index - 1].summary}\n`
-      : "";
-  const where = (i.platforms ?? []).map((p) => PLATFORM_LABELS[p]).join(", ");
-  const context = [
-    where ? `Plataformas: ${where}` : "",
-    i.mainSeconds ? `Duração: ${formatSeconds(i.mainSeconds)}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
-  const about = project.folder_about?.trim() ? `Sobre o projeto deste vídeo (tema e público do canal): ${project.folder_about.trim()}\n` : "";
-  const user = `${profileLines(profile)}${about}${episode}${context}
-
-Texto:
-"""
-${project.source_text.slice(0, SOURCE_EXCERPT)}
-"""`;
-
-  const raw = await ai.generateJson(TitlesSchema, TITLES_SYSTEM, user);
-  const titles = [...new Set(raw.titles.map((t) => clip(t, MAX_TITLE)).filter(Boolean))].slice(0, TITLE_COUNT);
-  if (titles.length === 0) throw new AiError(undefined, { code: "invalid_output" });
-
-  const scores = await deps.score(titles, `${episode}${context}\n${project.source_text.slice(0, 1500)}`.trim());
-  const ranked = titles
-    .map((text, k) => ({ text, score: Math.min(1, Math.max(0, Number.isFinite(scores[k]) ? scores[k] : 0)) }))
-    .sort((a, b) => b.score - a.score);
+  const ep = project.episode_index ? i.episodes?.[project.episode_index - 1] : undefined;
+  const options = await titulosAgent(
+    { ai, score: deps.score },
+    {
+      sourceText: project.source_text,
+      sourceLimit: SOURCE_EXCERPT,
+      profile,
+      about: project.folder_about,
+      style: project.folder_style,
+      episode: ep && project.episode_index ? { index: project.episode_index, title: ep.title, summary: ep.summary } : null,
+      platforms: (i.platforms ?? []).filter(isPlatform),
+      mainSeconds: i.mainSeconds,
+    },
+  );
+  const ranked: TitleOption[] = options.map((o) => ({ text: clip(o.text, MAX_TITLE), score: o.score, type: o.type, best: o.best }));
 
   const fresh = await deps.db.getProject(projectId);
   if (fresh) await deps.db.saveInterview(projectId, { ...(fresh.interview ?? {}), titleSuggestions: ranked });

@@ -10,6 +10,7 @@ export type MockFn =
   | "transcribeWords"
   | "generateJson"
   | "scoreViral"
+  | "scoreClosing"
   | "checkScript"
   | "reviewExcerpts";
 
@@ -97,6 +98,11 @@ export async function rawJson(schema: Record<string, unknown>, _system: string, 
 export async function scoreViral(titles: string[], _context: string): Promise<number[]> {
   const v = next("scoreViral") as number[];
   return titles.map((_, i) => v[i % v.length]);
+}
+
+export async function scoreClosing(texts: string[], _context: string): Promise<number[]> {
+  const v = next("scoreClosing") as number[];
+  return texts.map((_, i) => v[i % v.length]);
 }
 
 export async function checkScript(

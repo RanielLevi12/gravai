@@ -19,6 +19,8 @@ import {
   PLATFORMS,
   type FolderColor,
   type FolderSettings,
+  MAX_STYLE_EXAMPLES,
+  MAX_STYLE_SHORT,
 } from "@/lib/folders/schema";
 import { PLATFORM_LABELS, formatSeconds, type Platform } from "@/lib/interview/steps";
 import { allowedCutDurations } from "@/lib/rules/cuts";
@@ -47,6 +49,7 @@ export function FolderForm({
   const editing = Boolean(folderId);
   const s = v.settings;
   const set = (patch: Partial<FolderSettings>) => setV((cur) => ({ ...cur, settings: { ...cur.settings, ...patch } }));
+  const setStyle = (patch: NonNullable<FolderSettings["style"]>) => setV((cur) => ({ ...cur, settings: { ...cur.settings, style: { ...cur.settings.style, ...patch } } }));
 
   function pickDuration(seconds: number) {
     // Corte que não cabe mais no vídeo novo vira "sem cortes" até escolher de novo.
@@ -125,6 +128,31 @@ export function FolderForm({
           value={v.about}
           maxLength={MAX_ABOUT}
           onChange={(e) => setV({ ...v, about: e.target.value })}
+        />
+        <Field
+          label="Tom de voz do projeto"
+          hint="Opcional. Vale mais que o tom do seu perfil. Ex.: acolhedor, direto, bem-humorado."
+          name="style-tone"
+          value={s.style?.tone ?? ""}
+          maxLength={MAX_STYLE_SHORT}
+          onChange={(e) => setStyle({ tone: e.target.value })}
+        />
+        <Field
+          label="Público do projeto"
+          hint="Opcional. Ex.: mães de primeira viagem, donos de pequenas lojas, jovens da igreja."
+          name="style-audience"
+          value={s.style?.audience ?? ""}
+          maxLength={MAX_STYLE_SHORT}
+          onChange={(e) => setStyle({ audience: e.target.value })}
+        />
+        <Field
+          label="Exemplos de como você fala"
+          hint="Opcional. Cole 1 ou 2 trechos de vídeos seus que ficaram bons. A IA imita o ritmo, sem copiar as frases."
+          multiline
+          name="style-examples"
+          value={s.style?.examples ?? ""}
+          maxLength={MAX_STYLE_EXAMPLES}
+          onChange={(e) => setStyle({ examples: e.target.value })}
         />
       </section>
 

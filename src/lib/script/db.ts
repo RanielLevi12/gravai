@@ -1,3 +1,4 @@
+import { styleFromSettings } from "@/lib/folders/schema";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
@@ -17,14 +18,14 @@ export function supabaseScriptDb(deps: { supabase: SupabaseClient<Database>; use
     async getProject(id) {
       const { data, error } = await supabase
         .from("projects")
-        .select("id, title, source_kind, source_text, source_truncated, status, interview, series_id, episode_index, folder_id, folders(about)")
+        .select("id, title, source_kind, source_text, source_truncated, status, interview, series_id, episode_index, folder_id, folders(about, settings)")
         .eq("id", id)
         .maybeSingle();
       if (error) throw new Error("read project failed");
       if (!data) return null;
       const interview = data.interview && typeof data.interview === "object" && !Array.isArray(data.interview) ? data.interview : {};
       const { folders, ...project } = data;
-      return { ...project, folder_about: folders?.about ?? null, interview: interview as unknown as Interview } satisfies InterviewProject;
+      return { ...project, folder_about: folders?.about ?? null, folder_style: styleFromSettings(folders?.settings), interview: interview as unknown as Interview } satisfies InterviewProject;
     },
     async profile() {
       const { data } = await supabase.from("profiles").select("niche, audience, tone, phrases").maybeSingle();
@@ -98,14 +99,14 @@ export function supabaseCutsDb(deps: { supabase: SupabaseClient<Database> }): Cu
     async getProject(id) {
       const { data, error } = await supabase
         .from("projects")
-        .select("id, title, source_kind, source_text, source_truncated, status, interview, series_id, episode_index, folder_id, folders(about)")
+        .select("id, title, source_kind, source_text, source_truncated, status, interview, series_id, episode_index, folder_id, folders(about, settings)")
         .eq("id", id)
         .maybeSingle();
       if (error) throw new Error("read project failed");
       if (!data) return null;
       const interview = data.interview && typeof data.interview === "object" && !Array.isArray(data.interview) ? data.interview : {};
       const { folders, ...project } = data;
-      return { ...project, folder_about: folders?.about ?? null, interview: interview as unknown as Interview } satisfies InterviewProject;
+      return { ...project, folder_about: folders?.about ?? null, folder_style: styleFromSettings(folders?.settings), interview: interview as unknown as Interview } satisfies InterviewProject;
     },
     async blocks(projectId) {
       const { data, error } = await supabase.from("script_blocks").select("position, text").eq("project_id", projectId).order("position");

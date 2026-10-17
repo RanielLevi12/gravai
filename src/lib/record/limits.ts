@@ -1,7 +1,7 @@
 /** Limite de cada gravação (bucket `recordings`, plano Pro do Supabase). */
 export const MAX_FILE_BYTES = 524_288_000;
-export const VIDEO_BPS = 1_800_000;
-export const AUDIO_BPS = 96_000;
+export const VIDEO_BPS = 4_000_000;
+export const AUDIO_BPS = 128_000;
 export const MAX_TAKE_SECONDS = 200;
 export const WARN_TAKE_SECONDS = 180;
 
@@ -12,6 +12,11 @@ export function fitsBucket(sizeBytes: number): boolean {
   return sizeBytes <= MAX_FILE_BYTES;
 }
 
-export function estimatedBytes(seconds: number): number {
-  return (seconds * (VIDEO_BPS + AUDIO_BPS)) / 8;
+export function estimatedBytes(seconds: number, videoBps = VIDEO_BPS, audioBps = AUDIO_BPS): number {
+  return (seconds * (videoBps + audioBps)) / 8;
+}
+
+/** Segundos que cabem em 500 MB (com 5% de folga) nesse bitrate, nunca acima do limite de sempre. */
+export function maxSecondsFor(videoBps: number, audioBps = AUDIO_BPS): number {
+  return Math.min(MAX_TAKE_SECONDS, Math.floor((MAX_FILE_BYTES * 0.95) / ((videoBps + audioBps) / 8)));
 }

@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-export type AiErrorCode = "not_connected" | "provider" | "invalid_input" | "invalid_output";
+export type AiErrorCode = "not_connected" | "provider" | "invalid_input" | "invalid_output" | "limit_reached";
 
 /**
  * Erro da camada de IA. `userMessage` é genérica e segura para mostrar ao usuário.
  * `code`: not_connected = usuário sem conta de IA conectada; provider = o provedor falhou;
  * invalid_input = a entrada não serve (ex.: áudio ilegível ou em formato não aceito);
- * invalid_output = a IA respondeu fora do formato.
+ * invalid_output = a IA respondeu fora do formato; limit_reached = acabou o limite mensal da IA do Gravaí.
  */
 export class AiError extends Error {
   userMessage: string;

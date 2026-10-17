@@ -39,14 +39,14 @@ export type Database = {
                   ]
                 },"ai_usage": {
                   Row: {
-                    "completion_tokens": number | null,"cost_usd": number,"created_at": string,"id": string,"kind": string,"model": string,"prompt_tokens": number | null,"user_id": string
+                    "billed_to": string,"completion_tokens": number | null,"cost_usd": number,"created_at": string,"id": string,"kind": string,"model": string,"prompt_tokens": number | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "completion_tokens"?: number | null,"cost_usd": number,"created_at"?: string,"id"?: string,"kind": string,"model": string,"prompt_tokens"?: number | null,"user_id": string
+                    "billed_to"?: string,"completion_tokens"?: number | null,"cost_usd": number,"created_at"?: string,"id"?: string,"kind": string,"model": string,"prompt_tokens"?: number | null,"user_id": string
                   }
                   Update: {
-                    "completion_tokens"?: number | null,"cost_usd"?: number,"created_at"?: string,"id"?: string,"kind"?: string,"model"?: string,"prompt_tokens"?: number | null,"user_id"?: string
+                    "billed_to"?: string,"completion_tokens"?: number | null,"cost_usd"?: number,"created_at"?: string,"id"?: string,"kind"?: string,"model"?: string,"prompt_tokens"?: number | null,"user_id"?: string
                   }
                   Relationships: [
                     
@@ -161,14 +161,14 @@ isOneToOne: false
                   ]
                 },"recordings": {
                   Row: {
-                    "block_id": string | null,"created_at": string,"duration_seconds": number | null,"id": string,"kind": string,"mime": string,"project_id": string,"size_bytes": number,"status": string,"storage_path": string,"user_id": string
+                    "block_id": string | null,"created_at": string,"crop": Json | null,"duration_seconds": number | null,"id": string,"kind": string,"mime": string,"project_id": string,"size_bytes": number,"status": string,"storage_path": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "block_id"?: string | null,"created_at"?: string,"duration_seconds"?: number | null,"id"?: string,"kind": string,"mime": string,"project_id": string,"size_bytes": number,"status"?: string,"storage_path": string,"user_id"?: string
+                    "block_id"?: string | null,"created_at"?: string,"crop"?: Json | null,"duration_seconds"?: number | null,"id"?: string,"kind": string,"mime": string,"project_id": string,"size_bytes": number,"status"?: string,"storage_path": string,"user_id"?: string
                   }
                   Update: {
-                    "block_id"?: string | null,"created_at"?: string,"duration_seconds"?: number | null,"id"?: string,"kind"?: string,"mime"?: string,"project_id"?: string,"size_bytes"?: number,"status"?: string,"storage_path"?: string,"user_id"?: string
+                    "block_id"?: string | null,"created_at"?: string,"crop"?: Json | null,"duration_seconds"?: number | null,"id"?: string,"kind"?: string,"mime"?: string,"project_id"?: string,"size_bytes"?: number,"status"?: string,"storage_path"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {

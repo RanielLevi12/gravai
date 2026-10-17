@@ -32,6 +32,11 @@ export function isFolderColor(v: unknown): v is FolderColor {
   return typeof v === "string" && (FOLDER_COLORS as readonly string[]).includes(v);
 }
 
+/** Estilo do projeto: a IA escreve título, gancho e fecho com isso. Tudo opcional. */
+export type FolderStyle = { tone?: string; audience?: string; examples?: string };
+export const MAX_STYLE_SHORT = 200;
+export const MAX_STYLE_EXAMPLES = 1500;
+
 /** Subconjunto de `Interview`: o que o vídeo herda. O título nunca é do projeto. */
 export type FolderSettings = {
   platforms: Platform[];
@@ -43,6 +48,8 @@ export type FolderSettings = {
   cover: Cover;
   /** null = sem chamada no final. */
   ctaId: string | null;
+  /** Só existe se a pessoa preencheu algo. */
+  style?: FolderStyle;
 };
 
 export type FolderInput = { name: string; color: FolderColor; about: string | null; settings: FolderSettings };
@@ -98,6 +105,8 @@ export function validateFolderInput(input: unknown, ctaIds: string[]): Result {
   if (natural === null || aiPrompt === null) return fail("Descrição do cenário longa demais.");
   if (s.cover !== "frame" && s.cover !== "ai") return fail("Escolha um tipo de capa.");
   if (s.ctaId !== null && (typeof s.ctaId !== "string" || !ctaIds.includes(s.ctaId))) return fail("Escolha uma das suas chamadas.");
+  const style = validateStyle(s.style);
+  if (style === null) return fail(`Estilo longo demais: use até ${MAX_STYLE_SHORT} letras em tom e público e ${MAX_STYLE_EXAMPLES} nos exemplos.`);
 
   return {
     ok: true,
@@ -113,9 +122,29 @@ export function validateFolderInput(input: unknown, ctaIds: string[]): Result {
         scenery: { mode: s.scenery.mode, natural, aiPrompt },
         cover: s.cover,
         ctaId: s.ctaId,
+        ...(style ? { style } : {}),
       },
     },
   };
+}
+
+/** undefined = sem estilo; null = inválido (tipo errado ou longo demais). */
+function validateStyle(raw: unknown): FolderStyle | undefined | null {
+  if (raw == null) return undefined;
+  if (!isObj(raw)) return null;
+  const tone = raw.tone == null || raw.tone === "" ? "" : text(raw.tone, MAX_STYLE_SHORT);
+  const audience = raw.audience == null || raw.audience === "" ? "" : text(raw.audience, MAX_STYLE_SHORT);
+  const examples = raw.examples == null || raw.examples === "" ? "" : text(raw.examples, MAX_STYLE_EXAMPLES);
+  if (tone === null || audience === null || examples === null) return null;
+  const out: FolderStyle = { ...(tone ? { tone } : {}), ...(audience ? { audience } : {}), ...(examples ? { examples } : {}) };
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/** Estilo guardado em `folders.settings` (banco pode ter lixo): só texto, com os mesmos limites. */
+export function styleFromSettings(raw: unknown): FolderStyle | null {
+  const style = raw && typeof raw === "object" ? (raw as { style?: unknown }).style : undefined;
+  const v = validateStyle(style);
+  return v ?? null;
 }
 
 /** Resumo curto das configurações: "Reels · vídeo único · 60 s · cortes de 30 s · sem chamada". */

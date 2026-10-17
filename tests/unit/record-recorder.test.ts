@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRecorder, type RecorderEnv, type RecorderOpts } from "@/components/record/recorder";
-import { captureConstraints, DEFAULT_CAPTURE, maxRecordSeconds, QUALITY } from "@/lib/record/capture";
+import { captureConstraints, DEFAULT_CAPTURE, maxRecordSeconds, QUALITY, resolveCapture, type AutoProfile } from "@/lib/record/capture";
 
 class FakeMR {
   static supported = new Set(["video/webm;codecs=vp9,opus", "video/webm"]);
@@ -75,13 +75,11 @@ describe("createRecorder", () => {
     await begin(env);
     expect(FakeMR.last!.opts).toMatchObject({
       mimeType: "video/webm;codecs=vp9,opus",
-      videoBitsPerSecond: 1_800_000,
-      audioBitsPerSecond: 96_000,
+      videoBitsPerSecond: 4_000_000,
+      audioBitsPerSecond: 128_000,
     });
     expect(FakeMR.last!.slice).toBe(1000);
-    expect(env.getUserMedia).toHaveBeenCalledWith(
-      captureConstraints(DEFAULT_CAPTURE),
-    );
+    expect(env.getUserMedia).toHaveBeenCalledWith(captureConstraints(resolveCapture(DEFAULT_CAPTURE, null)));
   });
 
   it("conta 3-2-1 antes de gravar", async () => {
@@ -126,7 +124,7 @@ describe("createRecorder", () => {
 
   it("qualidade Alta: bitrate maior e limite menor", async () => {
     const env = makeEnv();
-    const r = await begin(env, { ...opts, capture: { ...DEFAULT_CAPTURE, quality: "alta" } });
+    const r = await begin(env, { ...opts, capture: { ...DEFAULT_CAPTURE, auto: false, quality: "alta" } });
     expect(FakeMR.last!.opts).toMatchObject({ videoBitsPerSecond: QUALITY.alta.videoBps });
     const max = maxRecordSeconds("alta");
     await vi.advanceTimersByTimeAsync((max - 20) * 1000);
@@ -151,7 +149,7 @@ describe("createRecorder", () => {
       if (JSON.stringify(c).includes("exact")) throw new Error("OverconstrainedError");
       return fakeStream;
     });
-    const r = createRecorder({ ...opts, capture: { ...DEFAULT_CAPTURE, cameraId: "velha" } }, makeEnv({ getUserMedia: gum }));
+    const r = createRecorder({ ...opts, capture: { ...DEFAULT_CAPTURE, auto: false, cameraId: "velha" } }, makeEnv({ getUserMedia: gum }));
     expect(await r.open()).toBe(true);
     expect(gum).toHaveBeenCalledTimes(2);
     expect(r.getSnapshot().state).toBe("ready");
@@ -173,5 +171,31 @@ describe("createRecorder", () => {
     await vi.advanceTimersByTimeAsync(3000);
     await p;
     expect(r.getSnapshot()).toMatchObject({ state: "ready", error: "Não foi possível agora." });
+  });
+
+  const HD: AutoProfile = { tier: "1080p", longSide: 1920, videoBps: 7_000_000, audioBps: 128_000, facing: "environment", micId: null, noiseSuppression: true, echoCancellation: false, autoGainControl: true };
+  const landscape = {
+    getTracks: () => [track],
+    getVideoTracks: () => [{ ...track, getSettings: () => ({ width: 1920, height: 1080, frameRate: 30 }) }],
+  } as unknown as MediaStream;
+
+  it("automático: grava a 7 Mbps com áudio a 128 kbps", async () => {
+    const env = makeEnv({ getUserMedia: vi.fn(async () => landscape) });
+    await begin(env, { ...opts, profile: HD });
+    expect(FakeMR.last!.opts).toMatchObject({ videoBitsPerSecond: 7_000_000, audioBitsPerSecond: 128_000 });
+  });
+
+  it("quadro deitado: manda o corte 9:16 central ao criar a gravação e mostra a Info técnica real", async () => {
+    const env = makeEnv({ getUserMedia: vi.fn(async () => landscape) });
+    const r = await begin(env, { ...opts, profile: HD });
+    expect(env.startRecording).toHaveBeenCalledWith(expect.objectContaining({ crop: { x: 656, y: 0, w: 606, h: 1080 } }));
+    expect(r.getSnapshot().info).toMatchObject({ width: 1920, height: 1080, fps: 30, videoBps: 7_000_000, codec: "VP9" });
+  });
+
+  it("quadro em pé: sem corte", async () => {
+    const portrait = { getTracks: () => [track], getVideoTracks: () => [{ getSettings: () => ({ width: 1080, height: 1920 }) }] } as unknown as MediaStream;
+    const env = makeEnv({ getUserMedia: vi.fn(async () => portrait) });
+    await begin(env, { ...opts, profile: HD });
+    expect(env.startRecording).toHaveBeenCalledWith(expect.objectContaining({ crop: null }));
   });
 });

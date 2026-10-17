@@ -1,4 +1,5 @@
 /** Regras da entrevista sobre um banco abstrato (Supabase no app, memória nos testes). */
+import type { FolderStyle } from "@/lib/folders/schema";
 import { PROJECTS_LIMIT } from "@/lib/usage";
 import { applyAnswer, changesScriptInputs, hasScript, nextAfter, validateEpisodes, EPISODES_STEP, type AnswerStep, type Episode, type Interview, type RouteStep } from "./steps";
 
@@ -16,6 +17,8 @@ export type InterviewProject = {
   folder_id?: string | null;
   /** "Sobre este projeto": contexto que a IA lê ao escrever título e script. */
   folder_about?: string | null;
+  /** Estilo do projeto (tom, público, exemplos), de `folders.settings.style`. */
+  folder_style?: FolderStyle | null;
 };
 
 export type NewEpisodeProject = Omit<InterviewProject, "id">;

@@ -1,3 +1,4 @@
+import type { Crop } from "./capture";
 import type { RecordDb } from "./db";
 import { MAX_FILE_BYTES, MSG_FILE_TOO_BIG, fitsBucket } from "./limits";
 import { allowedModes, canApprove, type RecordMode } from "./rules";
@@ -12,7 +13,7 @@ export const MSG_EMPTY_VIDEO = "O vídeo ficou vazio. Grave de novo.";
 export const MSG_FINISH_SCRIPT = "Termine o script antes de aprovar.";
 const MSG_BAD_VIDEO = "Formato de vídeo não aceito.";
 
-export type StartInput = { projectId: string; kind: "take" | "block" | "external"; blockId: string | null; mime: string };
+export type StartInput = { projectId: string; kind: "take" | "block" | "external"; blockId: string | null; mime: string; crop?: Crop | null };
 
 export async function startRecordingWith(db: RecordDb, input: StartInput): Promise<{ id: string; path: string }> {
   const base = input.mime.split(";")[0].trim().toLowerCase();
@@ -29,7 +30,7 @@ export async function startRecordingWith(db: RecordDb, input: StartInput): Promi
     blockId = input.blockId;
   }
 
-  return db.insertUploading({ projectId: input.projectId, kind: input.kind, blockId, mime: input.mime });
+  return db.insertUploading({ projectId: input.projectId, kind: input.kind, blockId, mime: input.mime, crop: input.crop ?? null });
 }
 
 export async function finishRecordingWith(

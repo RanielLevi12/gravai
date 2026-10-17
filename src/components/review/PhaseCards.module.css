@@ -1,0 +1,89 @@
+.cards {
+  display: grid;
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0;
+}
+
+/* Fase do vídeo: cartão alto, rosa da marca, com o número em destaque. */
+.video {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  border-radius: var(--radius-lg);
+  background: var(--primary-tint);
+  color: var(--ink);
+}
+
+.videoTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--primary-press);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.big {
+  margin: var(--space-xs) 0 0;
+  font-family: var(--display), system-ui, sans-serif;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.sub {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 15px;
+}
+
+.status {
+  justify-self: start;
+  margin-top: var(--space-xs);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  color: var(--primary-press);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* Fase do projeto: faixa baixa, com o quadradinho na cor do projeto. */
+.project {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+.tile {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  color: var(--ink);
+}
+
+.projectText {
+  min-width: 0;
+}
+
+.projectTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.projectSub {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
