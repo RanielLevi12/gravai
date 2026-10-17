@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { HomeView, type RecentVideo } from "@/components/project/HomeView";
+import { missingPartsCount } from "@/lib/record/missing";
 import { createServerClient } from "@/lib/supabase/server";
 import { currentMonth, PROJECTS_LIMIT } from "@/lib/usage";
 
@@ -39,7 +40,27 @@ export default async function ProjetosPage() {
     color: f.color,
     count: (f.projects as unknown as { count: number }[] | null)?.[0]?.count ?? 0,
   }));
-  const lista = recentes ?? [];
+  const base = recentes ?? [];
+
+  // "Faltam N partes": só para vídeos que estão sendo gravados por blocos.
+  const gravando = base.filter((p) => p.status === "gravacao").map((p) => p.id);
+  const parts = new Map<string, number | null>();
+  if (gravando.length > 0) {
+    const [{ data: blocos }, { data: prontas }] = await Promise.all([
+      supabase.from("script_blocks").select("id, project_id").in("project_id", gravando),
+      supabase.from("recordings").select("project_id, block_id").in("project_id", gravando).eq("status", "ready").eq("kind", "block"),
+    ]);
+    for (const id of gravando) {
+      parts.set(
+        id,
+        missingPartsCount(
+          (blocos ?? []).filter((b) => b.project_id === id).map((b) => b.id),
+          (prontas ?? []).filter((r) => r.project_id === id).map((r) => r.block_id),
+        ),
+      );
+    }
+  }
+  const lista = base.map((p) => ({ ...p, missingParts: parts.get(p.id) ?? null }));
 
   return (
     <HomeView
