@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import type { Interview } from "@/lib/interview/steps";
+import type { Crop } from "./capture";
 import { extensionFor } from "./mime";
 
 type Kind = "take" | "block" | "external";
@@ -9,7 +10,7 @@ type Kind = "take" | "block" | "external";
 export interface RecordDb {
   project(id: string): Promise<{ id: string; status: string; interview: Interview | null } | null>;
   blockIds(projectId: string): Promise<string[]>;
-  insertUploading(row: { projectId: string; kind: Kind; blockId: string | null; mime: string }): Promise<{ id: string; path: string }>;
+  insertUploading(row: { projectId: string; kind: Kind; blockId: string | null; mime: string; crop: Crop | null }): Promise<{ id: string; path: string }>;
   markReady(id: string, v: { sizeBytes: number; durationSeconds: number | null }): Promise<{ replacedPaths: string[] } | null>;
   /** Só apaga gravação em envio ("uploading"). "ready" = já salva, nada é apagado. */
   deleteRow(id: string): Promise<{ path: string } | "ready" | null>;
@@ -36,7 +37,7 @@ export function supabaseRecordDb(deps: { supabase: SupabaseClient<Database>; use
       if (error) throw new Error("read blocks failed");
       return (data ?? []).map((b) => b.id);
     },
-    async insertUploading({ projectId, kind, blockId, mime }) {
+    async insertUploading({ projectId, kind, blockId, mime, crop }) {
       const id = crypto.randomUUID();
       const path = `${userId}/${projectId}/${id}.${extensionFor(mime)}`;
       const { error } = await supabase.from("recordings").insert({
@@ -48,6 +49,8 @@ export function supabaseRecordDb(deps: { supabase: SupabaseClient<Database>; use
         storage_path: path,
         mime,
         size_bytes: 0,
+        // Só manda a coluna quando há corte: gravação em pé segue sem depender da migração 0013.
+        ...(crop ? { crop } : {}),
       });
       if (error) throw new Error("insert recording failed");
       return { id, path };

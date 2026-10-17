@@ -1,6 +1,6 @@
 "use client";
 
-import { Gauge, Rabbit, Settings2, Turtle, X } from "lucide-react";
+import { Gauge, Rabbit, RefreshCw, Settings2, Turtle, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -8,7 +8,7 @@ import { MAX_TAKE_SECONDS } from "@/lib/record/limits";
 import { DEFAULT_SPEED_WPM, stepSpeed } from "@/lib/record/scroll";
 import { clock } from "@/components/script/format";
 import { Prompter } from "./Prompter";
-import { DEFAULT_CAPTURE, type CaptureSettings } from "@/lib/record/capture";
+import { autoLabel, DEFAULT_CAPTURE, type CaptureSettings } from "@/lib/record/capture";
 import { CaptureSettingsPanel, loadCapture, saveCapture } from "./CaptureSettings";
 import { DEFAULT_PREFS, loadPrefs, PrompterSettings, savePrefs, type PrompterPrefs } from "./PrompterSettings";
 import styles from "./record.module.css";
@@ -53,7 +53,15 @@ export function TeleprompterScreen({
 
   const recording = rec.state === "recording";
   // Câmera de trás não espelha; a da frente espelha como um espelho de verdade.
-  const mirrored = rec.stream?.getVideoTracks()[0]?.getSettings().facingMode !== "environment";
+  const trackFacing = rec.stream?.getVideoTracks()[0]?.getSettings().facingMode;
+  const mirrored = trackFacing !== "environment";
+  const facing = trackFacing === "environment" || trackFacing === "user" ? trackFacing : (capture.facing ?? rec.profile?.facing ?? "user");
+  const locked = recording || rec.state === "counting";
+  const apply = (c: CaptureSettings) => {
+    setCapture(c);
+    saveCapture(c);
+    void rec.configure(c);
+  };
   const back = `/projetos/${projectId}/gravar`;
 
   if (rec.state === "denied" || rec.state === "unsupported") {
@@ -76,7 +84,10 @@ export function TeleprompterScreen({
 
   return (
     <main className={styles.studio}>
-      <video ref={video} className={styles.cam} autoPlay muted playsInline style={mirrored ? { transform: "scaleX(-1)" } : undefined} />
+      {/* Moldura 9:16: o object-fit: cover corta o centro, igual ao corte que o worker faz no vídeo final. */}
+      <div className={styles.frame}>
+        <video ref={video} className={styles.cam} autoPlay muted playsInline style={mirrored ? { transform: "scaleX(-1)" } : undefined} />
+      </div>
       <header className={styles.studioTop}>
         <Link href={back} className={styles.round} aria-label="Fechar">
           <X size={22} strokeWidth={2} aria-hidden />
@@ -89,6 +100,11 @@ export function TeleprompterScreen({
           <Settings2 size={22} strokeWidth={2} aria-hidden />
         </button>
       </header>
+      {capture.auto && rec.profile ? (
+        <p className={styles.badge} data-testid="selo-automatico">
+          {autoLabel(rec.profile)}
+        </p>
+      ) : null}
       {heading ? <p className={styles.heading}>{heading}</p> : null}
       {rec.warn ? (
         <p className={styles.warn} role="status">
@@ -130,6 +146,9 @@ export function TeleprompterScreen({
         >
           <i aria-hidden />
         </button>
+        <button type="button" className={styles.round} aria-label="Virar câmera" disabled={locked} onClick={() => apply({ ...capture, facing: facing === "user" ? "environment" : "user", cameraId: null })}>
+          <RefreshCw size={22} strokeWidth={2} aria-hidden />
+        </button>
       </footer>
 
       {showSettings ? (
@@ -140,17 +159,8 @@ export function TeleprompterScreen({
             savePrefs(p);
           }}
           onClose={() => setShowSettings(false)}
-        >
-          <CaptureSettingsPanel
-            settings={capture}
-            locked={recording || rec.state === "counting"}
-            onChange={(c) => {
-              setCapture(c);
-              saveCapture(c);
-              void rec.configure(c);
-            }}
-          />
-        </PrompterSettings>
+          cameraTab={<CaptureSettingsPanel settings={capture} profile={rec.profile} info={rec.info} locked={locked} onChange={apply} />}
+        />
       ) : null}
     </main>
   );

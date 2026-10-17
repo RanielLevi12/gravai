@@ -161,14 +161,14 @@ isOneToOne: false
                   ]
                 },"recordings": {
                   Row: {
-                    "block_id": string | null,"created_at": string,"duration_seconds": number | null,"id": string,"kind": string,"mime": string,"project_id": string,"size_bytes": number,"status": string,"storage_path": string,"user_id": string
+                    "block_id": string | null,"created_at": string,"crop": Json | null,"duration_seconds": number | null,"id": string,"kind": string,"mime": string,"project_id": string,"size_bytes": number,"status": string,"storage_path": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "block_id"?: string | null,"created_at"?: string,"duration_seconds"?: number | null,"id"?: string,"kind": string,"mime": string,"project_id": string,"size_bytes": number,"status"?: string,"storage_path": string,"user_id"?: string
+                    "block_id"?: string | null,"created_at"?: string,"crop"?: Json | null,"duration_seconds"?: number | null,"id"?: string,"kind": string,"mime": string,"project_id": string,"size_bytes": number,"status"?: string,"storage_path": string,"user_id"?: string
                   }
                   Update: {
-                    "block_id"?: string | null,"created_at"?: string,"duration_seconds"?: number | null,"id"?: string,"kind"?: string,"mime"?: string,"project_id"?: string,"size_bytes"?: number,"status"?: string,"storage_path"?: string,"user_id"?: string
+                    "block_id"?: string | null,"created_at"?: string,"crop"?: Json | null,"duration_seconds"?: number | null,"id"?: string,"kind"?: string,"mime"?: string,"project_id"?: string,"size_bytes"?: number,"status"?: string,"storage_path"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {

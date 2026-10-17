@@ -1,5 +1,15 @@
-import { captureConstraints, DEFAULT_CAPTURE, maxRecordSeconds, QUALITY, type CaptureSettings } from "@/lib/record/capture";
-import { AUDIO_BPS, MAX_TAKE_SECONDS, WARN_TAKE_SECONDS } from "@/lib/record/limits";
+import {
+  captureConstraints,
+  DEFAULT_CAPTURE,
+  readTech,
+  resolveCapture,
+  tuneTrack,
+  type AutoProfile,
+  type CaptureSettings,
+  type Crop,
+  type TechInfo,
+} from "@/lib/record/capture";
+import { MAX_TAKE_SECONDS, maxSecondsFor, WARN_TAKE_SECONDS } from "@/lib/record/limits";
 import { pickMimeType } from "@/lib/record/mime";
 
 export type RecState = "idle" | "denied" | "unsupported" | "ready" | "counting" | "recording" | "stopped";
@@ -15,11 +25,16 @@ export type RecSnapshot = {
   warn: boolean;
   error: string | null;
   result: RecResult | null;
+  /** O que a câmera e o gravador estão usando de verdade (resolução, fps, codec, bitrate). */
+  info: TechInfo | null;
 };
 
 type MediaRecorderLike = {
   ondataavailable: ((e: { data: Blob }) => void) | null;
   onstop: (() => void) | null;
+  videoBitsPerSecond?: number;
+  audioBitsPerSecond?: number;
+  mimeType?: string;
   start(timeslice: number): void;
   stop(): void;
 };
@@ -36,6 +51,7 @@ export type RecorderEnv = {
     kind: "take" | "block";
     blockId: string | null;
     mime: string;
+    crop: Crop | null;
   }) => Promise<{ id: string; path: string } | { error: string }>;
   appendChunk: (id: string, chunk: Blob) => Promise<void>;
   markMeta: (id: string, m: { mime: string; projectId: string; kind: string; blockId: string | null }) => Promise<void>;
@@ -48,9 +64,11 @@ export type RecorderOpts = {
   maxSeconds: number;
   /** Câmera, microfone e qualidade; sem isso, o padrão. */
   capture?: CaptureSettings;
+  /** Perfil do aparelho (automático); sem ele, 720p. */
+  profile?: AutoProfile | null;
 };
 
-const INITIAL: RecSnapshot = { state: "idle", stream: null, elapsed: 0, count: 0, warn: false, error: null, result: null };
+const INITIAL: RecSnapshot = { state: "idle", stream: null, elapsed: 0, count: 0, warn: false, error: null, result: null, info: null };
 
 /** Gravador sem React (testável): a tela assina por `subscribe` e lê `getSnapshot`. */
 export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
@@ -61,6 +79,7 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
   let chunks: Blob[] = [];
   let dead = false;
   let settings = opts.capture ?? DEFAULT_CAPTURE;
+  let profile = opts.profile ?? null;
 
   const set = (p: Partial<RecSnapshot>) => {
     snap = { ...snap, ...p };
@@ -68,31 +87,43 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
   };
   const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
   const releaseTracks = () => snap.stream?.getTracks().forEach((t) => t.stop());
+  const videoTrack = (s: MediaStream | null) => s?.getVideoTracks?.()[0];
+  const resolved = () => resolveCapture(settings, profile);
+  const techOf = (s: MediaStream | null, mime: string | null, rec?: MediaRecorderLike): TechInfo | null => {
+    const t = videoTrack(s);
+    const r = resolved();
+    return t ? readTech(t, { mime, videoBps: rec?.videoBitsPerSecond ?? r.videoBps, audioBps: rec?.audioBitsPerSecond ?? r.audioBps }) : null;
+  };
 
   async function open(): Promise<boolean> {
     if (snap.stream) return true;
     if (!env.MediaRecorder) return set({ state: "unsupported" }), false;
     let stream: MediaStream;
     try {
-      stream = await env.getUserMedia(captureConstraints(settings));
+      stream = await env.getUserMedia(captureConstraints(resolved()));
     } catch {
       // Câmera ou microfone escolhido sumiu (fone desligado, outro aparelho): tenta o padrão.
-      if (!settings.cameraId && !settings.micId) return set({ state: "denied" }), false;
+      const r = resolved();
+      if (!r.cameraId && !r.micId) return set({ state: "denied" }), false;
       try {
-        stream = await env.getUserMedia(captureConstraints({ ...settings, cameraId: null, micId: null }));
+        stream = await env.getUserMedia(captureConstraints({ ...r, cameraId: null, micId: null }));
       } catch {
         return set({ state: "denied" }), false;
       }
     }
     if (dead) return stream.getTracks().forEach((t) => t.stop()), false;
-    set({ stream, state: "ready", error: null });
+    const vt = videoTrack(stream);
+    if (vt) await tuneTrack(vt as Parameters<typeof tuneTrack>[0], resolved().longSide);
+    if (dead) return stream.getTracks().forEach((t) => t.stop()), false;
+    set({ stream, state: "ready", error: null, info: techOf(stream, null) });
     return true;
   }
 
   /** Troca câmera, microfone ou qualidade; fora da gravação, abre a câmera de novo. */
-  async function configure(next: CaptureSettings): Promise<void> {
+  async function configure(next: CaptureSettings, nextProfile?: AutoProfile | null): Promise<void> {
     if (snap.state === "counting" || snap.state === "recording") return;
     settings = next;
+    if (nextProfile !== undefined) profile = nextProfile;
     if (!snap.stream) return;
     releaseTracks();
     set({ stream: null, state: "idle" });
@@ -111,15 +142,23 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
       await sleep(1000);
       if (dead) return;
     }
-    const created = await env.startRecording({ projectId: opts.projectId, kind: opts.kind, blockId: opts.blockId, mime });
+    const r = resolved();
+    const created = await env.startRecording({
+      projectId: opts.projectId,
+      kind: opts.kind,
+      blockId: opts.blockId,
+      mime,
+      crop: techOf(snap.stream, mime)?.crop ?? null,
+    });
     if ("error" in created) return set({ state: "ready", count: 0, error: created.error });
     await env.markMeta(created.id, { mime, projectId: opts.projectId, kind: opts.kind, blockId: opts.blockId });
 
     chunks = [];
-    const limit = Math.min(opts.maxSeconds, maxRecordSeconds(settings.quality));
+    const limit = Math.min(opts.maxSeconds, maxSecondsFor(r.videoBps, r.audioBps));
     const warnAt = limit - (MAX_TAKE_SECONDS - WARN_TAKE_SECONDS);
-    const rec = new MR(snap.stream, { mimeType: mime, videoBitsPerSecond: QUALITY[settings.quality].videoBps, audioBitsPerSecond: AUDIO_BPS });
+    const rec = new MR(snap.stream, { mimeType: mime, videoBitsPerSecond: r.videoBps, audioBitsPerSecond: r.audioBps });
     recorder = rec;
+    set({ info: techOf(snap.stream, rec.mimeType || mime, rec) });
     rec.ondataavailable = (e) => {
       if (e.data.size === 0) return;
       chunks.push(e.data);
