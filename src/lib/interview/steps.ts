@@ -34,7 +34,8 @@ export const MAX_TITLE = 150;
 
 export type Episode = { title: string; summary: string };
 export type Scenery = { mode: "natural" | "ai"; natural: string; aiPrompt: string };
-export type TitleOption = { text: string; score: number };
+/** `type` e `best` vêm do agente de títulos (a opção marcada como melhor). */
+export type TitleOption = { text: string; score: number; type?: string; best?: boolean };
 export type Titles = { options: TitleOption[]; chosen: string };
 export type Cover = "frame" | "ai";
 export type Format = "single" | "series";
@@ -69,7 +70,13 @@ export type Interview = {
   scriptWarning?: string;
   /** Avisos do `checkScript` (tom e CTA). */
   scriptChecks?: string[];
+  /** Opções dos agentes de roteiro da última geração (a melhor vem primeiro), para a tela mostrar e trocar. */
+  scriptAgents?: ScriptAgentOptions;
 };
+
+export type HookOption = { type: string; text: string; onScreen: string; visual: string; score: number; best: boolean };
+export type ClosingOption = { type: string; text: string; conclusion: string; cta: string; score: number; best: boolean };
+export type ScriptAgentOptions = { hooks?: HookOption[]; closing?: ClosingOption[] };
 
 /** Valor de cada pergunta. */
 export type StepValues = {

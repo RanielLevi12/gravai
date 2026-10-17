@@ -2,6 +2,8 @@
 import { z } from "zod";
 import { PLATFORM_LABELS, PLATFORMS, isPlatform, type Platform } from "@/lib/interview/steps";
 import { estimateSeconds } from "@/lib/rules/duration";
+import { styleLines } from "@/lib/ai/agents/contexto";
+import type { FolderStyle } from "@/lib/folders/schema";
 import { finishDescriptions, type Descriptions } from "./generate";
 
 /** Posições (1..n) dos blocos do script; `descriptions` já com a chamada para ação na última linha. */
@@ -72,7 +74,7 @@ Regras:
 - O roteiro vem em blocos numerados. Cada corte é um trecho de blocos CONSECUTIVOS do mesmo roteiro (início e fim = números dos blocos), sem sobrepor outro corte.
 - O corte é só um recorte do vídeo: não crie texto novo, saudação nem "vídeo novo". Escolha trechos que façam sentido sozinhos e tenham um bom gancho logo no começo.
 - Respeite o tamanho pedido para cada corte (cada bloco mostra a duração estimada).
-- "title": título curto do corte. "coverPrompt": descrição da imagem de capa do corte. "descriptions": uma legenda por plataforma pedida, no estilo da plataforma, sem a chamada para ação (ela é adicionada depois).
+- "title": título curto do corte. "coverPrompt": descrição da imagem de capa do corte. "descriptions": uma legenda por plataforma pedida, no estilo da plataforma, sem a chamada para ação (ela é adicionada depois). Não escreva link, telefone nem número. Evite "Você sabia que", "Neste vídeo", "mergulhar", "jornada" e travessões.
 - Responda só com o JSON pedido.`;
 
 export function buildCutsUser(input: {
@@ -81,10 +83,10 @@ export function buildCutsUser(input: {
   count: number;
   platforms: Platform[];
   about?: string | null;
+  style?: FolderStyle | null;
   title?: string | null;
 }): string {
-  const lines: string[] = [];
-  if (input.about?.trim()) lines.push(`Sobre o projeto deste vídeo (tema e público do canal): ${input.about.trim()}`);
+  const lines: string[] = styleLines(null, input.style, input.about);
   if (input.title) lines.push(`Título do vídeo: ${input.title}`);
   lines.push(`Plataformas (uma descrição para cada): ${input.platforms.map((p) => `${p} (${PLATFORM_LABELS[p]})`).join(", ")}`);
   lines.push(`Escolha até ${input.count} cortes de cerca de ${input.cutSeconds} segundos cada.`);

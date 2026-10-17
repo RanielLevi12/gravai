@@ -46,7 +46,8 @@ export type UserAi = {
 };
 
 /**
- * IA cobrada na conta OpenRouter do usuário. Sem conexão → AiError code 'not_connected'.
+ * Qual conta paga a IA: a do próprio usuário (OAuth ou chave colada) quando conectada; senão a do Gravaí
+ * (OPENROUTER_API_KEY), com limite mensal por usuário. Sem nenhuma das duas → AiError 'not_connected'.
  * Com AI_MOCK=1 devolve o mock sem exigir conexão; em `next dev`, OPENROUTER_DEV_KEY vale como conexão.
  */
 export async function withUserAi(userId: string): Promise<UserAi> {
@@ -66,10 +67,17 @@ export async function withUserAi(userId: string): Promise<UserAi> {
       })()
     : await (async () => {
         // Só em `next dev`: a chave do dono dispensa o OAuth nos testes locais. Em produção é ignorada.
-        const key = (process.env.NODE_ENV === "development" && process.env.OPENROUTER_DEV_KEY) || (await (await import("./keys")).getUserAiKey(userId));
-        if (!key) throw new AiError("Conecte sua conta de IA para continuar.", { code: "not_connected" });
+        let key = (process.env.NODE_ENV === "development" && process.env.OPENROUTER_DEV_KEY) || (await (await import("./keys")).getUserAiKey(userId));
+        let billedTo: "user" | "app" = "user";
+        if (!key) {
+          // Padrão: a chave do servidor. Só o nome da variável é citado aqui; o valor nunca é lido fora desta chamada.
+          key = process.env.OPENROUTER_API_KEY || null;
+          if (!key) throw new AiError("Conecte sua conta de IA para continuar.", { code: "not_connected" });
+          await (await import("./limit")).assertUnderLimit(userId);
+          billedTo = "app";
+        }
         const { recordAiUsage } = await import("./usage");
-        return (await import("./openrouter")).createOpenRouterAi(key, { onUsage: (u) => void recordAiUsage(userId, u) });
+        return (await import("./openrouter")).createOpenRouterAi(key, { onUsage: (u) => void recordAiUsage(userId, { ...u, billedTo }) });
       })();
   return userAiFrom(provider);
 }
@@ -104,4 +112,16 @@ export async function reviewExcerpts(texts: string[], opts: { restart: boolean }
   return useMock()
     ? (await import("./mock")).reviewExcerpts(texts, opts)
     : (await import("./typesafe")).reviewExcerpts(texts, opts);
+}
+
+/** Nota (0..1) do fecho (conclusão + CTA) de cada opção. */
+export async function scoreClosing(texts: string[], context: string): Promise<number[]> {
+  return useMock()
+    ? (await import("./mock")).scoreClosing(texts, context)
+    : (await import("./typesafe")).scoreClosing(texts, context);
+}
+
+/** Nota (0..1) do gancho de cada texto (o jev). */
+export async function scoreHooks(texts: string[]): Promise<number[]> {
+  return (await reviewExcerpts(texts, { restart: false })).hook;
 }

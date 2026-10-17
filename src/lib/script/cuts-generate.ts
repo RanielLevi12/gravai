@@ -8,6 +8,7 @@ import { estimateCutCount } from "@/lib/rules/cuts";
 import { buildCutsUser, CUTS_SYSTEM, CutsSchema, normalizeCuts, validateCuts, type Cut } from "./cuts";
 import { formatCta, type ScriptCta } from "./generate";
 import { cutReviewWarnings, type ReviewFn } from "./review";
+import { cortesCtaAgent, withPointer } from "@/lib/ai/agents/cortes-cta";
 
 export interface CutsDb {
   getProject(id: string): Promise<InterviewProject | null>;
@@ -38,7 +39,7 @@ export async function suggestCutsWith(deps: { db: CutsDb; ai: () => Promise<User
   const raw = await ai.generateJson(
     CutsSchema,
     CUTS_SYSTEM,
-    buildCutsUser({ blocks, cutSeconds: i.cutSeconds, count: maxCuts, platforms, about: project.folder_about, title: i.titles?.chosen ?? project.title }),
+    buildCutsUser({ blocks, cutSeconds: i.cutSeconds, count: maxCuts, platforms, about: project.folder_about, style: project.folder_style, title: i.titles?.chosen ?? project.title }),
   );
   const cuts = normalizeCuts(raw, blocks.map((b) => b.text), {
     cutSeconds: i.cutSeconds,
@@ -47,6 +48,18 @@ export async function suggestCutsWith(deps: { db: CutsDb; ai: () => Promise<User
     ctaLine: cta ? formatCta(cta) : null,
     newId: deps.newId ?? (() => randomUUID().slice(0, 8)),
   });
+  if (cuts.length > 0) {
+    // Cada corte aponta para o vídeo completo ou para outro corte; o contato (última linha) continua sendo do código.
+    const mainTitle = i.titles?.chosen ?? project.title;
+    const pointers = await cortesCtaAgent(
+      { ai },
+      { mainTitle, cuts: cuts.map((c, k) => ({ index: k + 1, title: c.title, text: blocks.filter((b) => b.position >= c.start && b.position <= c.end).map((b) => b.text).join(" ") })) },
+    );
+    cuts.forEach((c, k) => {
+      const p = pointers[k];
+      c.descriptions = withPointer(c.descriptions, p.line, cta ? formatCta(cta) : null);
+    });
+  }
   if (cuts.length === 0) throw new AiError("Não achei cortes que servem neste script. Marque à mão ou tente de novo.", { code: "invalid_output" });
   if (!(await deps.db.saveCuts(projectId, cuts))) throw new Error(MSG_SAVE_FAILED);
   return cuts;

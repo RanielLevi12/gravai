@@ -1,3 +1,4 @@
+import { styleFromSettings } from "@/lib/folders/schema";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/types";
@@ -5,7 +6,7 @@ import { currentMonth, PROJECTS_LIMIT } from "@/lib/usage";
 import type { InterviewDb, InterviewProject } from "./service";
 import type { Interview } from "./steps";
 
-const PROJECT_FIELDS = "id, title, source_kind, source_text, source_truncated, status, interview, series_id, episode_index, folder_id, folders(about)";
+const PROJECT_FIELDS = "id, title, source_kind, source_text, source_truncated, status, interview, series_id, episode_index, folder_id, folders(about, settings)";
 
 const asJson = (i: unknown) => i as unknown as NonNullable<Json>;
 
@@ -21,7 +22,7 @@ export function supabaseInterviewDb(deps: { supabase: SupabaseClient<Database> }
       if (!data) return null;
       const interview = data.interview && typeof data.interview === "object" && !Array.isArray(data.interview) ? data.interview : {};
       const { folders, ...project } = data;
-      return { ...project, folder_about: folders?.about ?? null, interview: interview as unknown as Interview } satisfies InterviewProject;
+      return { ...project, folder_about: folders?.about ?? null, folder_style: styleFromSettings(folders?.settings), interview: interview as unknown as Interview } satisfies InterviewProject;
     },
     async saveInterview(id, interview, opts) {
       const { data, error } = await supabase

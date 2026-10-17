@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { AiError, checkScript, reviewExcerpts, withUserAi } from "@/lib/ai";
+import { AiError, checkScript, reviewExcerpts, scoreClosing, scoreHooks, withUserAi } from "@/lib/ai";
 import { createServerClient } from "@/lib/supabase/server";
 import type { Cut } from "./cuts";
 import { cutsWarnings, saveCutsWith, suggestCutsWith } from "./cuts-generate";
@@ -22,7 +22,7 @@ export async function generateScript(projectId: string): Promise<void> {
   if (!data.user) throw new Error("Sua sessão expirou. Entre de novo.");
   const userId = data.user.id;
   await generateScriptWith(
-    { db: supabaseScriptDb({ supabase, userId }), ai: () => withUserAi(userId), check: checkScript, review: reviewExcerpts },
+    { db: supabaseScriptDb({ supabase, userId }), ai: () => withUserAi(userId), check: checkScript, review: reviewExcerpts, agents: { scoreHook: scoreHooks, scoreClosing } },
     projectId,
   );
 }

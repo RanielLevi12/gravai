@@ -1,0 +1,7 @@
+{
+  "options": [
+    { "type": "fechar_gancho", "conclusion": "No terceiro dia você não precisa de força de vontade, precisa de um passo de dois minutos.", "cta": "Comenta qual passo você vai fazer amanhã." },
+    { "type": "frase_que_fica", "conclusion": "Rotina boa cabe no bolso.", "cta": "Salva este vídeo pra abrir amanhã cedo." },
+    { "type": "aplicacao_pratica", "conclusion": "Amanhã, antes do celular, faça só dois minutos.", "cta": "Manda pra quem vive recomeçando." }
+  ]
+}

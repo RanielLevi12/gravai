@@ -39,14 +39,14 @@ export type Database = {
                   ]
                 },"ai_usage": {
                   Row: {
-                    "completion_tokens": number | null,"cost_usd": number,"created_at": string,"id": string,"kind": string,"model": string,"prompt_tokens": number | null,"user_id": string
+                    "billed_to": string,"completion_tokens": number | null,"cost_usd": number,"created_at": string,"id": string,"kind": string,"model": string,"prompt_tokens": number | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "completion_tokens"?: number | null,"cost_usd": number,"created_at"?: string,"id"?: string,"kind": string,"model": string,"prompt_tokens"?: number | null,"user_id": string
+                    "billed_to"?: string,"completion_tokens"?: number | null,"cost_usd": number,"created_at"?: string,"id"?: string,"kind": string,"model": string,"prompt_tokens"?: number | null,"user_id": string
                   }
                   Update: {
-                    "completion_tokens"?: number | null,"cost_usd"?: number,"created_at"?: string,"id"?: string,"kind"?: string,"model"?: string,"prompt_tokens"?: number | null,"user_id"?: string
+                    "billed_to"?: string,"completion_tokens"?: number | null,"cost_usd"?: number,"created_at"?: string,"id"?: string,"kind"?: string,"model"?: string,"prompt_tokens"?: number | null,"user_id"?: string
                   }
                   Relationships: [
                     

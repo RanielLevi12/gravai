@@ -1,0 +1,7 @@
+{
+  "options": [
+    { "type": "beneficio", "text": "O hábito de 2 minutos que muda o seu dia" },
+    { "type": "erro_comum", "text": "O erro que trava qualquer rotina nova" },
+    { "type": "pergunta", "text": "Por que você desiste no terceiro dia?" }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "pointers": [
+    { "index": 1, "target": "principal", "targetIndex": null, "line": "O vídeo completo mostra os três passos, um por um." },
+    { "index": 2, "target": "corte", "targetIndex": 1, "line": "Antes disso, veja por que o terceiro dia é o mais difícil." }
+  ]
+}

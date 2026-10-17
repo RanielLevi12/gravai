@@ -107,7 +107,7 @@ export async function loadInterviewSuggestion(
   return loadSuggestion(s.deps, projectId, interview);
 }
 
-/** 6 títulos da IA do usuário, ranqueados por `scoreViral` (maior primeiro). */
+/** 3 títulos de tipos diferentes (agente de títulos), com nota do jev; o melhor vem primeiro. */
 export async function suggestTitles(projectId: string): Promise<TitleOption[]> {
   if (typeof projectId !== "string" || !UUID.test(projectId)) throw new Error(NOT_FOUND);
   const s = await session();

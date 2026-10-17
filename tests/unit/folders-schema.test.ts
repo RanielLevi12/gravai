@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SETTINGS, summarizeSettings, validateFolderInput } from "@/lib/folders/schema";
+import { DEFAULT_SETTINGS, styleFromSettings, summarizeSettings, validateFolderInput } from "@/lib/folders/schema";
 
 const ok = (over: Record<string, unknown> = {}, settings: Record<string, unknown> = {}) => ({
   name: "  Devocional ",
@@ -63,5 +63,26 @@ describe("summarizeSettings", () => {
   });
   it("aceita configurações parciais (vídeo solto)", () => {
     expect(summarizeSettings({})).toBe("");
+  });
+});
+
+describe("estilo do projeto (settings.style)", () => {
+  const base = { name: "Canal", color: "rosa", about: null, settings: { platforms: ["reels"], format: "single", mainSeconds: 60, cutSeconds: 30, scenery: { mode: "natural", natural: "", aiPrompt: "" }, cover: "frame", ctaId: null } };
+  it("sem estilo, o settings não ganha a chave", () => {
+    const r = validateFolderInput(base, []);
+    expect(r.ok && "style" in r.value.settings).toBe(false);
+  });
+  it("guarda tom, público e exemplos aparados; vazios somem", () => {
+    const r = validateFolderInput({ ...base, settings: { ...base.settings, style: { tone: " acolhedor ", audience: "", examples: "Gente, vem comigo." } } }, []);
+    expect(r.ok && r.value.settings.style).toEqual({ tone: "acolhedor", examples: "Gente, vem comigo." });
+  });
+  it("recusa estilo longo demais ou do tipo errado", () => {
+    expect(validateFolderInput({ ...base, settings: { ...base.settings, style: { tone: "x".repeat(201) } } }, []).ok).toBe(false);
+    expect(validateFolderInput({ ...base, settings: { ...base.settings, style: "texto" } }, []).ok).toBe(false);
+  });
+  it("styleFromSettings ignora lixo do banco", () => {
+    expect(styleFromSettings({ style: { tone: "calmo" } })).toEqual({ tone: "calmo" });
+    expect(styleFromSettings({ style: 5 })).toBeNull();
+    expect(styleFromSettings(null)).toBeNull();
   });
 });

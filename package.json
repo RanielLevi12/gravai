@@ -9,7 +9,8 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "test:integration": "bash scripts/test-integration.sh",
-    "db:types": "supabase gen types typescript --local > src/lib/supabase/types.ts"
+    "db:types": "supabase gen types typescript --local > src/lib/supabase/types.ts",
+    "eval:roteiro": "NODE_USE_ENV_PROXY=1 node --conditions=react-server --import tsx scripts/eval-roteiro.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

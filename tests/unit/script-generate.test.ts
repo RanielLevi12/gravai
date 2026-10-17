@@ -67,6 +67,45 @@ describe("generateScript", () => {
     expect(getMockCalls("generateJson")).toBe(1);
   });
 
+  it("com os agentes: o melhor gancho vai no pedido, o melhor fecho vira o fechamento e as opções ficam salvas", async () => {
+    const db = new FakeScriptDb(INTERVIEW);
+    const seen: string[] = [];
+    const base = userAiFrom(mockProvider);
+    const spy = { ...base, generateJson: ((schema: never, system: string, user: string) => (seen.push(user), base.generateJson(schema, system, user))) as typeof base.generateJson };
+    await generateScriptWith(
+      { ...deps(db), ai: async () => spy, agents: { scoreHook: async (t) => t.map((_, i) => [0.5, 0.9, 0.6][i]), scoreClosing: async (t) => t.map((_, i) => [0.5, 0.95, 0.7][i]) } },
+      "p1",
+    );
+    const scriptPrompt = seen.find((u) => u.includes("Texto-fonte:") && u.includes("Vídeo principal"))!;
+    expect(scriptPrompt).toContain("Gancho escolhido (a abertura começa com esta frase, sem mudar): Você começa a rotina grande demais.");
+    expect(scriptPrompt).toContain("Objetivo do fecho: Levar a pessoa a chamar no WhatsApp");
+    expect(db.blocks.at(-1)!.text).toBe("Rotina boa cabe no bolso. Salva este vídeo pra abrir amanhã cedo.");
+    const saved = db.project.interview.scriptAgents!;
+    expect(saved.hooks![0]).toMatchObject({ best: true, onScreen: "Grande demais", score: 0.9 });
+    expect(saved.closing).toHaveLength(3);
+    // O contato continua sendo do código, na última linha da descrição.
+    expect((db.descriptions as Record<string, string>).reels.split("\n").at(-1)).toBe("Chama no WhatsApp: https://wa.me/5511999990000");
+  });
+
+  it("se os agentes falharem, o script sai igual (abertura e fecho da IA principal)", async () => {
+    const db = new FakeScriptDb(INTERVIEW);
+    const boom = async () => {
+      throw new Error("jev fora do ar");
+    };
+    await generateScriptWith({ ...deps(db), agents: { scoreHook: boom, scoreClosing: boom } }, "p1");
+    expect(db.blocks.at(-1)!.text).toMatch(/^Então é isso/);
+    expect(db.project.interview.scriptAgents).toBeUndefined();
+    expect(db.project.status).toBe("script");
+  });
+
+  it("fecho não roda se a geração já gastou o tempo da função", async () => {
+    const db = new FakeScriptDb(INTERVIEW);
+    let t = 0;
+    const now = () => ((t += 100_000), t);
+    await generateScriptWith({ ...deps(db), now, agents: { scoreHook: async (x) => x.map(() => 0.9), scoreClosing: async (x) => x.map(() => 0.9) } }, "p1");
+    expect(db.blocks.at(-1)!.text).toMatch(/^Então é isso/);
+  });
+
   it("não pede cortes à IA: o prompt manda um vídeo só e cumprimento uma vez", async () => {
     const { SCRIPT_SYSTEM } = await import("@/lib/script/prompts");
     expect(SCRIPT_SYSTEM).toMatch(/UM vídeo/);

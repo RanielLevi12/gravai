@@ -8,6 +8,9 @@ import { MSG_NOT_FOUND, type InterviewProject } from "@/lib/interview/service";
 import { PLATFORMS, isPlatform, type Interview, type Platform } from "@/lib/interview/steps";
 import { estimateSeconds } from "@/lib/rules/duration";
 import { buildScriptUser, SCRIPT_SYSTEM, type ScriptProfile } from "./prompts";
+import { conclusaoCtaAgent, ctaObjective, type ClosingScoreFn } from "@/lib/ai/agents/conclusao-cta";
+import type { AgentContext } from "@/lib/ai/agents/contexto";
+import { hooksAgent, type HookScoreFn } from "@/lib/ai/agents/hooks";
 import { scriptReviewWarnings, type ReviewFn } from "./review";
 
 /** "body" = trecho do script contínuo; "bridge" e "cut" só existem em scripts gerados antes. */
@@ -52,6 +55,8 @@ export type ScriptDeps = {
   check: (text: string, opts: { tone: string; cta?: string }) => Promise<ScriptCheck>;
   /** Gancho por trecho e recomeço (jev). Opcional: sem ele, não há esse aviso. */
   review?: ReviewFn;
+  /** Agentes de gancho e de fecho (notas do jev). Opcional: sem ele, o script sai só com o prompt-base. */
+  agents?: { scoreHook: HookScoreFn; scoreClosing: ClosingScoreFn };
   /** Só para testes. */
   now?: () => number;
 };
@@ -64,6 +69,19 @@ const CHECK_MIN = 0.5;
 // Uma generateJson leva até ~240 s (2 tentativas em ai/index.ts, cada uma até 2×70 s em openrouter.ts).
 // 30 s + 240 s (segunda geração) + 15 s (checkScript) = 285 s < 300 s.
 const RETRY_BUDGET_MS = 30_000;
+// Os agentes são um extra: cada um tem teto próprio e o do fecho só roda se sobrar tempo dentro dos 300 s da função.
+const HOOK_AGENT_MS = 50_000;
+const CLOSING_AGENT_MS = 60_000;
+const CLOSING_START_BEFORE_MS = 170_000;
+
+/** Resolve com o valor ou rejeita se passar do tempo. */
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const limit = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("tempo esgotado")), ms);
+  });
+  return Promise.race([p, limit]).finally(() => clearTimeout(timer));
+}
 
 /** Linha final da descrição, montada no código (nunca pela IA). */
 export function formatCta(cta: ScriptCta): string | null {
@@ -122,11 +140,48 @@ export async function generateScriptWith(deps: ScriptDeps, projectId: string): P
   const ep = project.episode_index && i.episodes ? i.episodes[project.episode_index - 1] : undefined;
   const episode = ep && project.episode_index ? { index: project.episode_index, title: ep.title, summary: ep.summary } : null;
 
+  const t0 = deps.now?.() ?? Date.now();
+  const agentCtx: AgentContext = {
+    sourceText: project.source_text,
+    sourceLimit: 12_000,
+    title: i.titles?.chosen ?? project.title,
+    profile,
+    about: project.folder_about,
+    style: project.folder_style,
+    episode,
+    platforms,
+    mainSeconds,
+  };
+
+  // Gancho: 3 opções de tipos diferentes; a melhor abre o script. Falha ou demora = o prompt-base escreve a abertura.
+  let hooks: Awaited<ReturnType<typeof hooksAgent>> = [];
+  if (deps.agents) {
+    try {
+      hooks = await withTimeout(hooksAgent({ ai, score: deps.agents.scoreHook }, agentCtx), HOOK_AGENT_MS);
+    } catch (e) {
+      console.error("[script] agente de ganchos falhou", e instanceof Error ? e.message : e);
+    }
+  }
+  const hook = hooks.find((h) => h.best) ?? null;
+  const objective = ctaObjective(cta);
+
   const generate = (problem?: string) =>
     ai.generateJson(
       ScriptSchema,
       SCRIPT_SYSTEM,
-      buildScriptUser({ sourceText: project.source_text, interview: i, profile, episode, platforms, mainSeconds, about: project.folder_about, problem }),
+      buildScriptUser({
+        sourceText: project.source_text,
+        interview: i,
+        profile,
+        episode,
+        platforms,
+        mainSeconds,
+        about: project.folder_about,
+        style: project.folder_style,
+        hook,
+        ctaObjective: objective,
+        problem,
+      }),
     );
 
   const started = deps.now?.() ?? Date.now();
@@ -148,6 +203,27 @@ export async function generateScriptWith(deps: ScriptDeps, projectId: string): P
     cover_prompt: null,
   }));
 
+  // Fecho: a IA escreve a conclusão e o CTA a partir do objetivo salvo; o contato continua sendo montado pelo código.
+  let closing: Awaited<ReturnType<typeof conclusaoCtaAgent>> = [];
+  const elapsed = (deps.now?.() ?? Date.now()) - t0;
+  const closingBlock = [...blocks].reverse().find((b) => b.kind === "closing");
+  if (deps.agents && closingBlock && elapsed < CLOSING_START_BEFORE_MS) {
+    try {
+      closing = await withTimeout(
+        conclusaoCtaAgent(
+          { ai, score: deps.agents.scoreClosing },
+          { ctx: agentCtx, scriptBody: blocks.filter((b) => b.kind !== "closing").map((b) => b.text).join("\n\n"), cta },
+        ),
+        Math.min(CLOSING_AGENT_MS, 285_000 - elapsed),
+      );
+      const best = closing.find((c) => c.best);
+      if (best) closingBlock.text = best.text;
+    } catch (e) {
+      console.error("[script] agente de fecho falhou", e instanceof Error ? e.message : e);
+    }
+  }
+  problems = validateScript(blocks, mainSeconds);
+
   const checks: string[] = [];
   if (i.ctaId && !cta) checks.push("A chamada para ação que você escolheu foi removida do perfil; o script saiu sem ela.");
   const full = blocks.map((b) => b.text).join("\n\n");
@@ -168,9 +244,17 @@ export async function generateScriptWith(deps: ScriptDeps, projectId: string): P
   else if (review.status === "rejected") console.error("[script] reviewExcerpts falhou", review.reason instanceof Error ? review.reason.message : review.reason);
 
   // Zera avisos antigos e grava só os desta geração.
-  const { scriptWarning: _w, scriptChecks: _c, ...rest } = i;
+  const { scriptWarning: _w, scriptChecks: _c, scriptAgents: _a, ...rest } = i;
   const interview: Interview = {
     ...rest,
+    ...(hooks.length > 0 || closing.length > 0
+      ? {
+          scriptAgents: {
+            ...(hooks.length > 0 ? { hooks: hooks.map(({ type, text, onScreen, visual, score, best }) => ({ type, text, onScreen, visual, score, best })) } : {}),
+            ...(closing.length > 0 ? { closing: closing.map(({ type, text, conclusion, cta: c, score, best }) => ({ type, text, conclusion, cta: c, score, best })) } : {}),
+          },
+        }
+      : {}),
     ...(problems.length > 0 ? { scriptWarning: `O script ficou fora do esperado: ${problems.join("; ")}.` } : {}),
     ...(checks.length > 0 ? { scriptChecks: checks } : {}),
   };

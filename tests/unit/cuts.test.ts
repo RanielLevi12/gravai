@@ -95,8 +95,24 @@ describe("suggestCutsWith", () => {
   it("normaliza, põe o CTA no código e salva", async () => {
     const { db, saved } = fakeDb({ interview: { platforms: ["reels"], mainSeconds: 120, cutSeconds: 30, ctaId: "c1" } });
     const cuts = await suggestCutsWith({ db, ai: aiReturning({ cuts: [{ start: 2, end: 2, title: "A", coverPrompt: "c", descriptions: { reels: "d" } }] }), newId: () => "n1" }, "p1");
-    expect(cuts).toEqual([expect.objectContaining({ id: "n1", start: 2, end: 2, descriptions: { reels: "d\nLink na bio: x.com" } })]);
+    expect(cuts).toEqual([expect.objectContaining({ id: "n1", start: 2, end: 2, descriptions: { reels: "d\nVeja o vídeo completo: Vídeo\nLink na bio: x.com" } })]);
     expect(saved.cuts).toEqual(cuts);
+  });
+  it("CTA do corte aponta para outro corte quando a IA escolhe, e o contato continua por último", async () => {
+    const { db } = fakeDb({ interview: { platforms: ["reels"], mainSeconds: 120, cutSeconds: 30, ctaId: "c1" } });
+    const cutsRaw = { cuts: [
+      { start: 2, end: 2, title: "A", coverPrompt: "c", descriptions: { reels: "d1" } },
+      { start: 4, end: 4, title: "B", coverPrompt: "c", descriptions: { reels: "d2" } },
+    ] };
+    const pointers = { pointers: [
+      { index: 1, target: "principal", targetIndex: null, line: "O vídeo completo tem a conta inteira." },
+      { index: 2, target: "corte", targetIndex: 1, line: "Antes disso, veja o corte A." },
+    ] };
+    let n = 0;
+    const ai = async () => ({ generateJson: async () => (n++ === 0 ? cutsRaw : pointers) }) as unknown as UserAi;
+    const cuts = await suggestCutsWith({ db, ai, newId: () => `n${n}` }, "p1");
+    expect(cuts[0].descriptions.reels).toBe("d1\nO vídeo completo tem a conta inteira.\nLink na bio: x.com");
+    expect(cuts[1].descriptions.reels).toBe("d2\nAntes disso, veja o corte A.\nLink na bio: x.com");
   });
   it("sem tamanho de corte (vídeo sem cortes) não chama a IA", async () => {
     const { db } = fakeDb({ interview: { platforms: ["reels"], mainSeconds: 60, cutSeconds: null } });
