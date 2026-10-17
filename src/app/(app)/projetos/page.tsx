@@ -53,8 +53,8 @@ export default async function ProjetosPage() {
   }));
   const base = recentes ?? [];
 
-  // "Faltam N partes": só para vídeos que estão sendo gravados por blocos.
-  const gravando = base.filter((p) => p.status === "gravacao").map((p) => p.id);
+  // "Faltam N partes": só para vídeos que estão sendo gravados por blocos (o status pode seguir "script" até aprovar).
+  const gravando = base.filter((p) => p.status === "gravacao" || p.status === "script").map((p) => p.id);
   const parts = new Map<string, number | null>();
   if (gravando.length > 0) {
     const [{ data: blocos }, { data: prontas }] = await Promise.all([

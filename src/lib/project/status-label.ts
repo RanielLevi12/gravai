@@ -2,11 +2,12 @@
 export type StatusLabel = { label: "Gravar" | "Editar" | "Pronto"; hint: string };
 
 export function statusLabel(status: string, missingParts: number | null = null): StatusLabel {
+  // Já gravou alguma parte (por blocos) e faltam outras: o status ainda pode ser "script".
+  if ((status === "gravacao" || status === "script") && missingParts !== null && missingParts > 0) {
+    return { label: "Gravar", hint: missingParts === 1 ? "Falta 1 parte para gravar" : `Faltam ${missingParts} partes para gravar` };
+  }
   switch (status) {
     case "gravacao":
-      if (missingParts !== null && missingParts > 0) {
-        return { label: "Gravar", hint: missingParts === 1 ? "Falta 1 parte para gravar" : `Faltam ${missingParts} partes para gravar` };
-      }
       return { label: "Gravar", hint: "Script pronto, falta gravar" };
     case "pronto":
       return { label: "Pronto", hint: "Vídeos prontos para baixar" };

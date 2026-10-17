@@ -45,6 +45,8 @@ async function gravar(page: Page, segundos: number) {
 test("take único: grava, vê a prévia, usa e aprova", async ({ page }) => {
   test.setTimeout(120_000);
   const id = await projetoComScript(page, "gravar-take");
+  // Nada pulado: a conferência de trecho pulado tem teste próprio logo abaixo.
+  await page.route("**/api/record/skipped*", (route) => route.fulfill({ json: { skipped: [] } }));
   await page.goto(`/projetos/${id}/gravar`);
   await page.getByText("Tudo de uma vez").click();
   await page.getByRole("link", { name: "Gravar tudo de uma vez" }).click();

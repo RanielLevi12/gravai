@@ -16,11 +16,11 @@ test("projeto vai para a lixeira, dá para desfazer, restaurar e apagar de vez",
   await page.getByRole("dialog").getByRole("button", { name: "Mover para a lixeira" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Mover para a lixeira" }).click();
   await expect(page.getByRole("status")).toContainText("foi para a lixeira");
-  await expect(page.getByRole("link", { name: /Para a lixeira/ }).first()).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /^Para a lixeira/ }).first()).toHaveCount(0);
 
   // Desfazer traz de volta.
   await page.getByRole("button", { name: "Desfazer" }).click();
-  await expect(page.getByRole("link", { name: /Para a lixeira/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Para a lixeira/ })).toBeVisible();
 
   // De novo, e agora pela tela /lixeira: restaurar.
   await page.getByRole("button", { name: "Mais ações: Para a lixeira" }).click();

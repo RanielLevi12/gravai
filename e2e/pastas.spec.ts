@@ -23,7 +23,7 @@ test("criar, ver, editar e apagar um projeto (pasta)", async ({ page }) => {
 
   // Na tela inicial aparece na faixa de projetos.
   await page.getByRole("link", { name: /Seus vídeos/ }).click();
-  const card = page.getByRole("link", { name: /Devocional/ });
+  const card = page.getByRole("link", { name: /^Devocional/ });
   await expect(card).toContainText("0 vídeos");
 
   // Editar: trocar nome, plataforma e duração (o corte que não cabe é ajustado).
@@ -32,7 +32,8 @@ test("criar, ver, editar e apagar um projeto (pasta)", async ({ page }) => {
   await page.getByLabel("Nome do projeto").fill("Devocional diário");
   await page.getByLabel("YouTube").check({ force: true });
   await page.getByLabel("Reels").uncheck({ force: true });
-  await page.getByLabel("30 s", { exact: true }).first().check({ force: true });
+  await page.getByRole("group", { name: "Duração do vídeo" }).getByText("30 s", { exact: true }).click();
+  await expect(page.getByRole("radio", { name: "30 s" }).first()).toBeChecked();
   await page.getByRole("button", { name: "Salvar projeto" }).click();
   await expect(page.getByRole("heading", { name: "Devocional diário" })).toBeVisible();
   await expect(page.getByText(/^YouTube · vídeo único · 30 s · cortes de 10 s/)).toBeVisible();
@@ -43,7 +44,7 @@ test("criar, ver, editar e apagar um projeto (pasta)", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Mover este projeto para a lixeira?" })).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "Mover para a lixeira" }).click();
   await expect(page).toHaveURL(/\/projetos$/);
-  await expect(page.getByRole("link", { name: /Devocional diário/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /^Devocional diário/ })).toHaveCount(0);
 });
 
 test("projeto de outro usuário não abre", async ({ page, browser }) => {
@@ -93,7 +94,7 @@ test("vídeo novo dentro do projeto: entrevista curta, personalizado e voltar ao
   await page.goto(pastaUrl);
   await expect(page.getByText("Vídeos deste projeto")).toBeVisible();
   await page.goto("/projetos");
-  await expect(page.getByRole("link", { name: /Devocional/ })).toContainText("1 vídeo");
+  await expect(page.getByRole("link", { name: /^Devocional/ })).toContainText("1 vídeo");
 
   // Mudar só este vídeo: a resposta ganha "personalizado".
   await page.goto(`/projetos/${id}/entrevista/duracao`);
@@ -158,13 +159,13 @@ test("mover vídeo entre projetos e para solto não muda as escolhas dele", asyn
 
   // B → solto: aparece na tela inicial.
   await page.getByRole("link", { name: /Seus vídeos/ }).click();
-  await page.getByRole("link", { name: /Projeto B/ }).click();
+  await page.getByRole("link", { name: /^Projeto B/ }).click();
   await page.getByRole("button", { name: "Mover" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Sem projeto (solto)" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await page.goto("/projetos");
   await expect(page.getByRole("button", { name: "Mover" })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Projeto A/ })).toContainText("0 vídeos");
+  await expect(page.getByRole("link", { name: /^Projeto A/ })).toContainText("0 vídeos");
 
   // Mover não mexeu nas escolhas copiadas: ainda é a entrevista curta (só falta o título).
   await page.goto(`/projetos/${id}/entrevista/resumo`);

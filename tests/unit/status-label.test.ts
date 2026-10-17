@@ -12,6 +12,12 @@ describe("statusLabel", () => {
     expect(statusLabel("gravado").hint).toMatch(/gerar/);
     expect(statusLabel("script").hint).toMatch(/script/);
   });
+
+  it("gravando por blocos: 'Faltam N partes' mesmo com o status ainda em script", () => {
+    expect(statusLabel("script", 6)).toEqual({ label: "Gravar", hint: "Faltam 6 partes para gravar" });
+    expect(statusLabel("gravacao", 1).hint).toBe("Falta 1 parte para gravar");
+    expect(statusLabel("script", 0).label).toBe("Editar");
+  });
 });
 
 describe("novoVideoHref", () => {

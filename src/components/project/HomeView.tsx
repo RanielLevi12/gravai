@@ -60,7 +60,7 @@ export function HomeView({
               const pasta = p.folders?.name;
               return (
                 <li key={p.id} className={styles.recentItem}>
-                  <Link href={nextStepHref(p)} className={styles.recentCard}>
+                  <Link href={p.missingParts ? `/projetos/${p.id}/gravar` : nextStepHref(p)} className={styles.recentCard}>
                     <span className={styles.recentIc}>
                       <Origem size={22} strokeWidth={2} aria-hidden />
                     </span>

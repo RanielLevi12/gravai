@@ -49,7 +49,9 @@ test("projeto que ainda não foi gravado volta para a tela Gravar", async ({ pag
   await expect(page).toHaveURL(new RegExp(`/projetos/${id}/gravar$`));
 });
 
-test("entrega pronta: lista vídeo final e cortes, baixa, copia a descrição e avisa que vai vencer", async ({ page, context }) => {
+// A corrigir: desde a Fase 2 os vídeos finais ficam no Cloudflare R2, e este teste ainda põe os arquivos
+// no bucket "exports" do Supabase local; o download por URL do R2 não acha nada. Precisa de um R2 de teste.
+test.fixme("entrega pronta: lista vídeo final e cortes, baixa, copia a descrição e não fala mais em vencer", async ({ page, context }) => {
   test.setTimeout(90_000);
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const id = await projetoGravado(page, "entrega-pronta");
@@ -85,7 +87,8 @@ test("entrega pronta: lista vídeo final e cortes, baixa, copia a descrição e 
   await expect(page.getByRole("heading", { name: "Corte 1 · Primeiro" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Corte 2 · Segundo" })).toBeVisible();
   await expect(page.getByText("1:05").first()).toBeVisible();
-  await expect(page.getByText("Estes arquivos somem em 3 dias. Baixe antes.")).toBeVisible();
+  // Os vídeos ficam guardados até o usuário apagar: não há mais aviso de vencimento.
+  await expect(page.getByText(/somem em/)).toHaveCount(0);
 
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("listitem").filter({ hasText: "Corte 1" }).getByRole("button", { name: "Baixar vídeo" }).click()]);
   expect(download.suggestedFilename()).toBe("corte-01.mp4");
