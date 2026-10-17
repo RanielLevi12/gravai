@@ -569,6 +569,8 @@
   border-radius: var(--radius-sm);
   background: var(--primary-tint);
   font-size: 14px;
+  font-weight: 600;
+}
 
 /* Lembrete de partes que faltam: cor de alerta da marca (sol) com tinta por cima. */
 .missing {
