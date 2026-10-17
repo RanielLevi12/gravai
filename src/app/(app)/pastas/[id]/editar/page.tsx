@@ -14,7 +14,7 @@ export default async function EditarPastaPage({ params }: { params: Promise<{ id
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) redirect("/entrar");
 
-  const { data: pasta } = await supabase.from("folders").select("id, name, color, about, settings").eq("id", id).eq("user_id", auth.user.id).maybeSingle();
+  const { data: pasta } = await supabase.from("folders").select("id, name, color, about, settings").eq("id", id).eq("user_id", auth.user.id).is("deleted_at", null).maybeSingle();
   if (!pasta) notFound();
   const ctas = await loadCtas(supabase, auth.user.id);
 

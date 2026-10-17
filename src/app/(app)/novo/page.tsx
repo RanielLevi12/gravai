@@ -17,7 +17,7 @@ export default async function NovoPage({ searchParams }: { searchParams: Promise
   // Vídeo dentro de um projeto: a pasta precisa ser do próprio usuário (RLS), senão segue como vídeo solto.
   let folder: { id: string; name: string } | null = null;
   if (typeof projeto === "string" && UUID.test(projeto)) {
-    const { data } = await supabase.from("folders").select("id, name").eq("id", projeto).maybeSingle();
+    const { data } = await supabase.from("folders").select("id, name").eq("id", projeto).is("deleted_at", null).maybeSingle();
     folder = data ?? null;
   }
 

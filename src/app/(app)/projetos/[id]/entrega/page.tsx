@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import styles from "@/components/record/record.module.css";
 import { clock } from "@/components/script/format";
 import scriptStyles from "@/components/script/script.module.css";
+import { TrashMenu } from "@/components/trash/TrashMenu";
 import { Button } from "@/components/ui/Button";
 import { supabaseDeliveryDb } from "@/lib/delivery/db";
 import { SIGNED_URL_SECONDS, needsRegeneration, type ExportRow } from "@/lib/delivery/service";
@@ -55,6 +56,7 @@ export default async function EntregaPage({ params }: { params: Promise<{ id: st
         <Button href={`/projetos/${id}/gravar/aprovar`} variant="soft" icon={ArrowLeft}>
           Voltar
         </Button>
+        <TrashMenu kind="video" id={id} title="este vídeo" then="/projetos" />
       </nav>
       <h1 className={styles.title}>{ready ? "Seus vídeos estão prontos." : "Gerar vídeos"}</h1>
       {ready ? null : (

@@ -1,6 +1,7 @@
 import { ArrowRight, FolderOpen, Video, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { nextStepHref } from "@/lib/project/next-step";
+import { TrashMenu } from "@/components/trash/TrashMenu";
 import { MoveVideo, type FolderChoice } from "./MoveVideo";
 import { origemDoProjeto } from "./origens";
 import styles from "./ProjectRow.module.css";
@@ -61,6 +62,7 @@ export function ProjectRow({ project, move }: { project: ProjectRowData; move?: 
           <Acao size={17} strokeWidth={2} aria-hidden />
           {etapa.acao}
         </Link>
+        <TrashMenu kind="video" id={project.id} title={project.title} />
       </div>
     </article>
   );

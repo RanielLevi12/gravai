@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { TrashToastProvider } from "@/components/trash/TrashToast";
 import { CostBar } from "@/components/ui/CostBar";
 import { TabBar } from "@/components/ui/TabBar";
 import { createServerClient } from "@/lib/supabase/server";
@@ -14,7 +15,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className={styles.shell}>
       <CostBar />
-      <div className={styles.content}>{children}</div>
+      <TrashToastProvider>
+        <div className={styles.content}>{children}</div>
+      </TrashToastProvider>
       <Suspense fallback={null}>
         <TabBar />
       </Suspense>

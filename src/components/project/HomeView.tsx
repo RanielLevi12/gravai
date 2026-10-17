@@ -1,5 +1,6 @@
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { TrashMenu } from "@/components/trash/TrashMenu";
 import { COLOR_VAR, isFolderColor } from "@/lib/folders/schema";
 import { nextStepHref } from "@/lib/project/next-step";
 import { statusLabel } from "@/lib/project/status-label";
@@ -20,12 +21,15 @@ export function HomeView({
   recentes,
   pastas,
   soltos,
+  naLixeira = 0,
 }: {
   usados: number;
   limite: number;
   recentes: RecentVideo[];
   pastas: HomeFolder[];
   soltos: ProjectRowData[];
+  /** Quantos itens há na lixeira (mostra o link no fim da tela). */
+  naLixeira?: number;
 }) {
   const lista = recentes;
   const listaPastas = pastas;
@@ -55,7 +59,7 @@ export function HomeView({
               const Origem = origemDoProjeto(p.source_kind).icon;
               const pasta = p.folders?.name;
               return (
-                <li key={p.id}>
+                <li key={p.id} className={styles.recentItem}>
                   <Link href={nextStepHref(p)} className={styles.recentCard}>
                     <span className={styles.recentIc}>
                       <Origem size={22} strokeWidth={2} aria-hidden />
@@ -66,6 +70,7 @@ export function HomeView({
                     </span>
                     <span className={`${styles.badge} ${styles[`badge${st.label}`]}`}>{st.label}</span>
                   </Link>
+                  <TrashMenu kind="video" id={p.id} title={p.title} />
                 </li>
               );
             })}
@@ -97,6 +102,7 @@ export function HomeView({
                   <Plus size={16} strokeWidth={2.5} aria-hidden />
                   novo
                 </Link>
+                <TrashMenu kind="projeto" id={f.id} title={f.name} />
               </li>
             );
           })}
@@ -124,6 +130,13 @@ export function HomeView({
           <p className={styles.emptySmall}>Vídeos criados sem projeto ficam aqui.</p>
         )}
       </section>
+
+      {naLixeira > 0 ? (
+        <Link href="/lixeira" className={styles.trashLink}>
+          <Trash2 size={16} strokeWidth={2} aria-hidden />
+          Lixeira ({naLixeira})
+        </Link>
+      ) : null}
     </main>
   );
 }

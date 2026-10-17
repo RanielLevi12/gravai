@@ -87,14 +87,14 @@ isOneToOne: false
                   ]
                 },"folders": {
                   Row: {
-                    "about": string | null,"color": string,"created_at": string,"id": string,"name": string,"settings": NonNullable<Json>,"user_id": string
+                    "about": string | null,"color": string,"created_at": string,"deleted_at": string | null,"id": string,"name": string,"settings": NonNullable<Json>,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "about"?: string | null,"color"?: string,"created_at"?: string,"id"?: string,"name": string,"settings"?: NonNullable<Json>,"user_id"?: string
+                    "about"?: string | null,"color"?: string,"created_at"?: string,"deleted_at"?: string | null,"id"?: string,"name": string,"settings"?: NonNullable<Json>,"user_id"?: string
                   }
                   Update: {
-                    "about"?: string | null,"color"?: string,"created_at"?: string,"id"?: string,"name"?: string,"settings"?: NonNullable<Json>,"user_id"?: string
+                    "about"?: string | null,"color"?: string,"created_at"?: string,"deleted_at"?: string | null,"id"?: string,"name"?: string,"settings"?: NonNullable<Json>,"user_id"?: string
                   }
                   Relationships: [
                     
@@ -135,14 +135,14 @@ isOneToOne: false
                   ]
                 },"projects": {
                   Row: {
-                    "cover_prompt": string | null,"created_at": string,"cuts": NonNullable<Json>,"descriptions": NonNullable<Json>,"episode_index": number | null,"folder_id": string | null,"id": string,"interview": NonNullable<Json>,"script_stale": boolean,"series_id": string | null,"source_kind": string,"source_text": string,"source_truncated": boolean,"status": string,"title": string,"user_id": string
+                    "cover_prompt": string | null,"created_at": string,"cuts": NonNullable<Json>,"deleted_at": string | null,"descriptions": NonNullable<Json>,"episode_index": number | null,"folder_id": string | null,"id": string,"interview": NonNullable<Json>,"script_stale": boolean,"series_id": string | null,"source_kind": string,"source_text": string,"source_truncated": boolean,"status": string,"title": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "cover_prompt"?: string | null,"created_at"?: string,"cuts"?: NonNullable<Json>,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"folder_id"?: string | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind": string,"source_text": string,"source_truncated"?: boolean,"status"?: string,"title": string,"user_id"?: string
+                    "cover_prompt"?: string | null,"created_at"?: string,"cuts"?: NonNullable<Json>,"deleted_at"?: string | null,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"folder_id"?: string | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind": string,"source_text": string,"source_truncated"?: boolean,"status"?: string,"title": string,"user_id"?: string
                   }
                   Update: {
-                    "cover_prompt"?: string | null,"created_at"?: string,"cuts"?: NonNullable<Json>,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"folder_id"?: string | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind"?: string,"source_text"?: string,"source_truncated"?: boolean,"status"?: string,"title"?: string,"user_id"?: string
+                    "cover_prompt"?: string | null,"created_at"?: string,"cuts"?: NonNullable<Json>,"deleted_at"?: string | null,"descriptions"?: NonNullable<Json>,"episode_index"?: number | null,"folder_id"?: string | null,"id"?: string,"interview"?: NonNullable<Json>,"script_stale"?: boolean,"series_id"?: string | null,"source_kind"?: string,"source_text"?: string,"source_truncated"?: boolean,"status"?: string,"title"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -279,6 +279,12 @@ isOneToOne: true
             [_ in never]: never
           }
           Functions: {
+            "trash_folder":
+{ Args: { "p_id": string }; Returns: boolean
+                           },
+            "restore_folder":
+{ Args: { "p_id": string }; Returns: boolean
+                           },
             "claim_job":
 { Args: Record<PropertyKey, never>; Returns: {
               "attempts": number,
