@@ -3,10 +3,10 @@ import path from "node:path";
 import { progress } from "./claim";
 import { makeCover } from "./covers";
 import { UserError } from "./errors";
-import { probe, run } from "./ffmpeg";
+import { probe } from "./ffmpeg";
 import type { JobContext } from "./jobs";
-import { targetBitrates } from "./plan";
-import { SAFE_BYTES, encodeArgs, must, sizeOk } from "./render";
+import { encodeFrom } from "./encode";
+import { must, sizeOk } from "./render";
 import { download, upload } from "./storage";
 
 const MSG_BAD_RANGE = "Início e fim do corte não são válidos.";
@@ -38,9 +38,8 @@ export async function recutCut(ctx: JobContext): Promise<void> {
   if (end > real + 0.05) throw new UserError(MSG_BAD_RANGE);
 
   await progress(db, job.id, "cortando", 30);
-  const { videoKbps } = targetBitrates(seconds, SAFE_BYTES);
   const cutFile = path.join(workdir, "corte.mp4");
-  await run(["-y", "-ss", start.toFixed(3), "-i", finalFile, "-t", seconds.toFixed(3), ...encodeArgs(videoKbps), cutFile]);
+  await encodeFrom(finalFile, cutFile, { start, seconds });
   const cutSize = await sizeOk(cutFile);
 
   await progress(db, job.id, "capas", 60);

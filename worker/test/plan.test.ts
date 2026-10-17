@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blockRanges, cutRange, expiresAt, missingBlocks, targetBitrates } from "../src/plan";
+import { blockRanges, cutRange, expiresAt, missingBlocks, MAX_FILE_BYTES } from "../src/plan";
 import { wrapTitle } from "../src/covers";
 
 describe("blockRanges / cutRange", () => {
@@ -29,19 +29,9 @@ describe("missingBlocks", () => {
   });
 });
 
-describe("targetBitrates", () => {
-  it("cabe: mantém 1800 kbps", () => {
-    expect(targetBitrates(60, 50e6)).toEqual({ videoKbps: 1800, audioKbps: 96 });
-  });
-
-  it("não cabe: reduz até o arquivo caber", () => {
-    const { videoKbps, audioKbps } = targetBitrates(400, 50e6);
-    expect(videoKbps).toBeLessThan(1800);
-    expect(((videoKbps + audioKbps) * 400 * 1000) / 8).toBeLessThanOrEqual(50e6);
-  });
-
-  it("nunca desce de um piso mínimo", () => {
-    expect(targetBitrates(100000, 50e6).videoKbps).toBe(200);
+describe("MAX_FILE_BYTES", () => {
+  it("é só um limite de segurança alto (500 MB), não um alvo de qualidade", () => {
+    expect(MAX_FILE_BYTES).toBe(500 * 1024 * 1024);
   });
 });
 

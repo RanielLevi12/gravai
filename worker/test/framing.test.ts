@@ -20,7 +20,7 @@ describe("parseCrop", () => {
 
 describe("framingFilter", () => {
   it("usa o retângulo salvo, quando cabe no vídeo", () => {
-    expect(framingFilter({ x: 656, y: 0, w: 608, h: 1080 }, 1920, 1080)).toBe("crop=608:1080:656:0,scale=1080:1920,setsar=1");
+    expect(framingFilter({ x: 656, y: 0, w: 608, h: 1080 }, 1920, 1080)).toBe("crop=608:1080:656:0,scale=1080:1920:flags=lanczos,setsar=1");
   });
   it("retângulo maior que o vídeo cai no corte central", () => {
     expect(framingFilter({ x: 656, y: 0, w: 608, h: 1080 }, 640, 360)).toContain("min(iw");
