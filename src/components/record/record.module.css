@@ -484,3 +484,90 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Fundo escuro atrás do painel de ajustes: tocar nele fecha o painel. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: rgb(0 0 0 / 0.35);
+}
+
+.sheet {
+  z-index: 3;
+}
+
+.sheetTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.sheetClose {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.camNow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 14px;
+}
+
+.camNow strong {
+  font-size: 16px;
+}
+
+.camList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.camOption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.camOption[aria-pressed="true"] {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.camOption span {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.lockNote {
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint);
+  font-size: 14px;
+  font-weight: 600;
+}

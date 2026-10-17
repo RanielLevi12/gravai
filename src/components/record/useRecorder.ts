@@ -49,5 +49,5 @@ export function useRecorder(opts: RecorderOpts) {
     };
   }, [rec]);
 
-  return { ...snap, profile, start: rec.start, stop: rec.stop, reset: rec.reset, configure: rec.configure };
+  return { ...snap, profile, start: rec.start, stop: rec.stop, reset: rec.reset, configure: rec.configure, setFrame: rec.setFrame };
 }

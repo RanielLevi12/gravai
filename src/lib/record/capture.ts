@@ -187,15 +187,24 @@ export type TechInfo = {
   audioBps: number | null;
   crop: Crop | null;
   zoom: number | null;
+  /** Câmera em uso: o id casa com a lista do aparelho para dar o nome legível. */
+  deviceId: string | null;
+  label: string;
 };
 
+/**
+ * `frame` é o tamanho do quadro que chega no <video> (videoWidth × videoHeight). Ele vale mais que o
+ * getSettings(): no celular em pé, alguns navegadores dizem 1920×1080 mas entregam o quadro já girado (1080×1920).
+ */
 export function readTech(
-  track: Pick<MediaStreamTrack, "getSettings">,
+  track: Pick<MediaStreamTrack, "getSettings"> & { label?: string },
   rec: { mime: string | null; videoBps: number | null; audioBps: number | null },
+  frame?: { width: number; height: number } | null,
 ): TechInfo {
   const s = track.getSettings() as MediaTrackSettings & { zoom?: number };
-  const width = s.width ?? 0;
-  const height = s.height ?? 0;
+  const real = frame && frame.width > 0 && frame.height > 0 ? frame : null;
+  const width = real?.width ?? s.width ?? 0;
+  const height = real?.height ?? s.height ?? 0;
   return {
     width,
     height,
@@ -206,7 +215,40 @@ export function readTech(
     audioBps: rec.audioBps,
     crop: computeCrop(width, height),
     zoom: typeof s.zoom === "number" ? s.zoom : null,
+    deviceId: s.deviceId ?? null,
+    label: track.label ?? "",
   };
+}
+
+export type CameraName = { name: string; hint: string };
+
+/**
+ * Traduz o nome técnico da câmera ("camera2 0, facing back", "Back Ultra Wide Camera") para algo que dá
+ * para entender, com o que muda na imagem. `backIndex` é a posição entre as traseiras (0 = a primeira).
+ */
+export function cameraName(label: string, facingMode: string | null, backIndex = 0): CameraName {
+  const l = label.toLowerCase();
+  if (/ultra|grande[- ]angular|0[,.]5x/.test(l)) return { name: "Traseira grande-angular", hint: "Mostra mais coisa em volta. Bom para gravar de perto." };
+  if (/tele|zoom|\b[23]x\b/.test(l)) return { name: "Traseira com zoom", hint: "Aproxima a imagem. Só use com o celular longe." };
+  if (/front|frontal|user|selfie|facing front/.test(l) || facingMode === "user") return { name: "Frontal (selfie)", hint: "Você se vê enquanto grava. Imagem um pouco mais fraca." };
+  if (/back|rear|traseira|environment|facing back/.test(l) || facingMode === "environment") {
+    return backIndex === 0
+      ? { name: "Traseira principal", hint: "A melhor imagem do aparelho. Você não se vê." }
+      : { name: `Traseira ${backIndex + 1}`, hint: "Outra lente de trás (pode ser grande-angular ou zoom). Teste e veja na tela." };
+  }
+  if (/usb|webcam|hd|logi|camera|câmera/.test(l)) return { name: label.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)/i, "").trim() || "Câmera", hint: "Câmera do computador ou ligada por fio." };
+  return { name: label || "Câmera", hint: "" };
+}
+
+/** Nomes legíveis para a lista do aparelho, numerando as traseiras na ordem em que aparecem. */
+export function nameCameras(cams: { id: string; label: string }[]): (CameraName & { id: string })[] {
+  let back = 0;
+  return cams.map((c) => {
+    const isBack = /back|rear|traseira|environment/i.test(c.label) && !/ultra|tele|grande[- ]angular/i.test(c.label);
+    const n = cameraName(c.label, null, isBack ? back : 0);
+    if (isBack) back++;
+    return { id: c.id, ...n };
+  });
 }
 
 /** Segundos que cabem num arquivo do bucket no bitrate do modo manual. */

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { clock } from "@/components/script/format";
-import { autoLabel, DEFAULT_CAPTURE, maxRecordSeconds, parseCapture, type AutoProfile, type CaptureSettings, type TechInfo } from "@/lib/record/capture";
+import { autoLabel, cameraName, DEFAULT_CAPTURE, nameCameras, maxRecordSeconds, parseCapture, type AutoProfile, type CaptureSettings, type TechInfo } from "@/lib/record/capture";
 import styles from "./record.module.css";
 
 const KEY = "gravai:capture";
@@ -97,11 +97,25 @@ export function CaptureSettingsPanel({
   const manual = (patch: Partial<CaptureSettings>) => onChange({ ...settings, ...patch, auto: false });
   const chip = (on: boolean) => `${styles.chip} ${on ? styles.chipOn : ""}`;
   const facing = (f: NonNullable<CaptureSettings["facing"]>) => !settings.cameraId && settings.facing === f;
+  const named = nameCameras(cams);
+  const current = info?.deviceId ? named.find((c) => c.id === info.deviceId) : undefined;
+  const now = current ?? (info ? cameraName(info.label, null) : null);
 
   return (
     <fieldset className={styles.group} disabled={locked}>
       <legend className={styles.groupTitle}>Câmera e som</legend>
-      {locked ? <p className={styles.hint}>Pare a gravação para trocar.</p> : null}
+      {locked ? <p className={styles.lockNote}>Gravando agora: a câmera não pode ser trocada no meio. Pare a gravação para mudar estes ajustes. O texto pode ser mudado na aba Texto.</p> : null}
+      {now && info?.width ? (
+        <div className={styles.camNow} data-testid="camera-em-uso">
+          Câmera em uso
+          <strong>{now.name}</strong>
+          {now.hint ? <span>{now.hint}</span> : null}
+          <span>
+            Imagem de {info.width}×{info.height}
+            {info.fps ? ` · ${info.fps} fps` : ""}
+          </span>
+        </div>
+      ) : null}
       <div className={styles.setting} role="group" aria-label="Automático">
         Automático
         <div className={styles.chips}>
@@ -121,29 +135,29 @@ export function CaptureSettingsPanel({
         <div className={styles.group}>
           <div className={styles.setting} role="group" aria-label="Câmera">
             Câmera
-            <div className={styles.chips}>
-              <button type="button" className={chip(facing("user"))} aria-pressed={facing("user")} onClick={() => manual({ facing: "user", cameraId: null })}>
-                Frente
-              </button>
-              <button
-                type="button"
-                className={chip(facing("environment"))}
-                aria-pressed={facing("environment")}
-                onClick={() => manual({ facing: "environment", cameraId: null })}
-              >
-                Trás (melhor imagem)
-              </button>
-            </div>
-            {cams.length > 2 ? (
-              <select className={styles.select} aria-label="Outra câmera" value={settings.cameraId ?? ""} onChange={(e) => manual({ cameraId: e.target.value || null })}>
-                <option value="">Outra câmera…</option>
-                {cams.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            ) : null}
+            {named.length > 0 ? (
+              <div className={styles.camList}>
+                {named.map((c) => {
+                  const on = settings.cameraId ? settings.cameraId === c.id : current?.id === c.id;
+                  return (
+                    <button key={c.id} type="button" className={styles.camOption} aria-pressed={on} onClick={() => manual({ cameraId: c.id, facing: null })}>
+                      {c.name}
+                      {c.hint ? <span>{c.hint}</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className={styles.chips}>
+                <button type="button" className={chip(facing("user"))} aria-pressed={facing("user")} onClick={() => manual({ facing: "user", cameraId: null })}>
+                  Frontal (selfie)
+                </button>
+                <button type="button" className={chip(facing("environment"))} aria-pressed={facing("environment")} onClick={() => manual({ facing: "environment", cameraId: null })}>
+                  Traseira (melhor imagem)
+                </button>
+              </div>
+            )}
+            <span className={styles.hint}>Toque numa câmera e veja a imagem mudar atrás deste painel.</span>
           </div>
           <label className={styles.setting}>
             Microfone

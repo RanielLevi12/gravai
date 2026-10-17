@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   autoLabel,
+  cameraName,
   captureConstraints,
   computeCrop,
   DEFAULT_CAPTURE,
   maxRecordSeconds,
+  nameCameras,
   nativeTarget,
   parseCapture,
   parseCrop,
@@ -119,6 +121,47 @@ describe("readTech", () => {
     const t = readTech({ getSettings: () => ({ width: 1920, height: 1080, frameRate: 29.97 }) }, { mime: "video/mp4;codecs=avc1,mp4a", videoBps: 7_000_000, audioBps: 128_000 });
     expect(t).toMatchObject({ width: 1920, height: 1080, fps: 30, codec: "H.264", videoBps: 7_000_000, zoom: null });
     expect(t.crop).toEqual(computeCrop(1920, 1080));
+  });
+
+  it("o quadro real do <video> vale mais que o getSettings (celular em pé que diz 1920×1080)", () => {
+    const t = readTech({ getSettings: () => ({ width: 1920, height: 1080 }) }, { mime: null, videoBps: null, audioBps: null }, { width: 1080, height: 1920 });
+    expect(t).toMatchObject({ width: 1080, height: 1920, crop: null });
+  });
+
+  it("quadro zerado é ignorado", () => {
+    const t = readTech({ getSettings: () => ({ width: 1920, height: 1080 }) }, { mime: null, videoBps: null, audioBps: null }, { width: 0, height: 0 });
+    expect(t.width).toBe(1920);
+  });
+});
+
+describe("cameraName", () => {
+  it("traduz os nomes do Android", () => {
+    expect(cameraName("camera2 1, facing front", null).name).toBe("Frontal (selfie)");
+    expect(cameraName("camera2 0, facing back", null).name).toBe("Traseira principal");
+    expect(cameraName("camera2 2, facing back", null, 1).name).toBe("Traseira 2");
+  });
+
+  it("traduz os nomes do iPhone", () => {
+    expect(cameraName("Back Ultra Wide Camera", null).name).toBe("Traseira grande-angular");
+    expect(cameraName("Back Telephoto Camera", null).name).toBe("Traseira com zoom");
+    expect(cameraName("Câmera Frontal", null).name).toBe("Frontal (selfie)");
+  });
+
+  it("sem nome, usa a direção da câmera", () => {
+    expect(cameraName("", "environment").name).toBe("Traseira principal");
+    expect(cameraName("", "user").name).toBe("Frontal (selfie)");
+  });
+});
+
+describe("nameCameras", () => {
+  it("numera as traseiras comuns na ordem", () => {
+    const n = nameCameras([
+      { id: "a", label: "camera2 0, facing back" },
+      { id: "b", label: "camera2 1, facing front" },
+      { id: "c", label: "camera2 2, facing back" },
+    ]);
+    expect(n.map((c) => c.name)).toEqual(["Traseira principal", "Frontal (selfie)", "Traseira 2"]);
+    expect(n.every((c) => c.hint.length > 0)).toBe(true);
   });
 });
 

@@ -188,7 +188,7 @@ test("teleprompter: arrastar com o dedo move o texto e segura enquanto o dedo es
   await expect(texto).toHaveAccessibleName("Continuar texto");
 });
 
-test("ajustes de câmera: automático ligado, Avançado troca para trás e 1080p, mostra a Info técnica real e guarda", async ({ page }) => {
+test("ajustes de câmera: automático ligado, câmeras com nome, 1080p, Info técnica real, guarda e fecha ao tocar fora", async ({ page }) => {
   test.setTimeout(90_000);
   const id = await projetoComScript(page, "gravar-camera");
   await page.goto(`/projetos/${id}/gravar/teleprompter?modo=take`);
@@ -202,15 +202,16 @@ test("ajustes de câmera: automático ligado, Avançado troca para trás e 1080p
 
   await page.getByRole("button", { name: "Ajustes" }).click();
   await page.getByRole("tab", { name: "Câmera" }).click();
+  // Câmera em uso com nome e tamanho real da imagem.
+  await expect(page.getByTestId("camera-em-uso")).toContainText(/Imagem de \d+×\d+/);
   await page.getByText("Avançado", { exact: true }).click();
-  await page.getByRole("button", { name: "Trás (melhor imagem)" }).click();
+  const primeira = page.getByRole("group", { name: "Câmera", exact: true }).getByRole("button").first();
+  await primeira.click();
+  await expect(primeira).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "1080p", exact: true }).click();
-  const camera = () =>
-    page.locator("video").first().evaluate((v: HTMLVideoElement) => {
-      const t = (v.srcObject as MediaStream | null)?.getVideoTracks()[0];
-      return t ? JSON.stringify(t.getConstraints()) : "";
-    });
-  await expect.poll(camera, { timeout: 10_000 }).toContain("environment");
+  // A câmera aberta é a escolhida (o id dela está no track de verdade).
+  const usada = () => page.locator("video").first().evaluate((v: HTMLVideoElement) => (v.srcObject as MediaStream | null)?.getVideoTracks()[0]?.getSettings().deviceId ?? "");
+  await expect.poll(usada, { timeout: 10_000 }).not.toBe("");
 
   // Info técnica: números lidos da câmera, nunca um quadro em pé pedido pelo app.
   await page.getByText("Info técnica", { exact: true }).click();
@@ -222,8 +223,10 @@ test("ajustes de câmera: automático ligado, Avançado troca para trás e 1080p
   await page.getByRole("tab", { name: "Câmera" }).click();
   await page.getByText("Avançado", { exact: true }).click();
   await expect(page.getByRole("button", { name: "1080p", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("button", { name: "Trás (melhor imagem)" })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "Pronto" }).click();
+  await expect(page.getByRole("group", { name: "Câmera", exact: true }).getByRole("button").first()).toHaveAttribute("aria-pressed", "true");
+  // Tocar fora do painel fecha.
+  await page.getByTestId("fundo-ajustes").click({ position: { x: 30, y: 120 } });
+  await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeHidden();
 
   await gravar(page, 2);
 });

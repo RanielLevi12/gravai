@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { X } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import styles from "./record.module.css";
 
@@ -62,8 +63,18 @@ export function PrompterSettings({
   const set = (patch: Partial<PrompterPrefs>) => onChange({ ...prefs, ...patch });
   const [tab, setTab] = useState<"texto" | "camera">("texto");
   const chip = (on: boolean) => `${styles.chip} ${on ? styles.chipOn : ""}`;
+  // Tecla Esc fecha, como tocar fora.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
   return (
-    <div className={styles.sheet} role="dialog" aria-label="Ajustes">
+    <>
+    {/* Tocar fora do painel fecha. */}
+    <div className={styles.backdrop} aria-hidden data-testid="fundo-ajustes" onClick={onClose} />
+    <div className={styles.sheet} role="dialog" aria-modal="true" aria-label="Ajustes">
+      <div className={styles.sheetTop}>
       <div className={styles.tabs} role="tablist" aria-label="Ajustes">
         <button type="button" role="tab" aria-selected={tab === "texto"} className={chip(tab === "texto")} onClick={() => setTab("texto")}>
           Texto
@@ -72,9 +83,14 @@ export function PrompterSettings({
           Câmera
         </button>
       </div>
+        <button type="button" className={styles.sheetClose} aria-label="Fechar ajustes" onClick={onClose}>
+          <X size={22} strokeWidth={2} aria-hidden />
+        </button>
+      </div>
       {tab === "camera" ? cameraTab : <TextTab prefs={prefs} set={set} chip={chip} />}
       <Button onClick={onClose}>Pronto</Button>
     </div>
+    </>
   );
 }
 

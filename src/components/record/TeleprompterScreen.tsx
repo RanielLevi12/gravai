@@ -86,7 +86,16 @@ export function TeleprompterScreen({
     <main className={styles.studio}>
       {/* Moldura 9:16: o object-fit: cover corta o centro, igual ao corte que o worker faz no vídeo final. */}
       <div className={styles.frame}>
-        <video ref={video} className={styles.cam} autoPlay muted playsInline style={mirrored ? { transform: "scaleX(-1)" } : undefined} />
+        <video
+          ref={video}
+          className={styles.cam}
+          autoPlay
+          muted
+          playsInline
+          style={mirrored ? { transform: "scaleX(-1)" } : undefined}
+          onLoadedMetadata={(e) => rec.setFrame(e.currentTarget.videoWidth, e.currentTarget.videoHeight)}
+          onResize={(e) => rec.setFrame(e.currentTarget.videoWidth, e.currentTarget.videoHeight)}
+        />
       </div>
       <header className={styles.studioTop}>
         <Link href={back} className={styles.round} aria-label="Fechar">

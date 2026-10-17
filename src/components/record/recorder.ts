@@ -80,6 +80,8 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
   let dead = false;
   let settings = opts.capture ?? DEFAULT_CAPTURE;
   let profile = opts.profile ?? null;
+  // Tamanho do quadro que chega no <video>: vale mais que o getSettings() para o corte.
+  let frame: { width: number; height: number } | null = null;
 
   const set = (p: Partial<RecSnapshot>) => {
     snap = { ...snap, ...p };
@@ -92,7 +94,7 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
   const techOf = (s: MediaStream | null, mime: string | null, rec?: MediaRecorderLike): TechInfo | null => {
     const t = videoTrack(s);
     const r = resolved();
-    return t ? readTech(t, { mime, videoBps: rec?.videoBitsPerSecond ?? r.videoBps, audioBps: rec?.audioBitsPerSecond ?? r.audioBps }) : null;
+    return t ? readTech(t, { mime, videoBps: rec?.videoBitsPerSecond ?? r.videoBps, audioBps: rec?.audioBitsPerSecond ?? r.audioBps }, frame) : null;
   };
 
   async function open(): Promise<boolean> {
@@ -126,6 +128,7 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
     if (nextProfile !== undefined) profile = nextProfile;
     if (!snap.stream) return;
     releaseTracks();
+    frame = null;
     set({ stream: null, state: "idle" });
     await open();
   }
@@ -183,6 +186,13 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
     }, 1000);
   }
 
+  /** A tela informa o tamanho real do quadro (videoWidth × videoHeight) quando ele muda. */
+  function setFrame(width: number, height: number) {
+    if (!(width > 0) || !(height > 0) || (frame?.width === width && frame?.height === height)) return;
+    frame = { width, height };
+    if (snap.state === "ready") set({ info: techOf(snap.stream, null) });
+  }
+
   function stop() {
     if (snap.state === "recording" && recorder) recorder.stop();
   }
@@ -216,6 +226,7 @@ export function createRecorder(opts: RecorderOpts, env: RecorderEnv) {
     revive,
     start,
     stop,
+    setFrame,
     reset,
     release,
   };
